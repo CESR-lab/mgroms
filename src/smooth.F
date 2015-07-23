@@ -1,14 +1,14 @@
-      subroutine smooth(lev,grid,nite)
-      ! apply nite*2 smoothings on grid%x using grid%b
-      ! at level lev
-      ! smoothing operator is stored in grid%A
+      subroutine smooth(lev,nite)
+      ! apply nite*2 smoothings at level lev
+      ! smoothing operator is stored in grid(lev)%A
+
+      use mg_variables 
+!     provides the array of structure 'grid'
+!     each entry of grid contains all the variables of a given level
 
       implicit none
 
       integer:: lev,nite
-      ! mg_type is a structure containing the variables of a given level
-      ! lev
-      mg_type:: grid
 
       ! local
       integer:: k
@@ -16,12 +16,14 @@
       do k = 1,nite
          ! we assume halo width >=2 and so smooth twice before updating
          ! the halo
-         call smooth_twice(grid%nx,grid%ny,grid%nz,grid%A,grid%x,grid%b)
-         call fill_halo(lev,grid,grid%x)
+         call smooth_twice(grid(lev)%nx,grid(lev)%ny,grid(lev)%nz,
+     $                     grid(lev)%A,grid(lev)%x,grid(lev)%b)
+         call fill_halo(lev,grid(lev)%x)
       enddo
 
-      end
+      end subroutine
       
+
       subroutine smooth_twice(nx,ny,nz,A,x,b)
 
       implicit none
@@ -53,7 +55,6 @@
          enddo
       enddo
 
-
-      end
+      end subroutine
     
       
