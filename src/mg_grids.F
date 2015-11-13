@@ -130,9 +130,9 @@
       i=mod(myrank,np)
       j=myrank/np
       im=mod(i-ix,np)
-      jm=mod((j-iy,mp)
-      ip=mod((i+ix,np)
-      jp=mod((j+iy,mp)
+      jm=mod(j-iy,mp)
+      ip=mod(i+ix,np)
+      jp=mod(j+iy,mp)
       
       grid(lev)%neighb(1)=im+jm*np ! sw
       grid(lev)%neighb(2)=i +jm*np ! s

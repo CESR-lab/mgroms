@@ -5,7 +5,8 @@
       use mg_grids
       use mg_mpi
       use mg_smoother
-      use mg_interpolation      
+      use mg_interpolation     
+      use mg_simpleop
 
       contains
 
@@ -26,6 +27,9 @@
       do k=2,nz-1               ! treat separatately the lower and upper level
          do j=1,ny
             do i=1,nx
+               !TODO: use the 15 points stencil framework
+               ! even though some extradiag terms are 0
+               ! note: A(1,i,j,k) is the diagonal term
                grid(1)%A(1,i,j,k)=czz
                grid(1)%A(2,i,j,k)=cyy
                grid(1)%A(3,i,j,k)=cxx
