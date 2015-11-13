@@ -3,7 +3,7 @@
       implicit none
 
       type grid_type
-      real*8,dimension(:,:,:)  ,allocatable :: x,b,r
+      real*8,dimension(:,:,:)  ,allocatable :: x,b,r,dummy
       real*8,dimension(:,:,:,:),allocatable :: A
       integer:: nx,ny,nz,np,mp,nd
       integer::coarsening_method,smoothing_method,gather
@@ -110,6 +110,16 @@
          allocate( grid(lev)%A(nd,nx,ny,nz) ) ! matrix is symmetric
          ! one the finest grid it has 15 coefficients=>8 independant
          ! it can have 27 coefficients on coarser grids=>13 independant
+
+         if (grid(lev)%gather.eq.1)then
+            ! dummy is the array resulting from the restriction on a
+            ! gather level (i.e. just prior gathering it with 4 others
+            !  cores)
+            
+            ! todo: think hard on the dimensions of this dummy array
+            ! this is subtle
+            allocate( grid(lev)%dummy(:,:,:) )
+         endif
 
          ! stop criterion
          ok = (nz.eq.1).and.((n2d.eq.2).or.(min(nx,ny).lt.nsmall))
