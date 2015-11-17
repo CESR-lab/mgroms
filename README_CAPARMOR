@@ -1,0 +1,22 @@
+IFREMER/CAPARMOR:
+================
+
+Vérifer que les modules suivants soient chargés:
+-------------------------------------------------
+Currently Loaded Modulefiles:
+  1) intel-comp/11.1.073           2) netcdf-intel/3.6.3-11.1.073   3) intel-mpi/4.0.0.028
+
+Compilation:
+-----------
+setenv MPI_INC /appli/intel/impi/4.0.0.028/include64
+setenv MPI_LIB /appli/intel/impi/4.0.0.028/lib64
+
+./configure --prefix=/home2/caparmor/grima/NH_MultiGrid --enable-mpi
+make clean
+make 
+make install
+
+Soumission:
+----------
+cd ../bin
+qsub run_mgroms_caparmor.pbs

@@ -1,0 +1,18 @@
+# Line starting with '#' are commented.
+# Ignore all files mgroms
+mgroms
+# Ignore all files *~
+*~
+# Ignore all files *.mod
+*.mod
+# Ignore all files *.o
+*.o
+# Ignore all files *.log
+*.log
+# Ignore all files Makefile
+Makefile
+# Ignore all files *.nc
+*.nc
+# Ignore all files *.pdf
+*.pdf
+# script end #

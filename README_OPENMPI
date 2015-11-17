@@ -1,0 +1,26 @@
+LPO/UBO:
+=======
+
+Vérifer que les packages suivants soient intallés:
+-------------------------------------------------
+libopenmpi1.6  (ou supérieur)
+openmpi-bin
+openmpi-common
+
+Compilation:
+-----------
+setenv MPI_INC /usr/lib/openmpi/lib
+setenv MPI_LIB /usr/lib/openmpi/lib
+
+./configure --prefix=../. --enable-openmpi
+make clean
+make 
+make install
+
+mpif90 options -I/usr/lib/openmpi/lib  -c -o file.o file.f90
+mpif90 options -I/usr/lib/openmpi/lib  -L/usr/lib/openmpi/lib -lmpi -o mgroms *.o
+
+Soumission:
+----------
+setenv LD_LIBRARY_PATH "/usr/lib/openmpi/lib:$LD_LIBRARY_PATH"
+mpirun -np 4 3Ddiffusion
