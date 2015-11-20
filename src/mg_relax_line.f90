@@ -1,76 +1,49 @@
 ********************************************************************************
-      subroutine relax(p,b,nx,ny,nz,px,py,pz,bcx,bcy,j0,j1,nu)
+      subroutine relax_line(p,b)
       implicit none
-*     include 'mpi.com'
-*
-*     IMPORT/EXPORT
-      integer                                     ,intent(in)   :: nx,ny,nz
-      real(kind=8),dimension(0:nx+1,0:ny+1,0:nz+1),intent(inout):: p
+
+      use poisson_coeff
+      ! Coefficients are stored in order of diagonals
+      ! cA(1,:,:,:)      -> p(k,j,i)
+      ! cA(2,:,:,:)      -> p(k-1,j,i)
+      ! cA(3,:,:,:)      -> p(k+1,j-1,i)
+      ! cA(4,:,:,:)      -> p(k,j-1,i)
+      ! cA(5,:,:,:)      -> p(k-1,j-1,i)
+      ! cA(6,:,:,:)      -> p(k+1,j,i-1)
+      ! cA(7,:,:,:)      -> p(k,j,i-1)
+      ! cA(8,:,:,:)      -> p(k-1,j,i-1)
+!
+      real(kind=8),dimension(0:nz+1,0:ny+1,0:nx+1),intent(inout):: p
       real(kind=8),dimension(nx,ny,nz)            ,intent(in)   :: b
-      real(kind=8),dimension(nx+1,ny,nz)          ,intent(in)   :: px
-      real(kind=8),dimension(nx,ny+1,nz)          ,intent(in)   :: py
-      real(kind=8),dimension(nx,ny,nz+1)          ,intent(in)   :: pz
-      integer                                     ,intent(in)   :: bcx,bcy
-      integer                                     ,intent(in)   :: j0,j1
-      integer                                     ,intent(in)   :: nu
-*     LOCAL 
-      integer                    :: i,j,red_black,iters,k
+!     LOCAL 
+      integer                    :: i,j,k,red_black
       real(kind=8),dimension(nz) :: rhs,d,ud,p1d
-*
-      do iters = 1, nu
-        do red_black = 1,1
-          do j = j0,j1
-*           do i = 1 + mod(j+red_black,2),nx, 2
-            do i = 1,nx
-              do k = 1,nz
-                rhs(k) = b(i,j,k) 
-     &            - px(i,j,k)*p(i-1,j,k) - px(i+1,j,k)*p(i+1,j,k)
-     &            - py(i,j,k)*p(i,j-1,k) - py(i,j+1,k)*p(i,j+1,k) 
+!
+      do red_black = 1,1
+         do i = 1,nx
+!           do i = 1 + mod(j+red_black,2),nx, 2
+            do j = 1,ny
+               do k = 1,nz
+                  rhs(k) = b(k,j,i) 
+     &              - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)
+     &              - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)
+     &              - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)
+     &              - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)
+     &              - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)
+     &              - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                  d(k)   = cA(1,k,j,i)
+                  ud(k)  = cA(2,k+1,j,i)
+                  p1d(k) = p(k,j,i)
+               enddo
 
-                d(k) = -px(i,j,k)-px(i+1,j,k)-py(i,j,k)-py(i,j+1,k)-pz(i,j,k)-pz(i,j,k+1)
-                ud(k) = pz(i,j,k+1)
-              enddo
-              d( 1) = d( 1) + pz(i,j,1 )
-              d(nz) = d(nz) + pz(i,j,nz+1)  !! neumann bc at surface
-                                            !! ( -sign for dirichlet)
-                                            !! We can do this when
-                                            !! defining pz !!
-*             call tridiag(nz,d,ud,rhs,p(i,j,1:nz))
-              p1d = p(i,j,1:nz)
-              call tridiag(nz,d,ud,rhs,p1d)
-              p(i,j,1:nz) = p1d 
-
+               call tridiag(nz,d,ud,rhs,p1d)
+               do k = 1,nz
+                  p(i,j,1:nz) = p1d (k)
+               enddo
             enddo
-          enddo
-        enddo
-*         call update(p,nx,ny,nz,bcx,bcy)
-!       if (j0.eq.1) then
-!         p(:,0,:) = p(:,1,:)
-!       endif
-!       if (j1.eq.ny) then
-!          p(:,ny+1,:) = p(:,ny,:)
-!       endif
-        do k = 1,nz
-         do j = j0,j1
-           p(   0,j,k) = p( 1,j,k)
-           p(nx+1,j,k) = p(nx,j,k)
          enddo
-        enddo
-        do k = 1,nz
-          do i = 0,nx+1
-           p(i,   0,k) = p(i, 1,k)
-           p(i,ny+1,k) = p(i,ny,k)
-          enddo
-         enddo
-*       do j = j0,j1
-        do j = 0,ny+1
-          do i = 0,nx+1
-           p(i,j,   0) = p( i,j,1 )
-           p(i,j,nz+1) = p( i,j,nz)
-         enddo
-        enddo
-!$OMP BARRIER
       enddo
+      call mpi_update(p)
 *       
       END
 ******************************************************************************
