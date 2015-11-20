@@ -19,16 +19,23 @@
       ! local
       integer:: k,j,i
 
+      pointer cA <= grid(lev)%cA ! check the syntax / lighten the writing
+
+      
+      dxi=1.
+      dyi=1.
+      dzi=1.
+
       do i = 1,nx
          do j = 1,ny
             do k = 1,nz
-               cA(1,k,j,i) = -dxi(j,i)*dxi(j,i)-dyi(j,i)*dyi(j,i)-dzi(k,j,i)*dzi(k,j,i)
-               cA(2,k,j,i) = dzi(k,j,i)*dzi(k,j,i)
+               cA(1,k,j,i) = -dxi*dxi-dyi*dyi-dzi*dzi
+               cA(2,k,j,i) = dzi*dzi
                cA(3,k,j,i) = 0.0
-               cA(4,k,j,i) = dyi(j,i)*dyi(j,i)
+               cA(4,k,j,i) = dyi*dyi
                cA(5,k,j,i) = 0.0
                cA(6,k,j,i) = 0.0
-               cA(7,k,j,i) = dxi(j,i)*dxi(j,i)
+               cA(7,k,j,i) = dxi*dxi
                cA(8,k,j,i) = 0.0
             enddo
          enddo
