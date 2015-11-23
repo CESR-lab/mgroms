@@ -26,10 +26,11 @@ bin_PROGRAMS = mgroms
 ##
 ##
 mgroms_SOURCES =         \
-	mg_grids.f90         \
 	mg_mpi.f90           \
-	mg_optimized.f90     \
-	mg_test.f90
+	mg_grids.f90         \
+	mg_define_matrix.f90 \
+	mg_relax_line.f90    \
+	mg_testrelax.f90
 #	mg_variables.f90     \
 #	mg_smoother.f90      \
 #	mg_interpolation.f90 \

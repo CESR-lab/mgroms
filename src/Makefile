@@ -91,8 +91,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_mgroms_OBJECTS = mg_grids.$(OBJEXT) mg_mpi.$(OBJEXT) \
-	mg_optimized.$(OBJEXT) mg_test.$(OBJEXT)
+am_mgroms_OBJECTS = mg_mpi.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_define_matrix.$(OBJEXT) mg_relax_line.$(OBJEXT) \
+	mg_testrelax.$(OBJEXT)
 mgroms_OBJECTS = $(am_mgroms_OBJECTS)
 mgroms_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_$(V))
@@ -286,10 +287,11 @@ FORTRAN_TOOLS = .
 SUFFIXES = .F90 .f90 .o .mod
 SUBDIRS = .
 mgroms_SOURCES = \
-	mg_grids.f90         \
 	mg_mpi.f90           \
-	mg_optimized.f90     \
-	mg_test.f90
+	mg_grids.f90         \
+	mg_define_matrix.f90 \
+	mg_relax_line.f90    \
+	mg_testrelax.f90
 
 all: all-recursive
 

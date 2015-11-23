@@ -1,179 +1,359 @@
 module mg_grids
 
+  use mg_mpi
+
   implicit none
 
+  integer(kind=4), parameter:: maxlev=1
+
   type grid_type
-     real*8,dimension(:,:,:)  ,allocatable :: x,b,r,dummy
-     real*8,dimension(:,:,:,:),allocatable :: A
-     integer:: nx,ny,nz,np,mp,nd
-     integer::coarsening_method,smoothing_method,gather
-     integer::ix,iy
-     integer,dimension(8)::neighb
+     real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r
+     real(kind=rl),dimension(:,:,:,:),pointer :: cA
+     integer(kind=is) :: nx,ny, nz
+     integer(kind=is) :: npx, npy
+     integer(kind=is) :: pj_offset, pi_offset
+     integer(kind=is):: nh                 ! number of points in halo
+     integer(kind=is),dimension(8)::neighb
   end type grid_type
 
-
-  type(grid_type),dimension(40) :: grid
+  type(grid_type), dimension(maxlev) :: grid
   integer:: nlevs ! index of the coarsest level (1 is the finest)
   integer:: nhalo
 
 contains
 
   !----------------------------------------
-  subroutine define_grids(nx,ny,nz,np,mp,aspect_ratio,nsmall)
-    ! define the size of each grid, this routine makes decisions on
-    !
-    ! * how should be done the coarsening: 
-    !  - R_z^3 (if hz/hx << 1)
-    !  - R_x*R_y*R_z (regular case)
-    !  - R_x*R_y (if there is only one level in z)
-    !
-    ! * which smoother should be used on each grid
-    !
-    integer:: nx,ny,nz,np,mp,nsmall
-    real*8:: aspect_ratio
+  subroutine define_grids(nhalo,npxg,npyg)
 
-    logical:: ok
-    integer:: lev,n2d,coarsen,smooth,nd
+    integer(kind=is), intent(in):: nhalo         ! number of halo points
+    integer(kind=is), intent(in):: npxg,npyg  ! global CPU topology
 
-    integer :: ix,iy
+    integer(kind=is) :: nx, ny, nz
+    integer(kind=is) :: nh
+    integer(kind=is) :: npx, npy
 
-    nhalo=2
+    integer(kind=is) :: pi, pj
+    integer(kind=is) :: lev
 
-    ok = .false.
-    lev=1
-    n2d = 0 ! number of 2D coarsening
-    ix = 1
-    iy = 1
-    do while (.not.(ok))
+    ! 1rst loop about the grid dimensions at deifferent levels
+    ! at the end of that loop we have the number of levels 
 
-       if(lev>1) then! coarsen
-          if(nz.eq.1)then ! 2D coarsening
-             n2d=n2d+1
-             nx=nx/2
-             ny=ny/2
-             coarsen=2
-          else
-             if(aspect_ratio.le.0.25)then !pure vertical coarsening
-                aspect_ratio=aspect_ratio*8
-                nz=nz/8
-                coarsen=5
-             else ! regular 3D coarsening
-                nx=nx/2
-                ny=ny/2
-                nz=nz/2
-                coarsen=1
-             endif
-          endif
-          grid(lev-1)%coarsening_method=coarsen
-       endif
+    grid(1)%nx = nxo
+    grid(1)%ny = nyo
+    grid(1)%nz = nzo
+    grid(1)%nh = nhalo
 
-       ! determine if gathering is needed
-       if(((nx.lt.nsmall).or.(ny.lt.nsmall)).and.(np*mp.ge.2))then
-          if(np.ge.2)then
-             np=np/2
-             nx=nx*2
-          endif
-          if(mp.ge.2)then
-             mp=mp/2
-             ny=ny*2
-          endif
-          grid(lev)%gather=1
-       else
-          grid(lev)%gather=0
-       endif
+    grid(1)%npx = npxg
+    grid(1)%npy = npyg
 
-       !now determine what is the appropriate smoothing on this grid
-       if(nz.eq.1)then
-          smooth=2
-          nd=3
-       else
-          if(aspect_ratio.le.0.25)then
-             smooth=1
-             nd=8
-          else
-             smooth=0
-             nd=8
-          endif
-       endif
+    grid(1)%pj_offset = 0
+    grid(1)%pi_offset = 0
 
-       grid(lev)%nx=nx
-       grid(lev)%ny=ny
-       grid(lev)%nz=nz
-       grid(lev)%np=np
-       grid(lev)%mp=mp
-       grid(lev)%nd=nd
-       grid(lev)%smoothing_method=smooth
+    !!do lev=2, maxlev
+       ! figure out additional grid dimensions
+       ! TODO: figure out process numbers for grid levels
+       !!nlevs=lev
+    nlevs=1
+    !!enddo
 
-       allocate( grid(lev)%x(1-nh:nx+nh,ny,nz) )
-       allocate( grid(lev)%b(nx,ny,nz) )
-       allocate( grid(lev)%r(nx,ny,nz) )
-       allocate( grid(lev)%A(nd,nx,ny,nz) ) ! matrix is symmetric
-       ! one the finest grid it has 15 coefficients=>8 independant
-       ! it can have 27 coefficients on coarser grids=>13 independant
-
-       if (grid(lev)%gather.eq.1)then
-          ! dummy is the array resulting from the restriction on a
-          ! gather level (i.e. just prior gathering it with 4 others
-          !  cores)
-
-          ! todo: think hard on the dimensions of this dummy array
-          ! this is subtle
-          !!NG: 16 nov 2015 comment this part of program
-          !!$ allocate( grid(lev)%dummy(.,.,.) )
-       endif
-
-       ! stop criterion
-       ok = (nz.eq.1).and.((n2d.eq.2).or.(min(nx,ny).lt.nsmall))
-       ! stop after 2 pure horizontal coarsenings
-       lev = lev+1
+    do lev=1,nlevs
+       ! Allocate memory
+       nx = grid(lev)%nx
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
+       nh = grid(lev)%nh
+       allocate(grid(lev)%p(   nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%b(   nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%cA(8,nz,1-nh:ny+nh,1-nh:nx+nh))
     enddo
-    nlevs = lev-1
+
+    ! Neighbours
+    do lev=1,nlevs
+       npx = grid(lev)%npx
+       npy = grid(lev)%npy
+
+       !! rank/grid(1)%npx = floor(rank/grid(1)%npx) with integers
+       pj = rank/grid(1)%npx    + grid(1)%pj_offset
+       pi = rank-pj*grid(1)%npx + grid(1)%pi_offset
+
+       !!write(*,*)'rank - pi, pj, npx, npy:', rank, pi, pj, npx, npy
+
+       if (pj > 0) then ! south
+          grid(lev)%neighb(1) = (pj-1)*npx+pi
+       else
+          grid(lev)%neighb(1) = MPI_PROC_NULL
+       endif
+
+       if (pi < npx-1) then ! east
+          grid(lev)%neighb(2) = pj*npx+pi+1
+       else
+          grid(lev)%neighb(2) = MPI_PROC_NULL
+       endif
+
+      if (pj < npy-1) then ! north
+          grid(lev)%neighb(3) = (pj+1)*npx+pi
+       else
+          grid(lev)%neighb(3) = MPI_PROC_NULL
+       endif
+
+       if (pi >0) then ! west
+          grid(lev)%neighb(4) = pj*npx+pi-1
+       else
+          grid(lev)%neighb(4) = MPI_PROC_NULL
+       endif
+
+       if ((pj > 0).and.(pi > 0)) then ! south west
+          grid(lev)%neighb(5) = (pj-1)*npx+ pi-1
+       else
+          grid(lev)%neighb(5) = MPI_PROC_NULL
+       endif
+
+      if ((pj > 0).and.(pi < npx-1)) then ! south east
+          grid(lev)%neighb(6) = (pj-1)*npx+ pi+1
+       else
+          grid(lev)%neighb(6) = MPI_PROC_NULL
+       endif
+
+      if ((pj < npy-1).and.(pi < npx-1)) then ! north east
+          grid(lev)%neighb(7) = (pj+1)*npx + pi+1
+       else
+          grid(lev)%neighb(7) = MPI_PROC_NULL
+       endif
+      if ((pj < npy-1).and.(pi >0)) then ! north west
+          grid(lev)%neighb(8) = (pj+1)*npx + pi-1
+       else
+          grid(lev)%neighb(8) = MPI_PROC_NULL
+       endif
+    enddo
+
+    !!write(*,*)'myrank-myneighb:', rank, grid(lev-1)%neighb(:)
 
   end subroutine define_grids
 
   !----------------------------------------
-  subroutine define_neighbours(lev,myrank,np,mp,ix,iy)
+  subroutine fill_halo(lev)
 
-    integer:: lev,myrank,np,mp,ix,iy
+    integer(kind=is), intent(in):: lev
 
-    integer:: i,j,im,ip,jm,jp
+    real(kind=rl),dimension(:,:,:), pointer :: p
 
-    i=mod(myrank,np)
-    j=myrank/np
-    im=mod(i-ix,np)
-    jm=mod(j-iy,mp)
-    ip=mod(i+ix,np)
-    jp=mod(j+iy,mp)
+    integer(kind=is) :: nx, ny, nz
+    integer(kind=is) :: nh
+    integer(kind=is) :: south, east, north, west
+    integer(kind=is) :: southwest, southeast, northeast, northwest
 
-    grid(lev)%neighb(1)=im+jm*np ! sw
-    grid(lev)%neighb(2)=i +jm*np ! s
-    grid(lev)%neighb(3)=ip+jm*np ! se
+    integer(kind=is) :: etag, wtag, ntag, stag
+    integer(kind=is) :: ierr,status1 
+    integer(kind=is) :: ilev
 
-    grid(lev)%neighb(4)=im+j*np  ! w
-    grid(lev)%neighb(5)=ip+j*np  ! e
+    real(kind=rl),dimension(:,:,:),allocatable :: sendN,recvN,sendS,recvS
+    real(kind=rl),dimension(:,:,:),allocatable :: sendE,recvE,sendW,recvW
+    real(kind=rl),dimension(:,:,:),allocatable :: sendSW,recvSW,sendSE,recvSE
+    real(kind=rl),dimension(:,:,:),allocatable :: sendNW,recvNW,sendNE,recvNE
 
-    grid(lev)%neighb(6)=im+jp*np ! nw
-    grid(lev)%neighb(7)=i +jp*np ! n
-    grid(lev)%neighb(8)=ip+jp*np ! ne
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
 
-  end subroutine define_neighbours
+    p => grid(lev)%p
 
-  !----------------------------------------
-  subroutine print_grids
-    integer:: lev
+    south     = grid(lev)%neighb(1)
+    east      = grid(lev)%neighb(2)
+    north     = grid(lev)%neighb(3)
+    west      = grid(lev)%neighb(4)
+    southwest = grid(lev)%neighb(5)
+    southeast = grid(lev)%neighb(6)
+    northeast = grid(lev)%neighb(7)
+    northwest = grid(lev)%neighb(8)
 
-    do lev=1,nlevs
-       if (grid(lev)%gather.eq.0)then
-          write(*,100)"lev=",lev,": ", &
-                     grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                     " on ",grid(lev)%np,' x',grid(lev)%mp," procs"
-       else
-          write(*,100)"lev=",lev,": ", &
-                     grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                     " on ",grid(lev)%np,' x',grid(lev)%mp," procs / gather"
-       endif
-    enddo
-100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
-  end subroutine print_grids
+    !!write(*,*)'===================================='
+    !!write(*,*)'rank, neighb:', rank, south,east,north,west,southwest,southeast,northeast,northwest
+
+    allocate(sendS(nz,nx,nh))
+    allocate(recvS(nz,nx,nh))
+    allocate(sendN(nz,nx,nh))
+    allocate(recvN(nz,nx,nh))
+
+    allocate(sendE(nz,ny,nh))
+    allocate(recvE(nz,ny,nh))
+    allocate(sendW(nz,ny,nh))
+    allocate(recvW(nz,ny,nh))
+
+    allocate(sendSW(nz,nh,nh))
+    allocate(sendSE(nz,nh,nh))
+    allocate(sendNW(nz,nh,nh))
+    allocate(sendNE(nz,nh,nh))
+
+    allocate(recvSW(nz,nh,nh))
+    allocate(recvSE(nz,nh,nh))
+    allocate(recvNW(nz,nh,nh))
+    allocate(recvNE(nz,nh,nh))
+
+    !-----------
+    !    Fill West-East ghost cells
+    !
+    if (west.ne.MPI_PROC_NULL) then
+       sendW = p(:,1:ny,1:nh)  
+    endif
+
+    if (east.ne.MPI_PROC_NULL) then
+       sendE = p(:,1:ny,nx-nh:nx)  
+    endif
+
+    !!write(*,*)'rank, neighb east & west:', rank, east, west
+
+    etag = 3
+    call MPI_SendRecv(                                  &
+         sendE,nz*ny*nh,MPI_DOUBLE_PRECISION,east,etag, &
+         recvW,nz*ny*nh,MPI_DOUBLE_PRECISION,west,etag, &
+         MPI_COMM_WORLD,status1,ierr)
+
+    wtag = 4
+    call MPI_SendRecv(                                  &
+         sendW,nz*ny*nh,MPI_DOUBLE_PRECISION,west,wtag, &
+         recvE,nz*ny*nh,MPI_DOUBLE_PRECISION,east,wtag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack: 
+    if (west.ne.MPI_PROC_NULL) then
+       p(:,1:ny,1-nh:0) = recvW
+    else !!Homogenous Neumann  
+       p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
+    endif
+
+    if (east.ne.MPI_PROC_NULL) then
+       p(:,1:ny,nx+1:nx+nh) = recvE
+    else !!Homogenous Neumann  
+       p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh:-1)
+    end if
+    !
+    deallocate(sendE)
+    deallocate(sendW)
+    deallocate(recvE)
+    deallocate(recvW)
+
+    !-----------
+    !    Fill North-South ghost cells
+    !
+    !     Pack:
+    if (south.ne.MPI_PROC_NULL) then
+       sendS = p(:,1:nh,1:nx)  
+    endif
+    if (north.ne.MPI_PROC_NULL) then
+       sendN = p(:,ny-nh:ny,1:nx)  
+    endif
+    ntag = 1
+    call MPI_SendRecv(&
+         sendN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,ntag, &
+         recvS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,ntag, &
+         MPI_COMM_WORLD,status1,ierr)
+    stag = 2
+    call MPI_SendRecv&
+         (sendS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,stag, &
+         recvN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,stag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack:
+    if (south.ne.MPI_PROC_NULL) then
+       p(:,1-nh:0,1:nx)  = recvS
+    else !!Homogenous Neumann  
+       p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
+    end if
+
+    if (north.ne.MPI_PROC_NULL) then
+       p(:,ny+1:ny+nh,1:nx)  = recvN
+    else!!Homogenous Neumann  
+       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh:-1,1:nx)
+    end if
+    !
+    deallocate(sendN)
+    deallocate(sendS)
+    deallocate(recvN)
+    deallocate(recvS)
+
+    !-----------
+    !    Fill Corner ghost cells
+    !
+    ! SW and SE !
+    if (southwest.ne.MPI_PROC_NULL) then
+       sendSW = p(:,1:nh,1:nh)  
+    endif
+
+    if (southeast.ne.MPI_PROC_NULL) then
+       sendSE = p(:,1:nh,nx-nh:nx)  
+    endif
+
+    etag = 3
+    call MPI_SendRecv(&
+         sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,etag, &
+         recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,etag, &
+         MPI_COMM_WORLD,status1,ierr)
+
+    wtag = 4
+    call MPI_SendRecv(&
+         sendSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,wtag, &
+         recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,wtag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack: 
+    if (southwest.ne.MPI_PROC_NULL) then
+       p(:,1-nh:0,1-nh:0) = recvSW
+    else !!Homogenous Neumann  
+       p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
+    endif
+
+    if (southeast.ne.MPI_PROC_NULL) then
+       p(:,1-nh:0,nx+1:nx+nh) = recvE
+    else !!Homogenous Neumann  
+       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh:-1)
+    end if
+    !
+    deallocate(sendSE)
+    deallocate(sendSW)
+    deallocate(recvSE)
+    deallocate(recvSW)
+
+    ! NW and NE !
+    if (northwest.ne.MPI_PROC_NULL) then
+       sendNW = p(:,ny-nh:ny,1:nh)  
+    endif
+
+    if (northeast.ne.MPI_PROC_NULL) then
+       sendNE = p(:,ny-nh:ny,nx-nh:nx)  
+    endif
+
+    etag = 3
+    call MPI_SendRecv( &
+         sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,etag, &
+         recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,etag, &
+         MPI_COMM_WORLD,status1,ierr)
+
+    wtag = 4
+    call MPI_SendRecv(&
+         sendNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,wtag, &
+         recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,wtag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack: 
+    if (northwest.ne.MPI_PROC_NULL) then
+       p(:,ny+1:ny+nh,1-nh:0) = recvSW
+    else !!Homogenous Neumann  
+       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh:-1,nh:1:-1)
+    endif
+
+    if (northeast.ne.MPI_PROC_NULL) then
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = recvE
+    else !!Homogenous Neumann  
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh:-1,nx:nx-nh:-1)
+    end if
+    !
+    deallocate(sendNE)
+    deallocate(sendNW)
+    deallocate(recvNE)
+    deallocate(recvNW)
+
+  end subroutine fill_halo
+
 
 end module mg_grids
