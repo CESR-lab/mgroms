@@ -104,7 +104,7 @@ contains
        grid(lev)%nd=nd
        grid(lev)%smoothing_method=smooth
 
-       allocate( grid(lev)%x(nx,ny,nz) )
+       allocate( grid(lev)%x(1-nh:nx+nh,ny,nz) )
        allocate( grid(lev)%b(nx,ny,nz) )
        allocate( grid(lev)%r(nx,ny,nz) )
        allocate( grid(lev)%A(nd,nx,ny,nz) ) ! matrix is symmetric

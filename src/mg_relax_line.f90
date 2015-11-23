@@ -1,5 +1,5 @@
 ********************************************************************************
-      subroutine relax_line(p,b)
+      subroutine relax_line(p,b,nsweeps)
       implicit none
 
       use poisson_coeff
@@ -19,11 +19,13 @@
       integer                    :: i,j,k,red_black
       real(kind=8),dimension(nz) :: rhs,d,ud,p1d
 !
+      ! add a loop on smoothing
       do red_black = 1,1
          do i = 1,nx
 !           do i = 1 + mod(j+red_black,2),nx, 2
             do j = 1,ny
-               do k = 1,nz
+               k=1!lower level
+               do k = 2,nz-1
                   rhs(k) = b(k,j,i) 
      &              - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)
      &              - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)
@@ -35,7 +37,8 @@
                   ud(k)  = cA(2,k+1,j,i)
                   p1d(k) = p(k,j,i)
                enddo
-
+               k=nz
+               ! ...
                call tridiag(nz,d,ud,rhs,p1d)
                do k = 1,nz
                   p(i,j,1:nz) = p1d (k)
@@ -43,6 +46,7 @@
             enddo
          enddo
       enddo
+      ! don't call mpi at every pass if nh>1
       call mpi_update(p)
 *       
       END
