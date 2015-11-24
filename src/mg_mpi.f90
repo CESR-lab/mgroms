@@ -6,7 +6,7 @@ module mg_mpi
 
   integer(kind=4), parameter:: is=4, rl=8
 
-  integer(kind=is) :: rank
+  integer(kind=is) :: myrank
   integer(kind=is) :: nprocs
 
   ! local dimensions which will come from the outside (ROMS)
@@ -26,7 +26,7 @@ contains
 
     call mpi_init(ierr)
 
-    call mpi_comm_rank(mpi_comm_world, rank, ierr)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierr)
 
     call mpi_comm_size(mpi_comm_world, nprocs, ierr)
 
