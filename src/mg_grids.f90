@@ -144,7 +144,7 @@ contains
 
     integer(kind=is) :: etag, wtag, ntag, stag
     integer(kind=is) :: ierr,status1 
-    integer(kind=is) :: ilev
+    !!integer(kind=is) :: ilev
 
     real(kind=rl),dimension(:,:,:),allocatable :: sendN,recvN,sendS,recvS
     real(kind=rl),dimension(:,:,:),allocatable :: sendE,recvE,sendW,recvW
@@ -158,6 +158,9 @@ contains
 
     p => grid(lev)%p
 
+    !!write(*,*)'rank - ubound p, nh:', rank, ubound(p), nh
+    !!write(*,*)'rank - lbound p, nh:', rank, lbound(p), nh
+
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)
     north     = grid(lev)%neighb(3)
@@ -170,10 +173,10 @@ contains
     !!write(*,*)'===================================='
     !!write(*,*)'rank, neighb:', rank, south,east,north,west,southwest,southeast,northeast,northwest
 
-    allocate(sendS(nz,nx,nh))
-    allocate(recvS(nz,nx,nh))
-    allocate(sendN(nz,nx,nh))
-    allocate(recvN(nz,nx,nh))
+    allocate(sendS(nz,nh,nx))
+    allocate(recvS(nz,nh,nx))
+    allocate(sendN(nz,nh,nx))
+    allocate(recvN(nz,nh,nx))
 
     allocate(sendE(nz,ny,nh))
     allocate(recvE(nz,ny,nh))
@@ -225,7 +228,7 @@ contains
     if (east.ne.MPI_PROC_NULL) then
        p(:,1:ny,nx+1:nx+nh) = recvE
     else !!Homogenous Neumann  
-       p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh:-1)
+       p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
     end if
     !
     deallocate(sendE)
@@ -264,7 +267,7 @@ contains
     if (north.ne.MPI_PROC_NULL) then
        p(:,ny+1:ny+nh,1:nx)  = recvN
     else!!Homogenous Neumann  
-       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh:-1,1:nx)
+       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
     end if
     !
     deallocate(sendN)
@@ -304,9 +307,9 @@ contains
     endif
 
     if (southeast.ne.MPI_PROC_NULL) then
-       p(:,1-nh:0,nx+1:nx+nh) = recvE
+       p(:,1-nh:0,nx+1:nx+nh) = recvSE
     else !!Homogenous Neumann  
-       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh:-1)
+       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
     end if
     !
     deallocate(sendSE)
@@ -337,15 +340,15 @@ contains
     !
     !     Unpack: 
     if (northwest.ne.MPI_PROC_NULL) then
-       p(:,ny+1:ny+nh,1-nh:0) = recvSW
+       p(:,ny+1:ny+nh,1-nh:0) = recvNW
     else !!Homogenous Neumann  
-       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh:-1,nh:1:-1)
+       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
     endif
 
     if (northeast.ne.MPI_PROC_NULL) then
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = recvE
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = recvNE
     else !!Homogenous Neumann  
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh:-1,nx:nx-nh:-1)
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     end if
     !
     deallocate(sendNE)
