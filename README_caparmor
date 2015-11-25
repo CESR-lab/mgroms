@@ -1,0 +1,24 @@
+How to configure and compile mgroms at IFREMER/CAPARMOR:
+=======================================================
+Intel compiler + Intel MPI
+
+Environment:
+-----------
+module load intel-comp intel-mpi
+
+Currently Loaded Modulefiles:
+  1) intel-comp/2015.3.187         2) intel-mpi/5.0.3.048
+
+Configuration and compilation:
+-----------------------------
+setenv MPI_INC /appli/intel/impi/5.0.3.048/intel64/include
+setenv MPI_LIB /appli/intel/impi/5.0.3.048/intel64/lib
+
+./configure --prefix=/home2/caparmor/grima/3Ddiffusion/IntelMPI --enable-intel_mpi [--enable-traceanalyser] [--enable-optimization=aggressive]
+make clean
+make 
+make install
+
+Submission:
+----------
+qsub run_mgroms_caparmor.pbs

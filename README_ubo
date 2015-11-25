@@ -1,0 +1,26 @@
+How to configure and compile mgroms at UBO:
+==========================================
+Intel compiler + mpich
+
+Environment:
+-----------
+module load intel/12.1 mpich2/1.5-intel12
+module list
+Currently Loaded Modulefiles:
+ 1) intel/12.1          2) mpich2/1.5-intel12
+
+Configuration and compilation:
+-----------------------------
+setenv MPI_INC /opt/linux/mpich2/1.5-intel12.1/include
+setenv MPI_LIB /opt/linux/mpich2/1.5-intel12.1/lib
+
+./configure --prefix=/home/grima/NH_MultiGrid --enable-mpich [--enable-optimization=debug]
+make clean
+make 
+make install
+
+Submission:
+----------
+set you PATH environment variable !!
+
+mpirun -np 4 mgroms
