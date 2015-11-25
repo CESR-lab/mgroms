@@ -31,8 +31,6 @@ contains
     integer(kind=is) :: nx, ny, nz
     integer(kind=is) :: nh
 
-    integer(kind=is)::ierr
-
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz

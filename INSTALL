@@ -37,8 +37,6 @@ make install
 The command "ApplicationName_detect", "ApplicationName_tracking" and "prg_interp_filter" have to be installed
 in the "/the/directory/where/you/want/install/ApplicationName".
 
-
-
 Installation Instructions
 *************************
 

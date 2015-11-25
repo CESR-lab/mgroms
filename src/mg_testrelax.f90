@@ -26,8 +26,8 @@ program mg_testrelax
   nyg   = 128
   nzg   = 128
   nhalo = 2
-  npxg  = 1
-  npyg  = 1
+  npxg  = 2
+  npyg  = 2
 
   nit     = 1
   nsweeps = 2
@@ -36,7 +36,7 @@ program mg_testrelax
 
   call define_grids(nhalo,npxg,npyg)
 
-  call define_rhs(nxg, nyg, nzg, npxg, npyg)
+  call define_rhs(nxg, npxg)
 
   call define_matrix_simple()
 
