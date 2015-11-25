@@ -21,7 +21,7 @@ contains
 
     real(kind=rl), dimension(:,:,:,:), pointer :: cA
     integer(kind=is):: k, j, i
-    integer(kind=is):: dxi, dyi, dzi
+    real(kind=rl):: dxi, dyi, dzi
     integer(kind=is):: nx, ny, nz
     integer(kind=is):: nh
 
@@ -42,7 +42,7 @@ contains
     do i = 1-nh,nx+nh
        do j = 1-nh,ny+nh
           do k = 1,nz
-             cA(1,k,j,i) = 2*(-dxi*dxi-dyi*dyi-dzi*dzi)
+             cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)
              cA(2,k,j,i) = dzi*dzi
              cA(3,k,j,i) = 0.0_8
              cA(4,k,j,i) = dyi*dyi
@@ -70,8 +70,6 @@ contains
     ! cA(6,:,:,:)      -> p(k+1,j,i-1)
     ! cA(7,:,:,:)      -> p(k,j,i-1)
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-
-    integer:: k,j,i
 
   end subroutine define_matrix
 

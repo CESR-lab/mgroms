@@ -50,9 +50,9 @@ contains
     grid(1)%pi_offset = 0
 
     !!do lev=2, maxlev
-       ! figure out additional grid dimensions
-       ! TODO: figure out process numbers for grid levels
-       !!nlevs=lev
+    ! figure out additional grid dimensions
+    ! TODO: figure out process numbers for grid levels
+    !!nlevs=lev
     nlevs=1
     !!enddo
 
@@ -76,8 +76,6 @@ contains
        pj = myrank/grid(1)%npx    + grid(1)%pj_offset
        pi = myrank-pj*grid(1)%npx + grid(1)%pi_offset
 
-       !!write(*,*)'myrank - pi, pj, npx, npy:', myrank, pi, pj, npx, npy
-
        if (pj > 0) then ! south
           grid(lev)%neighb(1) = (pj-1)*npx+pi
        else
@@ -90,7 +88,7 @@ contains
           grid(lev)%neighb(2) = MPI_PROC_NULL
        endif
 
-      if (pj < npy-1) then ! north
+       if (pj < npy-1) then ! north
           grid(lev)%neighb(3) = (pj+1)*npx+pi
        else
           grid(lev)%neighb(3) = MPI_PROC_NULL
@@ -108,25 +106,23 @@ contains
           grid(lev)%neighb(5) = MPI_PROC_NULL
        endif
 
-      if ((pj > 0).and.(pi < npx-1)) then ! south east
+       if ((pj > 0).and.(pi < npx-1)) then ! south east
           grid(lev)%neighb(6) = (pj-1)*npx+ pi+1
        else
           grid(lev)%neighb(6) = MPI_PROC_NULL
        endif
 
-      if ((pj < npy-1).and.(pi < npx-1)) then ! north east
+       if ((pj < npy-1).and.(pi < npx-1)) then ! north east
           grid(lev)%neighb(7) = (pj+1)*npx + pi+1
        else
           grid(lev)%neighb(7) = MPI_PROC_NULL
        endif
-      if ((pj < npy-1).and.(pi >0)) then ! north west
+       if ((pj < npy-1).and.(pi >0)) then ! north west
           grid(lev)%neighb(8) = (pj+1)*npx + pi-1
        else
           grid(lev)%neighb(8) = MPI_PROC_NULL
        endif
     enddo
-
-    !!write(*,*)'mymyrank-myneighb:', myrank, grid(lev-1)%neighb(:)
 
   end subroutine define_grids
 
@@ -158,9 +154,6 @@ contains
 
     p => grid(lev)%p
 
-    !!write(*,*)'myrank - ubound p, nh:', myrank, ubound(p), nh
-    !!write(*,*)'myrank - lbound p, nh:', myrank, lbound(p), nh
-
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)
     north     = grid(lev)%neighb(3)
@@ -170,9 +163,8 @@ contains
     northeast = grid(lev)%neighb(7)
     northwest = grid(lev)%neighb(8)
 
-    !!write(*,*)'===================================='
-    !!write(*,*)'myrank, neighb:', myrank, south,east,north,west,southwest,southeast,northeast,northwest
 
+    ! To place outside of this routine in global variable !
     allocate(sendS(nz,nh,nx))
     allocate(recvS(nz,nh,nx))
     allocate(sendN(nz,nh,nx))
@@ -204,8 +196,6 @@ contains
        sendE = p(:,1:ny,nx-nh:nx)  
     endif
 
-    write(*,*)'myrank, neighb west & east, MPI_PROC_NULL:', myrank, west, east, MPI_PROC_NULL
-
     etag = 3
     call MPI_SendRecv(                                  &
          sendE,nz*ny*nh,MPI_DOUBLE_PRECISION,east,etag, &
@@ -236,125 +226,125 @@ contains
     deallocate(recvE)
     deallocate(recvW)
 
-!!$    !-----------
-!!$    !    Fill North-South ghost cells
-!!$    !
-!!$    !     Pack:
-!!$    if (south.ne.MPI_PROC_NULL) then
-!!$       sendS = p(:,1:nh,1:nx)  
-!!$    endif
-!!$    if (north.ne.MPI_PROC_NULL) then
-!!$       sendN = p(:,ny-nh:ny,1:nx)  
-!!$    endif
-!!$    ntag = 1
-!!$    call MPI_SendRecv(&
-!!$         sendN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,ntag, &
-!!$         recvS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,ntag, &
-!!$         MPI_COMM_WORLD,status1,ierr)
-!!$    stag = 2
-!!$    call MPI_SendRecv&
-!!$         (sendS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,stag, &
-!!$         recvN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,stag, &
-!!$         MPI_COMM_WORLD,status1,ierr)
-!!$    !
-!!$    !     Unpack:
-!!$    if (south.ne.MPI_PROC_NULL) then
-!!$       p(:,1-nh:0,1:nx)  = recvS
-!!$    else !!Homogenous Neumann  
-!!$       p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
-!!$    end if
-!!$
-!!$    if (north.ne.MPI_PROC_NULL) then
-!!$       p(:,ny+1:ny+nh,1:nx)  = recvN
-!!$    else!!Homogenous Neumann  
-!!$       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
-!!$    end if
-!!$    !
-!!$    deallocate(sendN)
-!!$    deallocate(sendS)
-!!$    deallocate(recvN)
-!!$    deallocate(recvS)
-!!$
-!!$    !-----------
-!!$    !    Fill Corner ghost cells
-!!$    !
-!!$    ! SW and SE !
-!!$    if (southwest.ne.MPI_PROC_NULL) then
-!!$       sendSW = p(:,1:nh,1:nh)  
-!!$    endif
-!!$
-!!$    if (southeast.ne.MPI_PROC_NULL) then
-!!$       sendSE = p(:,1:nh,nx-nh:nx)  
-!!$    endif
-!!$
-!!$    etag = 3
-!!$    call MPI_SendRecv(&
-!!$         sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,etag, &
-!!$         recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,etag, &
-!!$         MPI_COMM_WORLD,status1,ierr)
-!!$
-!!$    wtag = 4
-!!$    call MPI_SendRecv(&
-!!$         sendSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,wtag, &
-!!$         recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,wtag, &
-!!$         MPI_COMM_WORLD,status1,ierr)
-!!$    !
-!!$    !     Unpack: 
-!!$    if (southwest.ne.MPI_PROC_NULL) then
-!!$       p(:,1-nh:0,1-nh:0) = recvSW
-!!$    else !!Homogenous Neumann  
-!!$       p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
-!!$    endif
-!!$
-!!$    if (southeast.ne.MPI_PROC_NULL) then
-!!$       p(:,1-nh:0,nx+1:nx+nh) = recvSE
-!!$    else !!Homogenous Neumann  
-!!$       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
-!!$    end if
-!!$    !
-!!$    deallocate(sendSE)
-!!$    deallocate(sendSW)
-!!$    deallocate(recvSE)
-!!$    deallocate(recvSW)
-!!$
-!!$    ! NW and NE !
-!!$    if (northwest.ne.MPI_PROC_NULL) then
-!!$       sendNW = p(:,ny-nh:ny,1:nh)  
-!!$    endif
-!!$
-!!$    if (northeast.ne.MPI_PROC_NULL) then
-!!$       sendNE = p(:,ny-nh:ny,nx-nh:nx)  
-!!$    endif
-!!$
-!!$    etag = 3
-!!$    call MPI_SendRecv( &
-!!$         sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,etag, &
-!!$         recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,etag, &
-!!$         MPI_COMM_WORLD,status1,ierr)
-!!$
-!!$    wtag = 4
-!!$    call MPI_SendRecv(&
-!!$         sendNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,wtag, &
-!!$         recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,wtag, &
-!!$         MPI_COMM_WORLD,status1,ierr)
-!!$    !
-!!$    !     Unpack: 
-!!$    if (northwest.ne.MPI_PROC_NULL) then
-!!$       p(:,ny+1:ny+nh,1-nh:0) = recvNW
-!!$    else !!Homogenous Neumann  
-!!$       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
-!!$    endif
-!!$
-!!$    if (northeast.ne.MPI_PROC_NULL) then
-!!$       p(:,ny+1:ny+nh,nx+1:nx+nh) = recvNE
-!!$    else !!Homogenous Neumann  
-!!$       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
-!!$    end if
-!!$    !
-!!$    deallocate(sendNE)
-!!$    deallocate(sendNW)
-!!$    deallocate(recvNE)
-!!$    deallocate(recvNW)
+    !-----------
+    !    Fill North-South ghost cells
+    !
+    !     Pack:
+    if (south.ne.MPI_PROC_NULL) then
+       sendS = p(:,1:nh,1:nx)  
+    endif
+    if (north.ne.MPI_PROC_NULL) then
+       sendN = p(:,ny-nh:ny,1:nx)  
+    endif
+    ntag = 1
+    call MPI_SendRecv(&
+         sendN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,ntag, &
+         recvS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,ntag, &
+         MPI_COMM_WORLD,status1,ierr)
+    stag = 2
+    call MPI_SendRecv&
+         (sendS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,stag, &
+         recvN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,stag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack:
+    if (south.ne.MPI_PROC_NULL) then
+       p(:,1-nh:0,1:nx)  = recvS
+    else !!Homogenous Neumann  
+       p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
+    end if
+
+    if (north.ne.MPI_PROC_NULL) then
+       p(:,ny+1:ny+nh,1:nx)  = recvN
+    else!!Homogenous Neumann  
+       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
+    end if
+    !
+    deallocate(sendN)
+    deallocate(sendS)
+    deallocate(recvN)
+    deallocate(recvS)
+
+    !-----------
+    !    Fill Corner ghost cells
+    !
+    ! SW and SE !
+    if (southwest.ne.MPI_PROC_NULL) then
+       sendSW = p(:,1:nh,1:nh)  
+    endif
+
+    if (southeast.ne.MPI_PROC_NULL) then
+       sendSE = p(:,1:nh,nx-nh:nx)  
+    endif
+
+    etag = 3
+    call MPI_SendRecv(&
+         sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,etag, &
+         recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,etag, &
+         MPI_COMM_WORLD,status1,ierr)
+
+    wtag = 4
+    call MPI_SendRecv(&
+         sendSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,wtag, &
+         recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,wtag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack: 
+    if (southwest.ne.MPI_PROC_NULL) then
+       p(:,1-nh:0,1-nh:0) = recvSW
+    else !!Homogenous Neumann  
+       p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
+    endif
+
+    if (southeast.ne.MPI_PROC_NULL) then
+       p(:,1-nh:0,nx+1:nx+nh) = recvSE
+    else !!Homogenous Neumann  
+       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
+    end if
+    !
+    deallocate(sendSE)
+    deallocate(sendSW)
+    deallocate(recvSE)
+    deallocate(recvSW)
+
+    ! NW and NE !
+    if (northwest.ne.MPI_PROC_NULL) then
+       sendNW = p(:,ny-nh:ny,1:nh)  
+    endif
+
+    if (northeast.ne.MPI_PROC_NULL) then
+       sendNE = p(:,ny-nh:ny,nx-nh:nx)  
+    endif
+
+    etag = 3
+    call MPI_SendRecv( &
+         sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,etag, &
+         recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,etag, &
+         MPI_COMM_WORLD,status1,ierr)
+
+    wtag = 4
+    call MPI_SendRecv(&
+         sendNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,wtag, &
+         recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,wtag, &
+         MPI_COMM_WORLD,status1,ierr)
+    !
+    !     Unpack: 
+    if (northwest.ne.MPI_PROC_NULL) then
+       p(:,ny+1:ny+nh,1-nh:0) = recvNW
+    else !!Homogenous Neumann  
+       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
+    endif
+
+    if (northeast.ne.MPI_PROC_NULL) then
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = recvNE
+    else !!Homogenous Neumann  
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+    end if
+    !
+    deallocate(sendNE)
+    deallocate(sendNW)
+    deallocate(recvNE)
+    deallocate(recvNW)
 
   end subroutine fill_halo
 

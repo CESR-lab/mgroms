@@ -31,6 +31,8 @@ contains
     integer(kind=is) :: nx, ny, nz
     integer(kind=is) :: nh
 
+    integer(kind=is)::ierr
+
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
@@ -39,6 +41,8 @@ contains
     p => grid(lev)%p
     b => grid(lev)%b
     cA => grid(lev)%cA
+
+    p(:,:,:) = 0._8
 
     allocate(rhs(nz))
     allocate(d(nz))
@@ -55,13 +59,14 @@ contains
              rhs(k) = b(k,j,i) &
                   - cA(3,k,j,i)*p(k+1,j-1,i) &
                   - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                   - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                  - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
                   - cA(6,k,j,i)*p(k+1,j,i-1) &
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                   - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                  - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
              d(k)   = cA(1,k,j,i)
              ud(k)  = cA(2,k+1,j,i)
              p1d(k) = p(k,j,i)
+
              do k = 2,nz-1
                 rhs(k) = b(k,j,i) &
                      - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
@@ -74,6 +79,7 @@ contains
                 ud(k)  = cA(2,k+1,j,i)
                 p1d(k) = p(k,j,i)
              enddo
+
              k=nz
              rhs(k) = b(k,j,i)                   &
                   - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
@@ -90,6 +96,34 @@ contains
                 p(1:nz,j,i) = p1d (k)
              enddo
           enddo
+!!$          k=1!lower level
+!!$          rhs(k) = b(k,j,i) &
+!!$               - cA(3,k,j,i)*p(k+1,j-1,i) &
+!!$               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+!!$               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+!!$               - cA(6,k,j,i)*p(k+1,j,i-1) &
+!!$               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+!!$               - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+!!$          do k = 2,nz-1
+!!$             rhs(k) = b(k,j,i) &
+!!$                  - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+!!$                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+!!$                  - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+!!$                  - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+!!$                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+!!$                  - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+!!$          enddo
+!!$          k=nz
+!!$          rhs(k) = b(k,j,i)                   &
+!!$               - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+!!$               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+!!$               - cA(5,k,j,i)*p(k-1,j-1,i)      &
+!!$               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)  &
+!!$               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+!!$               - cA(8,k,j,i)*p(k-1,j,i-1)
+!!$          write(*,*)'myrank - sum(rhs):', myrank, sum(rhs)
+!!$          call mpi_barrier(MPI_COMM_world,ierr)
+!!$          stop
        enddo
     enddo
     ! don't call mpi at every pass if nh>1
@@ -108,7 +142,7 @@ contains
     real(kind=8),dimension(l),intent(in)  :: dd
     real(kind=8),dimension(l),intent(out) :: xc
     !     LOCAL
-    integer                  :: i,k
+    integer                  :: k
     real(kind=8),dimension(l):: gam
     real(kind=8)             :: bet
     !
@@ -145,7 +179,8 @@ contains
     real(kind=8),dimension(:,:,:), pointer:: b
     real(kind=8),dimension(:,:,:,:), pointer:: cA
     !     LOCAL 
-    integer(kind=is)           :: i,j,k,red_black
+    integer(kind=is)           :: i,j,k
+    !!integer(kind=is)           ::red_black
     !!real(kind=8),dimension(nz) :: rhs,d,ud,p1d
     real(kind=8) :: res, resmax
     integer(kind=is) :: nx, ny, nz

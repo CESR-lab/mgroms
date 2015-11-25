@@ -4,10 +4,10 @@
 ## If you change this script, submit these commands after change(s) :
 ## aclocal ; automake ; autoconf     
 ########################################################################
-## mgroms 
+## 3Ddiffusion = Fortran Skeleton Package
 ##
 ## OriginalAuthor@mail: Nicolas.Grima@univ-brest.fr
-## Date               : November 2015
+## Date               : January 2013
 ##
 ## Modified, improved by:
 ##   Author@mail:
@@ -39,7 +39,7 @@ AC_PREREQ([2.59])
 #
 ## Initialize autoconf with name of project, version, bug report 
 ## and support email address.
-AC_INIT([mgroms],[0.0.0],[nmolem@atmos.ucla.edu, Guillaume.Roullet@univ-brest.fr, Nicolas.Ducousso@univ-brest.fr, Nicolas.Grima@univ-brest.fr ],[mgroms],[https://github.com/nmolem/mgroms])
+AC_INIT([mgroms],[0.0.1],[nmolem@atmos.ucla.edu, Guillaume.Roullet@univ-brest.fr, Nicolas.Ducousso@univ-brest.fr, Nicolas.Grima@univ-brest.fr ],[mgroms],[https://github.com/nmolem/mgroms])
 #
 ## Set the directory that contains support scripts such as install-sh
 ## and config.guess
@@ -51,7 +51,10 @@ AM_INIT_AUTOMAKE
 AC_CANONICAL_HOST
 #
 ##
-## AC_PREFIX_DEFAULT([/home/grima/NH_MultiGrid])
+##AC_PREFIX_DEFAULT([/home/grima/FORTRAN/3Ddiffusion])
+#
+## Write some configurations parameter in a Fortran 90 file
+## Then these parameters can be used in the Fortran program/modules
 #
 
 #########################################################################
@@ -59,12 +62,13 @@ AC_CANONICAL_HOST
 #########################################################################
 ##
 ## Safety check that correct --srcdir was specified
-AC_CONFIG_SRCDIR([./src/mg_main.f90])
+##AC_CONFIG_SRCDIR([./src/mod_configure.f90])
 #
 #########################################################################
 # Checks for typedefs, structures, and compiler characteristics.
 #########################################################################
 AC_PROG_INSTALL
+
 #
 ## Configue argument definition.
 ## AC_ARG_ENABLE(..,..,etc)
@@ -90,14 +94,44 @@ AC_ARG_ENABLE(
     enable_prof=yes,
     enable_prof=no
              )
+
+#
+## Inetel trace analyser (if it is available)
+##
+AC_ARG_ENABLE(
+    traceanalyser,
+    [  --enable-traceanalyser - Intel traceanalyser (in mpi mode only !).],
+    enable_traceanalyser=yes,
+    enable_traceanalyser=no
+             )
+
+#
+## Quad precision (if it is available)
+##
+AC_ARG_ENABLE(
+    quad,
+    [  --enable-quad - Turn on quad precision for one varaible in Waters.
+                       This options allows to have same results on different
+                       platform.],
+    enable_quad=yes,
+    enable_quad=no
+             )
+
 #
 ## MPI libraries
 ##
 AC_ARG_ENABLE(
-    mpi,
-    [  --enable-mpi - MPI library and includes.],
-    enable_mpi=yes,
-    enable_mpi=no
+    mpt,
+    [  --enable-mpi_mpt - MPT library and includes (caparmor!).],
+    enable_mpi_mpt=yes,
+    enable_mpi_mpt=no
+             )
+
+AC_ARG_ENABLE(
+    intel_mpi,
+    [  --enable-intel_mpi - Intel MPI library and includes.],
+    enable_intel_mpi=yes,
+    enable_intel_mpi=no
              )
 
 AC_ARG_ENABLE(
@@ -113,6 +147,27 @@ AC_ARG_ENABLE(
     enable_mpich=yes,
     enable_mpich=no
              )
+
+#
+## Netcdf if it is need for Netcdf4
+##
+AC_ARG_ENABLE(
+    netcdf,
+    [  --enable-netcdf - Netcdf library and includes.],
+    enable_netcdf=yes,
+    enable_netcdf=no
+             )
+
+#
+## Hdf5 if it is need for Netcdf4
+##
+AC_ARG_ENABLE(
+    hdf5,
+    [  --enable-hdf5 - HDF5 for Netcdf 4.],
+    enable_hdf5=yes,
+    enable_hdf5=no
+             )
+
 #
 ## OpenMP
 ##
@@ -151,34 +206,34 @@ AC_PROG_FC(ifort gfortran f95 fort xlf90 pgf90 epcf90 pathf90 f90 xlf95 lf95 g95
 if test -n "$FC" ; then 
   case "$FC" in
 ##    GENERIC FORTRAN COMPILER (SGI-IRIX, HP-TRUE64, NEC-SX )
-      f90)
-        case "$host" in
+    f90)
+      case "$host" in
         *-sgi-irix*)
-          case "$enable_optimization" in
-	    debug)
-              AC_MSG_NOTICE([  -> DEBUGGING OPTIONS are SELECTED])
-              FCFLAGS="-g -O0 -C -fullwarn -DEBUG:trap_uninitialized=ON:subscript_check=ON"
-              LDFLAGS="-g"
-            ;;
-            aggressive)
-              AC_MSG_NOTICE([  -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
-    	      FCFLAGS="-g3 -O3 -ipa -listing"
+           case "$enable_optimization" in
+	         debug)
+               AC_MSG_NOTICE([  -> DEBUGGING OPTIONS are SELECTED])
+               FCFLAGS="-g -O0 -C -fullwarn -DEBUG:trap_uninitialized=ON:subscript_check=ON"
+               LDFLAGS="-g"
+             ;;
+             aggressive)
+               AC_MSG_NOTICE([  -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
+    	       FCFLAGS="-g3 -O3 -ipa -listing"
+               LDFLAGS="-g3"
+             ;;
+             normal|*)
+               AC_MSG_NOTICE([  -> NORMAL MODE])
+	           FCFLAGS="-g3 -O2 -listing"
               LDFLAGS="-g3"
-            ;;
-            normal|*)
-              AC_MSG_NOTICE([  -> NORMAL MODE])
-	      FCFLAGS="-g3 -O2 -listing"
-              LDFLAGS="-g3"
-	    ;;
-          esac
-	  if test "$enable_prof" = "yes" ; then
-            AC_MSG_WARN([!!! NO PROFILING COMPILER OPTIONS ON IRIX SYSTEM !!!])
-            AC_MSG_WARN([!!!        PLEASE READ SPEEDSHOP MANUAL          !!!])
-          fi
+	         ;;
+           esac
+	       if test "$enable_prof" = "yes" ; then
+              AC_MSG_WARN([!!! NO PROFILING COMPILER OPTIONS ON IRIX SYSTEM !!!])
+              AC_MSG_WARN([!!!        PLEASE READ SPEEDSHOP MANUAL          !!!])
+           fi
         ;;
         alpha*-dec-osf*)
           case "$enable_optimization" in
-	    debug)
+	        debug)
               AC_MSG_NOTICE([  -> DEBUGGING OPTIONS are SELECTED])
               FCFLAGS="-V -ladebug -g -O0 -C -check overflow -check underflow -warn nouninitialized -warn argument_checking"
               LDFLAGS="-ladebug -g"
@@ -190,11 +245,11 @@ if test -n "$FC" ; then
             ;;
             normal|*)
               AC_MSG_NOTICE([  -> NORMAL MODE])
-	      FCFLAGS="-V -g3 -O"
+	          FCFLAGS="-V -g3 -O"
               LDFLAGS=""
-	    ;;
+	        ;;
           esac
-	  if test "$enable_prof" = "yes" ; then
+	      if test "$enable_prof" = "yes" ; then
             AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
             FCFLAGS="-pg $FCFLAGS"
             LDFLAGS="-pg $LDFLAGS"
@@ -202,7 +257,7 @@ if test -n "$FC" ; then
         ;;
         *nec*superux*)
           case "$enable_optimization" in
-	    debug)
+	        debug)
               AC_MSG_NOTICE([  -> DEBUGGING OPTIONS are SELECTED])
               FCFLAGS='-C debug -eR -eP -R1 -R5 -Wf"-L nostdout" -Wf"-L source mrgmsg" -Wf"-L summary" -Wf"-init stack=nan" -Wf"-init heap=nan" -Wl"-f nan" Wf"-msg d" -Wf"-msg o"'
               LDFLAGS="-C debug"
@@ -214,24 +269,24 @@ if test -n "$FC" ; then
             ;;
             normal|*)
               AC_MSG_NOTICE([  -> NORMAL MODE])
-	      FCFLAGS='-R1 -R5 -Wf"-L nostdout"  -Wf"-L summary" -Wf"-pvctl fullmsg" -Wf"-O infomsg"'
+	          FCFLAGS='-R1 -R5 -Wf"-L nostdout"  -Wf"-L summary" -Wf"-pvctl fullmsg" -Wf"-O infomsg"'
               LDFLAGS=""
-	    ;;
+	        ;;
           esac
-	  if test "$enable_prof" = "yes" ; then
+	      if test "$enable_prof" = "yes" ; then
             AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
             FCFLAGS="-ftrace $FCFLAGS"
             LDFLAGS="-ftrace $LDFLAGS"
           fi
-	  if test "$enable_openmp" = "yes" ; then
+	      if test "$enable_openmp" = "yes" ; then
             AC_MSG_NOTICE([  -> OpenMP PARALLELISATION IS SELECTED])
             FCFLAGS="-Popenmp $FCFLAGS"
             LDFLAGS="-Popenmp $LDFLAGS"
           fi
-	;;
+	    ;;
         *solaris*)
           case "$enable_optimization" in
-	    debug)
+	        debug)
               AC_MSG_NOTICE([  -> DEBUGGING OPTIONS are SELECTED])
               FCFLAGS="-g -C -stackvar -w4"
               LDFLAGS="-g "
@@ -243,59 +298,59 @@ if test -n "$FC" ; then
             ;;
             normal|*)
               AC_MSG_NOTICE([  -> NORMAL MODE])
-	      FCFLAGS="-O2"
+	         FCFLAGS="-O2"
               LDFLAGS=""
-	    ;;
+	        ;;
           esac
-	  if test "$enable_prof" = "yes" ; then
+	      if test "$enable_prof" = "yes" ; then
             AC_MSG_NOTICE([  -> PROFILING is SELECTED (prof)])
             FCFLAGS="-p $FCFLAGS"
             LDFLAGS="-p $LDFLAGS"
           fi
         ;;
         *)
-          AC_MSG_WARN([mgroms MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host !!!])
+          AC_MSG_WARN([3Ddiffusion MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host !!!])
         ;;
         esac
-        ;;
+      ;;
 ##    INTEL FORTRAN COMPILER on LINUX OPERATING SYSTEM
       ifort)
-	case "$enable_optimization" in
-	  debug)
-            AC_MSG_NOTICE([ifort  -> DEBUGGING OPTIONS are SELECTED])
-	    CFLAGS="-g -O0"
-            FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
+	    case "$enable_optimization" in
+	      debug)
+            AC_MSG_NOTICE([ifort -> DEBUGGING OPTIONS are SELECTED])
+	        CFLAGS="-g -O0"
+            	FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
 	        LDFLAGS="-g -O0 -check all -traceback -auto"
           ;;
           aggressive)
-            AC_MSG_NOTICE([ifort  -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
-	        CFLAGS ="-g -O3 -no-prec-div -xHost -fp-model fast=2 -static"
-    	    FCFLAGS="-g -O3 -no-prec-div -xHost -fp-model fast=2 -static"
-            LDFLAGS="-g -O3 -no-prec-div -xHost -fp-model fast=2 -static"
+            AC_MSG_NOTICE([ifort -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
+	        CFLAGS=" -g -O3 -xHost -ipo"
+    	   	FCFLAGS="-g -O3 -xHost -ipo"
+            	LDFLAGS="-g -O3 -xHost -ipo"
           ;;
           normal|*)
-            AC_MSG_NOTICE([ifort  -> NORMAL MODE])
-	    CFLAGS="-g -O2"
-	    FCFLAGS="-g -O2"
-	  ;;
-	esac
-	if test "$enable_prof" = "yes" ; then
-          AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
-	  CFLAGS="-pg $CFLAGS"
-          FCFLAGS="-pg $FCFLAGS"
-          LDFLAGS="-pg $LDFLAGS"
+            AC_MSG_NOTICE([ifort -> NORMAL MODE])
+	        CFLAGS="-g -O2"
+	        FCFLAGS="-g -O2"
+	      ;;
+	    esac
+	    if test "$enable_prof" = "yes" ; then
+          AC_MSG_NOTICE([      -> PROFILING is SELECTED (gprof and intel report)])
+	      CFLAGS="-pg $CFLAGS"
+              FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all $FCFLAGS"
+              LDFLAGS="-pg $LDFLAGS"
         fi
-	if test "$enable_openmp" = "yes" ; then
-          AC_MSG_NOTICE([  -> OpenMP PARALLELISATION IS SELECTED])
+     	if test "$enable_openmp" = "yes" ; then
+          AC_MSG_NOTICE([      -> OpenMP PARALLELISATION IS SELECTED])
 	      CFLAGS="-openmp $CFLAGS"
           FCFLAGS="-openmp $FCFLAGS"
           LDFLAGS="-openmp $LDFLAGS"
         fi
-        ;;
+      ;;
 ##    IBM FORTRAN COMPILER on AIX OPERATING SYSTEM
       xlf90|xlf95)
-	case "$enable_optimization" in
-	  debug)
+	    case "$enable_optimization" in
+	      debug)
             FCFLAGS="-qsuffix=cpp=F90 -qsuffix=f=f90 -qfree=f90 -g -qnooptimize -C -qinitauto=7FBFFFFF -qflttrap=overflow:underflow:zerodivide:invalid:enable -qfloat=nans -qsigtrap -qextchk"
           ;;
           aggressive)
@@ -304,46 +359,46 @@ if test -n "$FC" ; then
           ;;
           normal|*)
             FCFLAGS="-qsuffix=cpp=F90 -qsuffix=f=f90 -qfree=f90 -O3 -qstrict"
-	  ;;
-	esac
-	if test "$enable_prof" = "yes" ; then
+	      ;;
+	    esac
+	    if test "$enable_prof" = "yes" ; then
           AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
           FCFLAGS="-pg $FCFLAGS"
           LDFLAGS="-pg $LDFLAGS"
         fi
-	if test "$enable_openmp" = "yes" ; then
+	    if test "$enable_openmp" = "yes" ; then
           AC_MSG_NOTICE([  -> OpenMP PARALLELISATION IS SELECTED])
           FCFLAGS="-qnosave -qsmp=omp $FCFLAGS"
           LDFLAGS="-qnosave -qsmp=omp $LDFLAGS"
         fi
-        ;;
+      ;;
 ##    PORTLAND GROUP FORTRAN COMPILER
       pgf90)
-	FCFLAGS="-g"
-        ;;
+	    FCFLAGS="-g"
+      ;;
 ##    GENERIC Fortran 95 compiler (not tested)
       f95)
-	FCFLAGS="-g"
-        ;;
+    	FCFLAGS="-g"
+      ;;
 ##    HP_COMPAQ ALPHASERVER FORTRAN COMPILER (LINUX OPERATING SYSTEM)
       fort)
-	FCFLAGS="-g"
-        ;;
+	    FCFLAGS="-g"
+      ;;
 ##    Lahey-Fujitsu compiler
       lf95)
-	FCFLAGS="-g"
-        ;;
+	    FCFLAGS="-g"
+      ;;
 ##    PATHSCALE FORTRAN COMPILER (AMD-OPTERON) (Not Tested)
       pathf90)
-	FCFLAGS="-g"
-        ;;
+	    FCFLAGS="-g"
+      ;;
 ##    GNU FORTRAN 90/95 COMPILER (Tested on Intel-PC and Mac OS X)
       g95)
-	case "$enable_optimization" in
-	  debug)
+	    case "$enable_optimization" in
+	      debug)
             AC_MSG_NOTICE([  -> DEBUGGING OPTIONS are SELECTED])
             FCFLAGS="-g -O0 -fno-second-underscore -Wall -Wunset-vars -Wunused-vars -fbounds-check "
-	    LDFLAGS="-g -O0 -fno-second-underscore"
+	        LDFLAGS="-g -O0 -fno-second-underscore"
           ;;
           aggressive)
             AC_MSG_NOTICE([  -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
@@ -352,16 +407,16 @@ if test -n "$FC" ; then
           ;;
           normal|*)
             AC_MSG_NOTICE([  -> NORMAL MODE])
-	    FCFLAGS="-g -O -fno-second-underscore"
+	        FCFLAGS="-g -O -fno-second-underscore"
             LDFLAGS="-g -O -fno-second-underscore"
-	  ;;
-	esac
-	if test "$enable_prof" = "yes" ; then
+	      ;;
+	    esac
+	    if test "$enable_prof" = "yes" ; then
           AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
           FCFLAGS="-pg $FCFLAGS"
           LDFLAGS="-pg $LDFLAGS"
         fi
-        ;;
+      ;;
 ##    OFFICIAL GCC GNU FORTRAN 90/95 COMPILER (Tested on Intel-PC with Linux/Ubuntu)
       gfortran)
 	    case "$enable_optimization" in
@@ -373,7 +428,7 @@ if test -n "$FC" ; then
           ;;
           aggressive)
             AC_MSG_NOTICE([  -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
-	        CFLAGS ="-g -O3"
+	        CFLAGS="-g -O3"
     	    FCFLAGS="-g -O3 -frecord-marker=4"
             LDFLAGS="-g -O3 -frecord-marker=4"
           ;;
@@ -382,22 +437,26 @@ if test -n "$FC" ; then
 	        CFLAGS="-g -O2"
 	        FCFLAGS="-g -O2 -frecord-marker=4"
             LDFLAGS="-g -O2 -frecord-marker=4"
-	  ;;
-	esac
-	if test "$enable_prof" = "yes" ; then
+	      ;;
+	    esac
+	    if test "$enable_prof" = "yes" ; then
           AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
 	      CFLAGS="-pg $CFLAGS"
           FCFLAGS="-pg $FCFLAGS"
           LDFLAGS="-pg $LDFLAGS"
         fi
-        if test "$enable_openmp" = "yes" ; then
+     	if test "$enable_openmp" = "yes" ; then
           AC_MSG_NOTICE([      -> OpenMP PARALLELISATION IS SELECTED])
 	      CFLAGS="-fopenmp $CFLAGS"
           FCFLAGS="-fopenmp $FCFLAGS"
           LDFLAGS="-fopenmp $LDFLAGS"
         fi
-        ;;
+
+      ;;
   esac  
+  #AC_MSG_NOTICE([$FC options:])
+  #AC_MSG_NOTICE([    - FCFLAGS     =  ${FCFLAGS}])
+  #AC_MSG_NOTICE([    - FCFLAGS_f90 = ${FCFLAGS_f90}])
   #AC_FC_SRCEXT(f90)
   #AC_FC_FREEFORM()
   F77=$FC
@@ -408,10 +467,23 @@ else
                install a Fortran 90 compiler.])
 fi
 
-if test "$enable_mpi" = "yes" ; then
-  AC_MSG_NOTICE([       -> MPI PARALLELISATION IS SELECTED])
-  AC_MSG_NOTICE([ ifort -> mpiifort]) 
+if test "$enable_mpi_mpt" = "yes" ; then
+  AC_MSG_NOTICE([       -> MPT PARALLELISATION IS SELECTED (caparmor)])
+  AC_MSG_NOTICE([       -> mpif90]) 
+  FC=mpif90
+  CFLAGS="$CFLAGS"
+  FCFLAGS="$FCFLAGS -I${MPI_INC}"
+  LDFLAGS="$LDFLAGS -I${MPI_INC} -L${MPI_LIB} -lmpi"
+fi
+
+if test "$enable_intel_mpi" = "yes" ; then
+  AC_MSG_NOTICE([       -> Intel MPI PARALLELISATION IS SELECTED])
+  AC_MSG_NOTICE([       -> mpiifort]) 
   FC=mpiifort
+  if test "$enable_traceanalyser" = "yes" ; then
+     FC="$FC -trace"
+     AC_MSG_NOTICE([       -> mpiifort -trace (traceanalyser)])
+  fi
   CFLAGS="$CFLAGS"
   FCFLAGS="$FCFLAGS -I${MPI_INC}"
   LDFLAGS="$LDFLAGS -I${MPI_INC} -L${MPI_LIB} -lmpi"
@@ -433,6 +505,17 @@ if test "$enable_mpich" = "yes" ; then
   LDFLAGS="$LDFLAGS -I${MPI_INC} -L${MPI_LIB} -lmpich -lmpichf90"
 fi
 
+#
+# Quad precision -> Add a precompilation option.
+# It concerns only the mod_precision.f90 fortran module.
+#
+if test "$enable_quad" = "yes" ; then
+  CPPFLAGS="-Dquad"
+  AC_MSG_NOTICE([  -> Quad Precision is used to improve precision])
+else	
+  CPPFLAGS=""
+fi
+
 ########################################################
 ## Test if fortran compiler works on a simple program ##
 ########################################################
@@ -449,7 +532,7 @@ if AC_TRY_EVAL(doit); then
 else
   nc_ans=no
 fi
-rm -f conftest.f90 a.out
+rm -f conftest.f90 a.out \$\<.log
 AC_MSG_RESULT([$nc_ans])
 if test "x$nc_ans" = xno; then
   AC_MSG_ERROR([A simple Fortran 90 test doesn't work.])
@@ -479,22 +562,25 @@ AC_OUTPUT()
 echo ""
 echo "Configuration Parameters:"
 echo "------------------------"
-echo "mgroms's version........ ${VERSION}"
+echo "3Ddiffusion's version........ ${VERSION}"
 echo "prefix............... ${prefix}"
 echo "FC................... ${FC}"
 echo "FCFLAGS.............. ${FCFLAGS}"
 echo "FCFLAGS_f90.......... ${FCFLAGS_f90}"
 echo "LDFLAGS.............. ${LDFLAGS}"
 echo "LIBS................. ${LIBS}"
+##echo "CPP.................. ${CPP}"
+##echo "CPPFLAGS............. ${CPPFLAGS}"
+##echo "CC................... ${CC}"
+##echo "CFLAGS............... ${CFLAGS}"
 echo "ENABLE_OPTIMIZATION.. ${enable_optimization}"
-echo "ENABLE_PROFILING..... ${enable_prof}"
-echo "ENABLE_MPI........... ${enable_mpi}"
-echo "ENABLE_OPENMPI....... ${enable_openmpi}"
-if test "$enable_openmpi" = "yes" ; then
-  echo "  -MPI_LIB........... ${MPI_LIB}"
-  echo "  -MPI_INC........... ${MPI_INC}"
+echo "ENABLE_NETCDF........ ${enable_netcdf}"
+if test "$enable_netcdf" = "yes" ; then
+  echo "  -NETCDF_LIB........ ${NETCDF_LIB}"
+  echo "  -NETCDF_INC........ ${NETCDF_INC}"
 fi
-echo "ENABLE_MPICH......... ${enable_mpich}"
+echo "ENABLE_PROFILING..... ${enable_prof}"
+echo "ENABLE_QUAD.......... ${enable_quad}"
 echo "host................. ${host}"
 echo ""
 date
@@ -502,6 +588,6 @@ date
 # Inform users of the very useful configure.eg
 echo ""
 echo "*******************************************************************"
-echo "*                mgroms's configuration is completed              *" 
+echo "*   Fortran Skeleton Package (3Ddiffusion)'s configuration is completed   *" 
 echo "* You are now ready to run 'make clean', 'make' and 'make install'*"
 echo "*******************************************************************"

@@ -28,6 +28,7 @@ bin_PROGRAMS = mgroms
 mgroms_SOURCES =         \
 	mg_mpi.f90           \
 	mg_grids.f90         \
+	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
 	mg_relax_line.f90    \
 	mg_testrelax.f90

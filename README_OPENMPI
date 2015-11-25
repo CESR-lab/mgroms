@@ -12,7 +12,8 @@ Compilation:
 setenv MPI_INC /usr/lib/openmpi/lib
 setenv MPI_LIB /usr/lib/openmpi/lib
 
-./configure --prefix=../. --enable-openmpi
+./configure --prefix=/home/grima/NH_MultiGrid --enable-openmpi
+(./configure --prefix=/home/grima/NH_MultiGrid --enable-openmpi --enable-optimization=debug)
 make clean
 make 
 make install
@@ -23,4 +24,4 @@ mpif90 options -I/usr/lib/openmpi/lib  -L/usr/lib/openmpi/lib -lmpi -o mgroms *.
 Soumission:
 ----------
 setenv LD_LIBRARY_PATH "/usr/lib/openmpi/lib:$LD_LIBRARY_PATH"
-mpirun -np 4 3Ddiffusion
+mpirun -np 4 mgroms

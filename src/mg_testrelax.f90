@@ -3,6 +3,7 @@ program mg_testrelax
   use mg_mpi ! everything will come from the outside !!!
 
   use mg_grids
+  use mg_define_rhs
   use mg_define_matrix
   use mg_relax
 
@@ -25,8 +26,8 @@ program mg_testrelax
   nyg   = 128
   nzg   = 128
   nhalo = 2
-  npxg  = 2
-  npyg  = 2
+  npxg  = 1
+  npyg  = 1
 
   nit     = 1
   nsweeps = 2
@@ -35,9 +36,13 @@ program mg_testrelax
 
   call define_grids(nhalo,npxg,npyg)
 
+  call define_rhs(nxg, nyg, nzg, npxg, npyg)
+
   call define_matrix_simple()
 
   lev = 1
+  call check_solution(lev)
+
   do it=1, nit
      call relax_line(lev,nsweeps)
   enddo

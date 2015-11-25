@@ -92,8 +92,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_mgroms_OBJECTS = mg_mpi.$(OBJEXT) mg_grids.$(OBJEXT) \
-	mg_define_matrix.$(OBJEXT) mg_relax_line.$(OBJEXT) \
-	mg_testrelax.$(OBJEXT)
+	mg_define_rhs.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
+	mg_relax_line.$(OBJEXT) mg_testrelax.$(OBJEXT)
 mgroms_OBJECTS = $(am_mgroms_OBJECTS)
 mgroms_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -289,6 +289,7 @@ SUBDIRS = .
 mgroms_SOURCES = \
 	mg_mpi.f90           \
 	mg_grids.f90         \
+	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
 	mg_relax_line.f90    \
 	mg_testrelax.f90
