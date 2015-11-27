@@ -4,6 +4,8 @@ module mg_define_rhs
 
   implicit none
 
+   real(kind=rl):: dx, dy, dz
+
 contains
 
   subroutine define_rhs(nxg, nyg, nzg, npxg, npyg)
@@ -20,8 +22,6 @@ contains
     real(kind=rl):: sizex, sizey, sizez
     real(kind=rl):: x0, y0, z0
     real(kind=rl):: x1, y1, z1
-
-    real(kind=rl):: dx, dz
 
     real(kind=rl):: x,y,z
 
@@ -52,6 +52,7 @@ contains
     rhs => grid(lev)%b
 
     dx = sizex / nxg
+    dy = sizey / nyg
     dz = sizez / nz
 
     pj = myrank/npxg   
@@ -65,7 +66,7 @@ contains
           !y =real(j,kind=rl)
 
           do k = 1,nz
-             z =(real(k,kind=rl)- 0.5_8) * dz
+             z = -(real(k,kind=rl)- 0.5_8) * dz
 
              rhs(k,j,i) = &
                   exp(-bet * ((x-x0)**2 + (z-z0)**2)) - &
@@ -75,7 +76,7 @@ contains
        enddo
     enddo
 
-    !!write(*,*)'myrank - sum(rhs):', myrank, sum(rhs)
+    write(*,*)'myrank - sum(rhs):', myrank, sum(rhs(:,1:ny,1:nx))
 
   end subroutine define_rhs
 

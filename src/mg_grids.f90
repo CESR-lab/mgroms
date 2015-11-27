@@ -63,6 +63,7 @@ contains
        nz = grid(lev)%nz
        nh = grid(lev)%nh
        allocate(grid(lev)%p(   nz,1-nh:ny+nh,1-nh:nx+nh))
+       grid(lev)%p(:,:,:)=0._8
        allocate(grid(lev)%b(   nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%cA(8,nz,1-nh:ny+nh,1-nh:nx+nh))
     enddo
@@ -132,6 +133,8 @@ contains
     integer(kind=is), intent(in):: lev
 
     real(kind=rl),dimension(:,:,:), pointer :: p
+ 
+!    real(kind=rl),dimension(:,:,:),intent(inout)::p
 
     integer(kind=is) :: nx, ny, nz
     integer(kind=is) :: nh
@@ -139,6 +142,7 @@ contains
     integer(kind=is) :: southwest, southeast, northeast, northwest
 
     integer(kind=is) :: etag, wtag, ntag, stag
+    integer(kind=is) :: swtag, setag, nwtag, netag
     integer(kind=is) :: ierr,status1 
     !!integer(kind=is) :: ilev
 
@@ -193,16 +197,16 @@ contains
     endif
 
     if (east.ne.MPI_PROC_NULL) then
-       sendE = p(:,1:ny,nx-nh:nx)  
+       sendE = p(:,1:ny,nx-nh+1:nx)  
     endif
 
-    etag = 3
+    etag = 1
     call MPI_SendRecv(                                  &
          sendE,nz*ny*nh,MPI_DOUBLE_PRECISION,east,etag, &
          recvW,nz*ny*nh,MPI_DOUBLE_PRECISION,west,etag, &
          MPI_COMM_WORLD,status1,ierr)
 
-    wtag = 4
+    wtag = 1
     call MPI_SendRecv(                                  &
          sendW,nz*ny*nh,MPI_DOUBLE_PRECISION,west,wtag, &
          recvE,nz*ny*nh,MPI_DOUBLE_PRECISION,east,wtag, &
@@ -234,16 +238,16 @@ contains
        sendS = p(:,1:nh,1:nx)  
     endif
     if (north.ne.MPI_PROC_NULL) then
-       sendN = p(:,ny-nh:ny,1:nx)  
+       sendN = p(:,ny-nh+1:ny,1:nx)  
     endif
     ntag = 1
     call MPI_SendRecv(&
          sendN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,ntag, &
          recvS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,ntag, &
          MPI_COMM_WORLD,status1,ierr)
-    stag = 2
-    call MPI_SendRecv&
-         (sendS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,stag, &
+    stag = 1
+    call MPI_SendRecv(&
+         sendS,nz*nx*nh,MPI_DOUBLE_PRECISION,south,stag, &
          recvN,nz*nx*nh,MPI_DOUBLE_PRECISION,north,stag, &
          MPI_COMM_WORLD,status1,ierr)
     !
@@ -274,19 +278,19 @@ contains
     endif
 
     if (southeast.ne.MPI_PROC_NULL) then
-       sendSE = p(:,1:nh,nx-nh:nx)  
+       sendSE = p(:,1:nh,nx-nh+1:nx)  
     endif
 
-    etag = 3
+    setag = 1
     call MPI_SendRecv(&
-         sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,etag, &
-         recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,etag, &
+         sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,setag, &
+         recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,setag, &
          MPI_COMM_WORLD,status1,ierr)
 
-    wtag = 4
+    swtag = 1
     call MPI_SendRecv(&
-         sendSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,wtag, &
-         recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,wtag, &
+         sendSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest,swtag, &
+         recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast,swtag, &
          MPI_COMM_WORLD,status1,ierr)
     !
     !     Unpack: 
@@ -309,23 +313,23 @@ contains
 
     ! NW and NE !
     if (northwest.ne.MPI_PROC_NULL) then
-       sendNW = p(:,ny-nh:ny,1:nh)  
+       sendNW = p(:,ny-nh+1:ny,1:nh)  
     endif
 
     if (northeast.ne.MPI_PROC_NULL) then
-       sendNE = p(:,ny-nh:ny,nx-nh:nx)  
+       sendNE = p(:,ny-nh+1:ny,nx-nh+1:nx)  
     endif
 
-    etag = 3
+    netag = 1
     call MPI_SendRecv( &
-         sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,etag, &
-         recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,etag, &
+         sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,netag, &
+         recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,netag, &
          MPI_COMM_WORLD,status1,ierr)
 
-    wtag = 4
+    nwtag = 1
     call MPI_SendRecv(&
-         sendNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,wtag, &
-         recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,wtag, &
+         sendNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest,nwtag, &
+         recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast,nwtag, &
          MPI_COMM_WORLD,status1,ierr)
     !
     !     Unpack: 
@@ -345,6 +349,13 @@ contains
     deallocate(sendNW)
     deallocate(recvNE)
     deallocate(recvNW)
+
+    !write(*,*)'rank- p(nz/2,0:1,0)       :', myrank, p(nz/2,0:1,0), p(nz/2,1,1)
+    !write(*,*)'rank- p(nz/2,0:1,nx/2)    :', myrank, p(nz/2,0:1,nx/2)
+    !write(*,*)'rank- p(nz/2,0:1,nx+1)    :', myrank, p(nz/2,0:1,nx+1), p(nz/2,1,nx)
+    !write(*,*)'rank- p(nz/2,ny:ny+1,0)   :', myrank, p(nz/2,ny:ny+1,0), p(nz/2,ny,1)
+    !write(*,*)'rank- p(nz/2,ny:ny+1,nx/2):', myrank, p(nz/2,ny:ny+1,nx/2)
+    !write(*,*)'rank- p(nz/2,ny:ny+1,nx+1):', myrank, p(nz/2,ny:ny+1,nx+1), p(nz/2,ny,nx)
 
   end subroutine fill_halo
 

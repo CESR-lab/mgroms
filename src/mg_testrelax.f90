@@ -25,9 +25,9 @@ program mg_testrelax
   nxg   = 128
   nyg   = 128
   nzg   = 128
-  nhalo = 2
-  npxg  = 1
-  npyg  = 1
+  nhalo = 1
+  npxg  = 2
+  npyg  = 2
 
   nit     = 1
   nsweeps = 2
@@ -45,9 +45,10 @@ program mg_testrelax
 
   do it=1, nit
      call relax_line(lev,nsweeps)
+     call check_solution(lev)
   enddo
 
-  call check_solution(lev)
+!  call check_solution(lev)
 
   call mg_mpi_finalize()
 

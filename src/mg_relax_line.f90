@@ -42,59 +42,75 @@ contains
     b => grid(lev)%b
     cA => grid(lev)%cA
 
-    p(:,:,:) = 0._8
-
-    allocate(rhs(nz))
-    allocate(d(nz))
-    allocate(ud(nz))
-    allocate(p1d(nz))
+    ! whazt's the fastest, pull from preallocated or allocate/deallocate on the fly?
+    !rhs => grid(lev)%rhs
+     
+    if (.not.allocated(rhs)) allocate(rhs(nz))
+    if (.not.allocated(d)) allocate(d(nz))
+    if (.not.allocated(ud)) allocate(ud(nz))
+    if (.not.allocated(p1d)) allocate(p1d(nz))
 
     !
     ! add a loop on smoothing
     do it = 1,nsweeps
+
        do i = 1,nx
           !           do i = 1 + mod(j+red_black,2),nx, 2
           do j = 1,ny
+
              k=1!lower level
              rhs(k) = b(k,j,i) &
                   - cA(3,k,j,i)*p(k+1,j-1,i) &
-                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                  - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+                                             - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
                   - cA(6,k,j,i)*p(k+1,j,i-1) &
-                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                  - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
+                                             - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
              d(k)   = cA(1,k,j,i)
              ud(k)  = cA(2,k+1,j,i)
+! is that useful?
              p1d(k) = p(k,j,i)
+!
 
-             do k = 2,nz-1
+             do k = 2,nz-1!interior levels
                 rhs(k) = b(k,j,i) &
-                     - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
-                     - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                     - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-                     - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
-                     - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                     - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+                     - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+                     - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
+                     - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+                     - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
                      - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
                 d(k)   = cA(1,k,j,i)
                 ud(k)  = cA(2,k+1,j,i)
                 p1d(k) = p(k,j,i)
              enddo
 
-             k=nz
-             rhs(k) = b(k,j,i)                   &
-                  - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
-                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                  - cA(5,k,j,i)*p(k-1,j-1,i)      &
-                  - cA(6,k-1,j,i+1)*p(k-1,j,i+1)  &
-                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+             k=nz!upper level
+             rhs(k) = b(k,j,i) &
+                                             - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+                  - cA(5,k,j,i)*p(k-1,j-1,i) &
+                                             - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
                   - cA(8,k,j,i)*p(k-1,j,i-1) 
              d(k)   = cA(1,k,j,i)
              p1d(k) = p(k,j,i)
 
-             call tridiag(nz,d,ud,rhs,p1d)
+             if (i == nx/2) then
+               if (j == ny/2) then
+                 write(*,*)'rank- rhs(nz/2)       :', myrank, rhs(nz/2)
+               endif
+             endif
+
+             call tridiag(nz,d,ud,rhs,p1d) !solve for vertical_coeff_matrix.p1d=rhs
+
              do k = 1,nz
-                p(1:nz,j,i) = p1d (k)
+! ND test
+!                p(1:nz,j,i) = p1d(k)
+                p(k,j,i) = p1d(k)
+!
              enddo
+
           enddo
 !!$          k=1!lower level
 !!$          rhs(k) = b(k,j,i) &
@@ -125,10 +141,11 @@ contains
 !!$          call mpi_barrier(MPI_COMM_world,ierr)
 !!$          stop
        enddo
+    
     enddo
     ! don't call mpi at every pass if nh>1
-    call fill_halo(lev)
-    !       
+    call fill_halo(lev) ! add the name of the variable as a second argument
+    !      
   end subroutine relax_line
 
   !----------------------------------------
@@ -203,6 +220,7 @@ contains
     do i = 1,nx
        !           do i = 1 + mod(j+red_black,2),nx, 2
        do j = 1,ny
+
           k=1!lower level
           res = b(k,j,i) &
                - cA(1,k,j,i)*p(k,j,i)                                   &
@@ -213,10 +231,9 @@ contains
                - cA(6,k,j,i)*p(k+1,j,i-1) &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
-
           resmax = max(resmax,abs(res))
 
-          do k = 2,nz-1
+          do k = 2,nz-1!interior levels
              res = b(k,j,i)                                                &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
                   - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
@@ -228,7 +245,8 @@ contains
                   - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
              resmax = max(resmax,abs(res))
           enddo
-          k=nz
+
+          k=nz!upper level
           res = b(k,j,i)                   &
                - cA(1,k,j,i)*p(k,j,i)                                   &
                - cA(2,k,j,i)*p(k-1,j,i)     &

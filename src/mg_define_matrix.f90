@@ -1,6 +1,7 @@
 module mg_define_matrix
 
   use mg_grids
+  use mg_define_rhs
 
   implicit none
 
@@ -34,9 +35,9 @@ contains
 
     cA => grid(1)%cA ! check the syntax / lighten the writing
 
-    dxi=1._8
-    dyi=1._8
-    dzi=1._8
+    dxi=1._8/dx
+    dyi=1._8/dy
+    dzi=1._8/dz
 
     !extended loops will be a pain for the real matrix
     do i = 1-nh,nx+nh
