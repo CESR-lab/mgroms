@@ -37,7 +37,7 @@ program mg_testrelax
 
   call define_grids(nhalo,npxg,npyg)
 
-  call define_rhs(nxg, npxg)
+  call define_rhs(nxg, nyg, npxg)
 
   call define_matrix_simple()
 

@@ -8,9 +8,9 @@ module mg_define_rhs
 
 contains
 
-  subroutine define_rhs(nxg, npxg)
+  subroutine define_rhs(nxg, nyg, npxg)
 
-    integer(kind=is), intent(in) :: nxg
+    integer(kind=is), intent(in) :: nxg,nyg
     integer(kind=is), intent(in) :: npxg
 
     real(kind=rl), dimension(:,:,:), pointer :: rhs

@@ -17,4 +17,8 @@ Makefile
 *.pdf
 # Ignore all files *.swp
 *.swp
+# Ignore autom4te.cache/requests
+autom4te.cache/requests
+# Ignore config.status
+config.status
 # script end #
