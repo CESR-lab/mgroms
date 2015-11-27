@@ -16,6 +16,15 @@ module mg_grids
      integer(kind=is),dimension(8)::neighb
   end type grid_type
 
+  type type_halo
+    real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+    real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+    real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+    real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
+  end type type_halo
+
+  type(type_halo),dimension(maxlev) :: halo
+
   type(grid_type), dimension(maxlev) :: grid
   integer:: nlevs ! index of the coarsest level (1 is the finest)
   integer:: nhalo
@@ -66,6 +75,26 @@ contains
        grid(lev)%p(:,:,:)=0._8
        allocate(grid(lev)%b(   nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%cA(8,nz,1-nh:ny+nh,1-nh:nx+nh))
+
+       allocate(halo(lev)%sendS(nz,nh,nx))
+       allocate(halo(lev)%recvS(nz,nh,nx))
+       allocate(halo(lev)%sendN(nz,nh,nx))
+       allocate(halo(lev)%recvN(nz,nh,nx))
+
+       allocate(halo(lev)%sendE(nz,ny,nh))
+       allocate(halo(lev)%recvE(nz,ny,nh))
+       allocate(halo(lev)%sendW(nz,ny,nh))
+       allocate(halo(lev)%recvW(nz,ny,nh))
+
+       allocate(halo(lev)%sendSW(nz,nh,nh))
+       allocate(halo(lev)%sendSE(nz,nh,nh))
+       allocate(halo(lev)%sendNW(nz,nh,nh))
+       allocate(halo(lev)%sendNE(nz,nh,nh))
+
+       allocate(halo(lev)%recvSW(nz,nh,nh))
+       allocate(halo(lev)%recvSE(nz,nh,nh))
+       allocate(halo(lev)%recvNW(nz,nh,nh))
+       allocate(halo(lev)%recvNE(nz,nh,nh))
     enddo
 
     ! Neighbours
@@ -146,10 +175,10 @@ contains
     integer(kind=is) :: ierr,status1 
     !!integer(kind=is) :: ilev
 
-    real(kind=rl),dimension(:,:,:),allocatable :: sendN,recvN,sendS,recvS
-    real(kind=rl),dimension(:,:,:),allocatable :: sendE,recvE,sendW,recvW
-    real(kind=rl),dimension(:,:,:),allocatable :: sendSW,recvSW,sendSE,recvSE
-    real(kind=rl),dimension(:,:,:),allocatable :: sendNW,recvNW,sendNE,recvNE
+    real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+    real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+    real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+    real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -167,27 +196,25 @@ contains
     northeast = grid(lev)%neighb(7)
     northwest = grid(lev)%neighb(8)
 
+    sendS => halo(lev)%sendS
+    recvS => halo(lev)%recvS
+    sendN => halo(lev)%sendN
+    recvN => halo(lev)%recvN
 
-    ! To place outside of this routine in global variable !
-    allocate(sendS(nz,nh,nx))
-    allocate(recvS(nz,nh,nx))
-    allocate(sendN(nz,nh,nx))
-    allocate(recvN(nz,nh,nx))
+    sendE => halo(lev)%sendE
+    recvE => halo(lev)%recvE
+    sendW => halo(lev)%sendW
+    recvW => halo(lev)%recvW
 
-    allocate(sendE(nz,ny,nh))
-    allocate(recvE(nz,ny,nh))
-    allocate(sendW(nz,ny,nh))
-    allocate(recvW(nz,ny,nh))
+    sendSW => halo(lev)%sendSW
+    sendSE => halo(lev)%sendSE
+    sendNW => halo(lev)%sendNW
+    sendNE => halo(lev)%sendNE
 
-    allocate(sendSW(nz,nh,nh))
-    allocate(sendSE(nz,nh,nh))
-    allocate(sendNW(nz,nh,nh))
-    allocate(sendNE(nz,nh,nh))
-
-    allocate(recvSW(nz,nh,nh))
-    allocate(recvSE(nz,nh,nh))
-    allocate(recvNW(nz,nh,nh))
-    allocate(recvNE(nz,nh,nh))
+    recvSW => halo(lev)%recvSW
+    recvSE => halo(lev)%recvSE
+    recvNW => halo(lev)%recvNW
+    recvNE => halo(lev)%recvNE
 
     !-----------
     !    Fill West-East ghost cells
@@ -225,10 +252,6 @@ contains
        p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
     end if
     !
-    deallocate(sendE)
-    deallocate(sendW)
-    deallocate(recvE)
-    deallocate(recvW)
 
     !-----------
     !    Fill North-South ghost cells
@@ -264,11 +287,6 @@ contains
        p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
     end if
     !
-    deallocate(sendN)
-    deallocate(sendS)
-    deallocate(recvN)
-    deallocate(recvS)
-
     !-----------
     !    Fill Corner ghost cells
     !
@@ -306,10 +324,6 @@ contains
        p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
     end if
     !
-    deallocate(sendSE)
-    deallocate(sendSW)
-    deallocate(recvSE)
-    deallocate(recvSW)
 
     ! NW and NE !
     if (northwest.ne.MPI_PROC_NULL) then
@@ -345,10 +359,6 @@ contains
        p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     end if
     !
-    deallocate(sendNE)
-    deallocate(sendNW)
-    deallocate(recvNE)
-    deallocate(recvNW)
 
     !write(*,*)'rank- p(nz/2,0:1,0)       :', myrank, p(nz/2,0:1,0), p(nz/2,1,1)
     !write(*,*)'rank- p(nz/2,0:1,nx/2)    :', myrank, p(nz/2,0:1,nx/2)

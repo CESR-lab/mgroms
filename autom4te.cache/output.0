@@ -600,6 +600,8 @@ ac_ct_FC
 LDFLAGS
 FCFLAGS
 FC
+MPI_INC
+MPI_LIB
 host_os
 host_vendor
 host_cpu
@@ -680,18 +682,17 @@ enable_silent_rules
 enable_optimization
 enable_profiling
 enable_traceanalyser
-enable_quad
 enable_mpt
 enable_intel_mpi
 enable_openmpi
 enable_mpich
-enable_netcdf
-enable_hdf5
 enable_openmp
 '
       ac_precious_vars='build_alias
 host_alias
 target_alias
+MPI_LIB
+MPI_INC
 FC
 FCFLAGS
 LDFLAGS
@@ -1323,18 +1324,15 @@ Optional Features:
        aggressive - aggressive optimization (YOU HAVE TO VERIFY YOUR RESULTS!).
   --enable-profiling - Turn on profiling compiler options.
   --enable-traceanalyser - Intel traceanalyser (in mpi mode only !).
-  --enable-quad - Turn on quad precision for one varaible in Waters.
-                       This options allows to have same results on different
-                       platform.
   --enable-mpi_mpt - MPT library and includes (caparmor!).
   --enable-intel_mpi - Intel MPI library and includes.
   --enable-openmpi - OpenMPI library and includes.
   --enable-mpich - MPICH library and includes.
-  --enable-netcdf - Netcdf library and includes.
-  --enable-hdf5 - HDF5 for Netcdf 4.
   --enable-openmp - OpenMP parallelisation.
 
 Some influential environment variables:
+  MPI_LIB     Location of MPI library (compile-time)
+  MPI_INC     Location of MPI module (compile-time)
   FC          Fortran compiler command
   FCFLAGS     Fortran compiler flags
   LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
@@ -2497,7 +2495,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 #
 ##
-##AC_PREFIX_DEFAULT([/home/grima/FORTRAN/3Ddiffusion])
+##AC_PREFIX_DEFAULT([/home/grima/FORTRAN/mgroms])
 #
 ## Write some configurations parameter in a Fortran 90 file
 ## Then these parameters can be used in the Fortran program/modules
@@ -2554,18 +2552,6 @@ fi
 
 
 #
-## Quad precision (if it is available)
-##
-@%:@ Check whether --enable-quad was given.
-if test "${enable_quad+set}" = set; then :
-  enableval=$enable_quad; enable_quad=yes
-else
-  enable_quad=no
-             
-fi
-
-
-#
 ## MPI libraries
 ##
 @%:@ Check whether --enable-mpt was given.
@@ -2605,30 +2591,6 @@ fi
 
 
 #
-## Netcdf if it is need for Netcdf4
-##
-@%:@ Check whether --enable-netcdf was given.
-if test "${enable_netcdf+set}" = set; then :
-  enableval=$enable_netcdf; enable_netcdf=yes
-else
-  enable_netcdf=no
-             
-fi
-
-
-#
-## Hdf5 if it is need for Netcdf4
-##
-@%:@ Check whether --enable-hdf5 was given.
-if test "${enable_hdf5+set}" = set; then :
-  enableval=$enable_hdf5; enable_hdf5=yes
-else
-  enable_hdf5=no
-             
-fi
-
-
-#
 ## OpenMP
 ##
 @%:@ Check whether --enable-openmp was given.
@@ -2638,6 +2600,9 @@ else
   enable_openmp=no
              
 fi
+
+
+
 
 
 ##################################
@@ -3234,8 +3199,8 @@ $as_echo "$as_me:   -> PROFILING is SELECTED (prof)" >&6;}
           fi
         ;;
         *)
-          { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: 3Ddiffusion MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host !!!" >&5
-$as_echo "$as_me: WARNING: 3Ddiffusion MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host !!!" >&2;}
+          { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: mgroms MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host !!!" >&5
+$as_echo "$as_me: WARNING: mgroms MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host !!!" >&2;}
         ;;
         esac
       ;;
@@ -3448,7 +3413,7 @@ fi
 if test "$enable_mpich" = "yes" ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}:       -> MPI PARALLELISATION IS SELECTED" >&5
 $as_echo "$as_me:       -> MPI PARALLELISATION IS SELECTED" >&6;}
-  mpif90.mpich
+  FC=mpif90
   CFLAGS="$CFLAGS"
   FCFLAGS="$FCFLAGS -I${MPI_INC}"
   LDFLAGS="$LDFLAGS -I${MPI_INC} -L${MPI_LIB} -lmpich -lmpichf90"
@@ -4712,25 +4677,22 @@ fi
 echo ""
 echo "Configuration Parameters:"
 echo "------------------------"
-echo "3Ddiffusion's version........ ${VERSION}"
+echo "mgroms's version........ ${VERSION}"
 echo "prefix............... ${prefix}"
 echo "FC................... ${FC}"
 echo "FCFLAGS.............. ${FCFLAGS}"
 echo "FCFLAGS_f90.......... ${FCFLAGS_f90}"
 echo "LDFLAGS.............. ${LDFLAGS}"
 echo "LIBS................. ${LIBS}"
-##echo "CPP.................. ${CPP}"
-##echo "CPPFLAGS............. ${CPPFLAGS}"
-##echo "CC................... ${CC}"
-##echo "CFLAGS............... ${CFLAGS}"
 echo "ENABLE_OPTIMIZATION.. ${enable_optimization}"
-echo "ENABLE_NETCDF........ ${enable_netcdf}"
-if test "$enable_netcdf" = "yes" ; then
-  echo "  -NETCDF_LIB........ ${NETCDF_LIB}"
-  echo "  -NETCDF_INC........ ${NETCDF_INC}"
-fi
+echo "ENABLE_mpi_mpt....... ${enable_mpi_mpt}"
+echo "ENABLE_intel_mpi..... ${enable_intel_mpi}"
+echo "ENABLE_open_mpi...... ${enable_openmpi}"
+echo "ENABLE_mpich......... ${enable_mpich}"
+echo "      MPI_LIB........ ${MPI_LIB}"
+echo "      MPI_INC........ ${MPI_INC}"
 echo "ENABLE_PROFILING..... ${enable_prof}"
-echo "ENABLE_QUAD.......... ${enable_quad}"
+echo "ENABLE_TRACEANALYSER. ${enable_traceanalyser}"
 echo "host................. ${host}"
 echo ""
 date
@@ -4738,6 +4700,6 @@ date
 # Inform users of the very useful configure.eg
 echo ""
 echo "*******************************************************************"
-echo "*   Fortran Skeleton Package (3Ddiffusion)'s configuration is completed   *" 
+echo "*              mgroms's configuration is completed                *" 
 echo "* You are now ready to run 'make clean', 'make' and 'make install'*"
 echo "*******************************************************************"

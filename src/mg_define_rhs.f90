@@ -8,10 +8,10 @@ module mg_define_rhs
 
 contains
 
-  subroutine define_rhs(nxg, nyg, nzg, npxg, npyg)
+  subroutine define_rhs(nxg, npxg)
 
-    integer(kind=is), intent(in) :: nxg, nyg, nzg
-    integer(kind=is), intent(in) :: npxg, npyg
+    integer(kind=is), intent(in) :: nxg
+    integer(kind=is), intent(in) :: npxg
 
     real(kind=rl), dimension(:,:,:), pointer :: rhs
 
@@ -23,7 +23,7 @@ contains
     real(kind=rl):: x0, y0, z0
     real(kind=rl):: x1, y1, z1
 
-    real(kind=rl):: x,y,z
+    real(kind=rl):: x,z
 
     real(kind=rl):: bet
 
