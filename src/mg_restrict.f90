@@ -13,36 +13,65 @@ contains
    !------------------------------------------------------------
    subroutine restrict_xyz(l1,l2,x,y)
    !
-   ! Restrict the residual from fine to coarse grid
+   ! Restrict 'x' from fine level l1 to 'y' on coarse level l2=l1+1
 
-   integer:: l1,l2
-   real*8,dimension(grid(l1)%nx,grid(l1)%ny,grid(l1)%nz) :: x
-   real*8,dimension(grid(l2)%nx,grid(l2)%ny,grid(l2)%nz) :: y
+   integer(kind=is) :: l1,l2
+   real(kind=8),dimension(:,:,:),intent(in) :: x
+   real(kind=8),dimension(:,:,:),intent(out) :: y
 
    ! local
-   integer:: i,j,k,i2,j2,k2
-   integer:: nx2,ny2,nz2
-   real*8:: z
+   integer(kind=is) :: i,j,k,i2,j2,k2
+   real(kind=8):: z
 
-   nx2 = grid(l2)%nx
-   ny2 = grid(l2)%ny
-   nz2 = grid(l2)%nz      
-
-   do k2=1,nz2
-       k=2*k2-1
-       ! indices (nh+1,nh+2) on fine grid are glued to (nh+1) on coarse grid
-       do j2=2,ny2-1
-          j=2*(j2-nhalo)+1 ! take into account the halo!!!
-          do i2=2,nx2-1
-             i=2*(i2-nhalo)+1
-             z = x(i,j,k)+x(i+1,j,k)+x(i,j+1,k)+x(i+1,j+1,k) &
-                        + x(i,j,k+1)+x(i+1,j,k+1)+x(i,j+1,k+1)+x(i+1,j+1,k+1)
-             y(i2,j2,k2) = z * 0.125
+   ! 
+   do i2=1,grid(l2)%nx
+      i=2*i2-1
+      do j2=1,grid(l2)%ny
+         j=2*j2-1
+         do k2=1,grid(l2)%nz
+            k=2*k2-1
+            z = x(k,j,i)  +x(k,j,i+1)  +x(k,j+1,i)  +x(k,j+1,i+1) &
+              + x(k+1,j,i)+x(k+1,j,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
+            y(k2,j2,i2) = z * 0.125_8
           enddo
        enddo
     enddo
 
    end subroutine restrict_xyz
+
+   !------------------------------------------------------------
+   subroutine interp_xyz(l2,l1,x,y)
+   !
+   ! Transpose operation of restrict_xyz
+   ! Interpolate 'x' from coarse level l2 to 'y' on fine level l1=l2-1
+
+   integer(kind=is) :: l1,l2
+   real(kind=8),dimension(:,:,:),intent(in) :: x
+   real(kind=8),dimension(:,:,:),intent(out) :: y
+
+   ! local
+   integer(kind=is) :: i,j,k,i2,j2,k2
+
+   ! 
+   do i2=1,grid(l2)%nx
+      i=2*i2-1
+      do j2=1,grid(l2)%ny
+         j=2*j2-1
+         do k2=1,grid(l2)%nz
+            k=2*k2-1
+            y(k  ,j  ,i  ) = x(k2,j2,i2)
+            y(k+1,j  ,i  ) = x(k2,j2,i2)
+            y(k  ,j+1,i  ) = x(k2,j2,i2)
+            y(k+1,j+1,i  ) = x(k2,j2,i2)
+            y(k  ,j  ,i+1) = x(k2,j2,i2)
+            y(k+1,j  ,i+1) = x(k2,j2,i2)
+            y(k  ,j+1,i+1) = x(k2,j2,i2)
+            y(k+1,j+1,i+1) = x(k2,j2,i2)
+          enddo
+       enddo
+    enddo
+
+   end subroutine interp_xyz
 
   !----------------------------------------
   subroutine restrict_xy(l1,l2,x,y)
