@@ -259,6 +259,9 @@ contains
        enddo
     enddo
 
+    res = resmax
+    call global_max(lev,res,resmax)
+
     write(*,*)' myrank - resmax =', myrank, resmax
 
     ! don't call mpi at every pass if nh>1
