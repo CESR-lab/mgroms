@@ -94,11 +94,11 @@ contains
              d(k)   = cA(1,k,j,i)
              p1d(k) = p(k,j,i)
 
-             if (i == nx/2) then
-               if (j == ny/2) then
-                 write(*,*)'rank- rhs(nz/2)       :', myrank, rhs(nz/2)
-               endif
-             endif
+!!$             if (i == nx/2) then
+!!$               if (j == ny/2) then
+!!$                 write(*,*)'rank- rhs(nz/2)       :', myrank, rhs(nz/2)
+!!$               endif
+!!$             endif
 
              call tridiag(nz,d,ud,rhs,p1d) !solve for vertical_coeff_matrix.p1d=rhs
 
@@ -142,7 +142,7 @@ contains
     
     enddo
     ! don't call mpi at every pass if nh>1
-    !call fill_halo(lev,p) ! add the name of the variable as a second argument
+    call fill_halo(lev,p) ! add the name of the variable as a second argument
     !      
   end subroutine relax_line
 
@@ -176,9 +176,10 @@ contains
   end subroutine tridiag
 
   !----------------------------------------
-  subroutine check_solution(lev)
+  subroutine compute_residual(lev,norm)
 
     integer(kind=is), intent(in):: lev
+    real(kind=8),intent(out) :: norm
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -192,6 +193,7 @@ contains
     !
     real(kind=8),dimension(:,:,:), pointer:: p
     real(kind=8),dimension(:,:,:), pointer:: b
+    real(kind=8),dimension(:,:,:), pointer:: r
     real(kind=8),dimension(:,:,:,:), pointer:: cA
     !     LOCAL 
     integer(kind=is)           :: i,j,k
@@ -208,6 +210,7 @@ contains
 
     p => grid(lev)%p
     b => grid(lev)%b
+    r => grid(lev)%r
     cA => grid(lev)%cA
 
     !
@@ -220,7 +223,7 @@ contains
        do j = 1,ny
 
           k=1!lower level
-          res = b(k,j,i) &
+          r(k,j,i) = b(k,j,i) &
                - cA(1,k,j,i)*p(k,j,i)                                   &
                - cA(2,k+1,j,i)*p(k+1,j,i)    &
                - cA(3,k,j,i)*p(k+1,j-1,i) &
@@ -229,10 +232,10 @@ contains
                - cA(6,k,j,i)*p(k+1,j,i-1) &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
-          resmax = max(resmax,abs(res))
+          resmax = max(resmax,abs(r(k,j,i)))
 
           do k = 2,nz-1!interior levels
-             res = b(k,j,i)                                                &
+             r(k,j,i) = b(k,j,i)                                                &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
                   - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
                   - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
@@ -241,11 +244,11 @@ contains
                   - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                   - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
-             resmax = max(resmax,abs(res))
+             resmax = max(resmax,abs(r(k,j,i)))
           enddo
 
           k=nz!upper level
-          res = b(k,j,i)                   &
+          r(k,j,i) = b(k,j,i)                   &
                - cA(1,k,j,i)*p(k,j,i)                                   &
                - cA(2,k,j,i)*p(k-1,j,i)     &
                - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
@@ -254,21 +257,20 @@ contains
                - cA(6,k-1,j,i+1)*p(k-1,j,i+1)  &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k,j,i)*p(k-1,j,i-1)
-          resmax = max(resmax,abs(res))
+          resmax = max(resmax,abs(r(k,j,i)))
 
        enddo
     enddo
 
-    res = resmax
-    call global_max(lev,res,resmax)
+    call global_max(lev,resmax,norm)
 
     !write(*,*)' myrank - resmax =', myrank, resmax
-    if (myrank.eq.0)then
-       write(*,*)'- resmax:',resmax
-    endif
+!    if (myrank.eq.0)then
+!       write(*,*)'- resmax:',resmax
+!    endif
 
 
     ! don't call mpi at every pass if nh>1
-  end subroutine check_solution
+  end subroutine compute_residual
 
 end module mg_relax

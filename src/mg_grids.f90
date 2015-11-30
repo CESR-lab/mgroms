@@ -74,6 +74,7 @@ contains
        allocate(grid(lev)%p(   nz,1-nh:ny+nh,1-nh:nx+nh))
        grid(lev)%p(:,:,:)=0._8
        allocate(grid(lev)%b(   nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%r(   nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%cA(8,nz,1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(halo(lev)%sendS(nz,nh,nx))
@@ -161,9 +162,9 @@ contains
 
     integer(kind=is), intent(in):: lev
 
-    real(kind=rl),dimension(&
-         grid(lev)%nz,&
-         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh,&
+    real(kind=rl),dimension( &
+         grid(lev)%nz,       &
+         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh, &
          1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(inout) :: p
  
 !    real(kind=rl),dimension(:,:,:),intent(inout)::p

@@ -21,6 +21,7 @@ program mg_testrelax
   integer(kind=is):: nsweeps
 
   integer(kind=is):: lev
+  real(kind=8)    :: res
 
   nxg   = 128
   nyg   = 128
@@ -30,8 +31,8 @@ program mg_testrelax
   npxg  = 2
   npyg  = 2
 
-  nit     = 5
-  nsweeps = 2
+  nit     = 10
+  nsweeps = 1
 
   call init_mpi(nxg, nyg, nzg, npxg, npyg)
 
@@ -42,12 +43,16 @@ program mg_testrelax
   call define_matrix_simple()
 
   lev = 1
-  call check_solution(lev)
+  call compute_residual(lev,res)
 
   do it=1, nit
      call relax_line(lev,nsweeps)
-     call check_solution(lev)
+     call compute_residual(lev,res)
+     if (myrank.eq.0)then
+        write(*,1000)"ite=",it," - res=",res
+     endif
   enddo
+1000 format(A,I2,A,F6.3)
 
 !  call check_solution(lev)
 
