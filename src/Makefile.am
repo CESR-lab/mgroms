@@ -31,7 +31,8 @@ mgroms_SOURCES =         \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
 	mg_relax_line.f90    \
-	mg_testrelax.f90
+	mg_testhalo.f90
+#	mg_testrelax.f90     \
 #	mg_variables.f90     \
 #	mg_smoother.f90      \
 #	mg_interpolation.f90 \
