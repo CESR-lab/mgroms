@@ -10,9 +10,11 @@ module mg_grids
      real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r
      real(kind=rl),dimension(:,:,:,:),pointer :: cA
      integer(kind=is) :: nx,ny, nz
-     integer(kind=is) :: npx, npy
+     integer(kind=is) :: nd ! number of diagonals in cA
+     integer(kind=is) :: npx, npy, incx, incy
      integer(kind=is) :: pj_offset, pi_offset
-     integer(kind=is):: nh                 ! number of points in halo
+     integer(kind=is) :: nh                 ! number of points in halo
+     integer(kind=is) :: coarsening_method, smoothing_method, gather
      integer(kind=is),dimension(8)::neighb
   end type grid_type
 
@@ -38,8 +40,9 @@ contains
     integer(kind=is), intent(in):: npxg,npyg  ! global CPU topology
 
     integer(kind=is) :: nx, ny, nz
-    integer(kind=is) :: nh
+    integer(kind=is) :: nh, nd
     integer(kind=is) :: npx, npy
+    integer(kind=is) :: incx, incy
 
     integer(kind=is) :: pi, pj
     integer(kind=is) :: lev
@@ -51,38 +54,46 @@ contains
     grid(1)%ny = nyo
     grid(1)%nz = nzo
     grid(1)%nh = nhalo
+    grid(1)%nd = 8
 
     grid(1)%npx = npxg
     grid(1)%npy = npyg
 
+    grid(1)%incx=1
+    grid(1)%incy=1
+
     grid(1)%pj_offset = 0
     grid(1)%pi_offset = 0
 
-    nlevs=4
-    do lev=2, nlevs
-    ! figure out additional grid dimensions
-    ! TODO: figure out process numbers for grid levels
-       grid(lev)%nx = grid(lev-1)%nx/2
-       grid(lev)%ny = grid(lev-1)%ny/2
-       grid(lev)%nz = grid(lev-1)%nz/2
-       grid(lev)%nh = nhalo
-       grid(lev)%npx = npxg
-       grid(lev)%npy = npyg
+    call define_grid_hierarchy()
 
-       grid(lev)%pj_offset = 0
-       grid(lev)%pi_offset = 0
-    enddo
+!!$    nlevs=4
+!!$    do lev=2, nlevs
+!!$    ! figure out additional grid dimensions
+!!$    ! TODO: figure out process numbers for grid levels
+!!$       grid(lev)%nx = grid(lev-1)%nx/2
+!!$       grid(lev)%ny = grid(lev-1)%ny/2
+!!$       grid(lev)%nz = grid(lev-1)%nz/2
+!!$       grid(lev)%nh = nhalo
+!!$       grid(lev)%npx = npxg
+!!$       grid(lev)%npy = npyg
+!!$
+!!$       grid(lev)%pj_offset = 0
+!!$       grid(lev)%pi_offset = 0
+!!$    enddo
+
     do lev=1,nlevs
        ! Allocate memory
        nx = grid(lev)%nx
        ny = grid(lev)%ny
        nz = grid(lev)%nz
        nh = grid(lev)%nh
+       nd = grid(lev)%nd
        allocate(grid(lev)%p(   nz,1-nh:ny+nh,1-nh:nx+nh))
        grid(lev)%p(:,:,:)=0._8
        allocate(grid(lev)%b(   nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%r(   nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%cA(8,nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%cA(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(halo(lev)%sendS(nz,nh,nx))
        allocate(halo(lev)%recvS(nz,nh,nx))
@@ -107,62 +118,166 @@ contains
 
     ! Neighbours
     do lev=1,nlevs
-       npx = grid(lev)%npx
-       npy = grid(lev)%npy
+       npx = grid(1)%npx
+       npy = grid(1)%npy
+       incx = grid(lev)%incx
+       incy = grid(lev)%incy
 
        !! rank/grid(1)%npx = floor(myrank/grid(1)%npx) with integers
-       pj = myrank/grid(1)%npx    + grid(1)%pj_offset
-       pi = myrank-pj*grid(1)%npx + grid(1)%pi_offset
+!       pj = myrank/grid(lev)%npx    + grid(lev)%pj_offset
+!       pi = myrank-pj*grid(lev)%npx + grid(lev)%pi_offset
 
-       if (pj > 0) then ! south
-          grid(lev)%neighb(1) = (pj-1)*npx+pi
+       pj = myrank/npx
+       pi = mod(myrank,npx)
+
+       if (pj >= incy) then ! south
+          grid(lev)%neighb(1) = (pj-incy)*npx+pi
        else
           grid(lev)%neighb(1) = MPI_PROC_NULL
        endif
 
-       if (pi < npx-1) then ! east
-          grid(lev)%neighb(2) = pj*npx+pi+1
+       if (pi < npx-incx) then ! east
+          grid(lev)%neighb(2) = pj*npx+pi+incx
        else
           grid(lev)%neighb(2) = MPI_PROC_NULL
        endif
 
-       if (pj < npy-1) then ! north
-          grid(lev)%neighb(3) = (pj+1)*npx+pi
+       if (pj < npy-incy) then ! north
+          grid(lev)%neighb(3) = (pj+incy)*npx+pi
        else
           grid(lev)%neighb(3) = MPI_PROC_NULL
        endif
 
-       if (pi >0) then ! west
-          grid(lev)%neighb(4) = pj*npx+pi-1
+       if (pi >= incx) then ! west
+          grid(lev)%neighb(4) = pj*npx+pi-incx
        else
           grid(lev)%neighb(4) = MPI_PROC_NULL
        endif
 
-       if ((pj > 0).and.(pi > 0)) then ! south west
-          grid(lev)%neighb(5) = (pj-1)*npx+ pi-1
+       if ((pj >= incy).and.(pi >= incx)) then ! south west
+          grid(lev)%neighb(5) = (pj-incy)*npx+ pi-incx
        else
           grid(lev)%neighb(5) = MPI_PROC_NULL
        endif
 
-       if ((pj > 0).and.(pi < npx-1)) then ! south east
-          grid(lev)%neighb(6) = (pj-1)*npx+ pi+1
+       if ((pj >= incy).and.(pi < npx-incx)) then ! south east
+          grid(lev)%neighb(6) = (pj-incy)*npx+ pi+incx
        else
           grid(lev)%neighb(6) = MPI_PROC_NULL
        endif
 
-       if ((pj < npy-1).and.(pi < npx-1)) then ! north east
-          grid(lev)%neighb(7) = (pj+1)*npx + pi+1
+       if ((pj < npy-incy).and.(pi < npx-incx)) then ! north east
+          grid(lev)%neighb(7) = (pj+incy)*npx + pi+incx
        else
           grid(lev)%neighb(7) = MPI_PROC_NULL
        endif
-       if ((pj < npy-1).and.(pi >0)) then ! north west
-          grid(lev)%neighb(8) = (pj+1)*npx + pi-1
+       if ((pj < npy-incy).and.(pi >= incx)) then ! north west
+          grid(lev)%neighb(8) = (pj+incy)*npx + pi-incx
        else
           grid(lev)%neighb(8) = MPI_PROC_NULL
        endif
     enddo
 
   end subroutine define_grids
+
+  !----------------------------------------
+  subroutine define_grid_hierarchy
+
+    integer(kind=is) :: nx, ny, nz, nd, nh
+    integer(kind=is) :: npx, npy
+    integer(kind=is) :: lev, n2d, incx, incy, nsmall
+    integer(kind=is) :: coarsen, smooth
+    logical:: ok
+
+    nx = grid(1)%nx
+    ny = grid(1)%ny
+    nz = grid(1)%nz
+    nh = grid(1)%nh
+
+    npx = grid(1)%npx
+    npy = grid(1)%npy
+
+    ok = .false.
+    lev=2
+    n2d = 0 ! number of 2D coarsening
+    incx = 1
+    incy = 1
+    nsmall=8 ! smallest dimension ever for the global domain 
+    do while (.not.(ok))
+       if(lev>1) then! coarsen
+          if(nz.eq.1)then 
+             ! 2D coarsening
+             n2d=n2d+1
+             nx=nx/2
+             ny=ny/2
+             coarsen=2
+          else
+!!$             if(aspect_ratio.le.0.25)then !pure vertical coarsening
+!!$                aspect_ratio=aspect_ratio*8
+!!$                nz=nz/8
+!!$                coarsen=5
+!!$             else 
+             ! regular 3D coarsening
+             nx=nx/2
+             ny=ny/2
+             nz=nz/2
+             coarsen=1
+!!$             endif
+          endif
+          grid(lev-1)%coarsening_method=coarsen
+       endif
+
+       ! determine if gathering is needed
+       if(((nx.lt.nsmall).or.(ny.lt.nsmall)).and.(npx*npy.ge.2))then
+          if(npx.ge.2)then
+             npx=npx/2
+             nx=nx*2
+             incx=incx*2
+          endif
+          if(npy.ge.2)then
+             npy=npy/2
+             ny=ny*2
+             incy=incy*2
+          endif
+          grid(lev)%gather=1
+       else
+          grid(lev)%gather=0
+       endif
+
+       !now determine what is the appropriate smoothing on this grid
+       if(nz.eq.1)then
+          smooth=2
+          nd=3
+       else
+!!$          if(aspect_ratio.le.0.25)then
+!!$             smooth=1
+!!$             nd=8
+!!$          else
+          smooth=0
+          nd=8
+!!$          endif
+       endif
+       
+       grid(lev)%nx=nx
+       grid(lev)%ny=ny
+       grid(lev)%nz=nz
+       grid(lev)%npx=npx
+       grid(lev)%npy=npy
+       grid(lev)%incx=incx
+       grid(lev)%incy=incy
+       grid(lev)%nd=nd ! number of coefficients for cA
+       grid(lev)%nh=nh
+       grid(lev)%smoothing_method=smooth
+
+       ! stop criterion
+       ok = (nz.eq.1).or.((n2d.eq.2).or.(min(nx,ny).lt.nsmall))
+       ok = (nx.le.8)
+       ! stop after 2 pure horizontal coarsenings
+       lev = lev+1
+    enddo
+    nlevs = lev-1
+
+  end subroutine define_grid_hierarchy
 
   !----------------------------------------
   subroutine fill_halo(lev,p)

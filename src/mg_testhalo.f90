@@ -45,7 +45,7 @@ program mg_testhalo
 
   call define_rhs(nxg, nyg, npxg)
 
-  lev = 2
+  do lev = 1,nlevs
 
   p => grid(lev)%p
   nx = grid(lev)%nx
@@ -56,15 +56,15 @@ program mg_testhalo
 
   p = 1._8*myrank
 
-  if(myrank.eq.0)then 
-     write(*,*)grid(lev)%neighb
-  endif
+!!$  if(myrank.eq.0)then 
+!!$     write(*,*)grid(lev)%neighb
+!!$  endif
 
   call fill_halo(lev,p)
 
   ! test if the west halo has been properly updated
   call MPI_Barrier( MPI_COMM_WORLD ,ierr)
-  if (myrank.eq.0) write(*,*)"---------- WEST ----------"
+  if (myrank.eq.0) write(*,"(A,I2,A)")"---------- WEST lev = ",lev," ----------"
   call MPI_Barrier( MPI_COMM_WORLD ,ierr)
   if (west.ne.MPI_PROC_NULL) then
      z = sum(p(:,1:ny,1-nh:0)-west)
@@ -72,6 +72,7 @@ program mg_testhalo
      write(*,1000)"rank = ",myrank," / west is = ",west," / test=",test
   endif
 
+  enddo
 
 1000 format(A,I3,A,I3,A,L)
 

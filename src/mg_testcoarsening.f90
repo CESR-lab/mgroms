@@ -39,15 +39,38 @@ program mg_testcoarsening
 
   call define_grids(nhalo,npxg,npyg)
 
+
+  call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+  if (myrank.eq.0)then
+    do lev=1,nlevs
+       if (grid(lev)%gather.eq.0)then
+          write(*,100)"lev=",lev,": ", &
+                     grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
+                     " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
+       else
+          write(*,100)"lev=",lev,": ", &
+                     grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
+                     " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
+       endif
+    enddo
+ endif
+100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
+
+
+
   call define_rhs(nxg, nyg, npxg)
+
+  write(*,*)"rhs  done"
 
   call define_matrix_simple()
 
+  write(*,*)"matrix simple done"
 
   ! coarsen matrix on all grids
   do lev=1,nlevs-1
      call coarsen_matrix(lev)
   enddo
+  write(*,*)"coarsening done"
   do lev=1,nlevs
      call MPI_Barrier( MPI_COMM_WORLD ,ierr)
      if (myrank.eq.0)then
