@@ -58,7 +58,7 @@ contains
     grid(1)%pj_offset = 0
     grid(1)%pi_offset = 0
 
-    nlevs=2
+    nlevs=4
     do lev=2, nlevs
     ! figure out additional grid dimensions
     ! TODO: figure out process numbers for grid levels

@@ -22,7 +22,7 @@ program mg_testcoarsening
   integer(kind=is):: nsweeps
 
   integer(kind=is):: lev, ierr
-  real(kind=8)    :: res
+  real(kind=8)    :: res,res0,conv
 
   nxg   = 128
   nyg   = 128
@@ -43,33 +43,48 @@ program mg_testcoarsening
 
   call define_matrix_simple()
 
-  lev = 1
 
-  call coarsen_matrix(lev)
-
-  lev = lev+1
-  call MPI_Barrier( MPI_COMM_WORLD ,ierr)
-  if (myrank.eq.0)then
-     write(*,*)grid(lev)%cA(:,grid(lev).nz/2,grid(lev).ny/2,grid(lev).nx/2)
-  endif
-  call MPI_Barrier( MPI_COMM_WORLD ,ierr)
-
-  call restrict_xyz(1,2,grid(1)%b,grid(2)%b)
-
-!!$  call compute_residual(lev,res)
-!!$
-  do it=1, nit
-     call relax_line(lev,nsweeps)
-     call compute_residual(lev,res)
-     if (myrank.eq.0)then
-        write(*,1000)"ite=",it," - res=",res
-     endif
+  ! coarsen matrix on all grids
+  do lev=1,nlevs-1
+     call coarsen_matrix(lev)
   enddo
-1000 format(A,I2,A,F6.3)
+  do lev=1,nlevs
+     call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+     if (myrank.eq.0)then
+        write(*,'(A,I2,A,8F6.3)')"stencil on lev =",lev," / ",&
+             grid(lev)%cA(:,grid(lev).nz/2,grid(lev).ny/2,grid(lev).nx/2)
+!        write(*,1010)grid(lev)%cA(:,grid(lev).nz/2,grid(lev).ny/2,grid(lev).nx/2)
+     endif
+     call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+  end do
+1010 format(8F6.3)
+
+  ! coarsen RHS on all grids
+  do lev=1,nlevs-1
+     call restrict_xyz(lev,lev+1,grid(lev)%b,grid(lev+1)%b)
+  enddo
+
+  ! check smoothing on all grids
+  do lev=1,nlevs
+     if (myrank.eq.0)then
+        write(*,'(A,I2,A,I3,A,I3,A,I3,A)')"check relaxation on lev = ",lev,&
+             " / (",grid(lev)%nx,",",grid(lev)%ny,",",grid(lev)%nz,")"
+     endif
+     res0=0.
+     do it=1, nit
+        call relax_line(lev,nsweeps)
+        call compute_residual(lev,res)
+        conv = log(res0/res)/log(10.)
+        if (myrank.eq.0)then
+           write(*,'(A,I2,A,F6.3,A,F6.3)')"  ite=",it," - res=",res," - conv rate =",conv
+        endif
+        res0=res
+     enddo
+  enddo
 
 !  call check_solution(lev)
 
-  stop
+
   call mg_mpi_finalize()
 
 end program mg_testcoarsening
