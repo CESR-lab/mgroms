@@ -157,11 +157,11 @@ contains
   end subroutine define_grids
 
   !----------------------------------------
-  subroutine fill_halo(lev)
+  subroutine fill_halo(lev,p)
 
     integer(kind=is), intent(in):: lev
 
-    real(kind=rl),dimension(:,:,:), pointer :: p
+    real(kind=rl),dimension(:,:,:), intent(inout) :: p
  
 !    real(kind=rl),dimension(:,:,:),intent(inout)::p
 
@@ -185,7 +185,7 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-    p => grid(lev)%p
+!    p => grid(lev)%p
 
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)

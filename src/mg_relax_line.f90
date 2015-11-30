@@ -142,7 +142,7 @@ contains
     
     enddo
     ! don't call mpi at every pass if nh>1
-    call fill_halo(lev) ! add the name of the variable as a second argument
+    call fill_halo(lev,p) ! add the name of the variable as a second argument
     !      
   end subroutine relax_line
 

@@ -90,7 +90,7 @@ contains
     nx2 = grid(lev+1)%nx
     ny2 = grid(lev+1)%ny
     nz2 = grid(lev+1)%nz
-    nh  = grid(lev+1)%h
+    nh  = grid(lev+1)%nh
 
     
     do i2 = 1,nx2
@@ -138,8 +138,8 @@ contains
              diag = diag+diag
              
              ! add the 8 self-interacting terms
-             diag = cA(1,k,j,i) +cA(1,kp,j,i) +cA(1,k,jp,i) +cA(1,kp,jp,i)
-             $     +cA(1,k,j,ip)+cA(1,kp,j,ip)+cA(1,k,jp,ip)+cA(1,kp,jp,ip) + diag
+             diag = cA(1,k,j,i) +cA(1,kp,j,i) +cA(1,k,jp,i) +cA(1,kp,jp,i) &
+                   +cA(1,k,j,ip)+cA(1,kp,j,ip)+cA(1,k,jp,ip)+cA(1,kp,jp,ip) + diag
 
              ! here we go!
              cA2(1,k2,j2,i2) = diag
