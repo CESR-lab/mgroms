@@ -25,7 +25,7 @@ contains
 
     real(kind=rl):: x,z
 
-    real(kind=rl):: bet
+    real(kind=rl):: bet,sumglo
 
     integer(kind=is) :: lev
 
@@ -76,7 +76,13 @@ contains
        enddo
     enddo
 
-    write(*,*)'myrank - sum(rhs):', myrank, sum(rhs(:,1:ny,1:nx))
+    z = sum(rhs(:,1:ny,1:nx))
+    call global_sum(1,z,sumglo)
+
+    !write(*,*)'myrank - sum(rhs):', myrank, sum(rhs(:,1:ny,1:nx))
+    if (myrank.eq.0)then
+       write(*,*)'- sum(rhs):',sumglo
+    endif
 
   end subroutine define_rhs
 

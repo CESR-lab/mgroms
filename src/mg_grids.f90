@@ -161,7 +161,10 @@ contains
 
     integer(kind=is), intent(in):: lev
 
-    real(kind=rl),dimension(:,:,:), intent(inout) :: p
+    real(kind=rl),dimension(&
+         grid(lev)%nz,&
+         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh,&
+         1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(inout) :: p
  
 !    real(kind=rl),dimension(:,:,:),intent(inout)::p
 

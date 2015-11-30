@@ -142,7 +142,7 @@ contains
     
     enddo
     ! don't call mpi at every pass if nh>1
-    call fill_halo(lev,p) ! add the name of the variable as a second argument
+    !call fill_halo(lev,p) ! add the name of the variable as a second argument
     !      
   end subroutine relax_line
 
@@ -262,7 +262,11 @@ contains
     res = resmax
     call global_max(lev,res,resmax)
 
-    write(*,*)' myrank - resmax =', myrank, resmax
+    !write(*,*)' myrank - resmax =', myrank, resmax
+    if (myrank.eq.0)then
+       write(*,*)'- resmax:',resmax
+    endif
+
 
     ! don't call mpi at every pass if nh>1
   end subroutine check_solution

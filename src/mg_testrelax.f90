@@ -30,7 +30,7 @@ program mg_testrelax
   npxg  = 2
   npyg  = 2
 
-  nit     = 1
+  nit     = 5
   nsweeps = 2
 
   call init_mpi(nxg, nyg, nzg, npxg, npyg)
