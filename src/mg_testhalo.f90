@@ -45,7 +45,7 @@ program mg_testhalo
 
   call define_rhs(nxg, nyg, npxg)
 
-  lev = 1
+  lev = 2
 
   p => grid(lev)%p
   nx = grid(lev)%nx
@@ -55,6 +55,10 @@ program mg_testhalo
   west      = grid(lev)%neighb(4)
 
   p = 1._8*myrank
+
+  if(myrank.eq.0)then 
+     write(*,*)grid(lev)%neighb
+  endif
 
   call fill_halo(lev,p)
 

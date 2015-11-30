@@ -4,7 +4,7 @@ module mg_grids
 
   implicit none
 
-  integer(kind=4), parameter:: maxlev=1
+  integer(kind=4), parameter:: maxlev=10
 
   type grid_type
      real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r
@@ -58,13 +58,20 @@ contains
     grid(1)%pj_offset = 0
     grid(1)%pi_offset = 0
 
-    !!do lev=2, maxlev
+    nlevs=2
+    do lev=2, nlevs
     ! figure out additional grid dimensions
     ! TODO: figure out process numbers for grid levels
-    !!nlevs=lev
-    nlevs=1
-    !!enddo
+       grid(lev)%nx = grid(lev-1)%nx/2
+       grid(lev)%ny = grid(lev-1)%ny/2
+       grid(lev)%nz = grid(lev-1)%nz/2
+       grid(lev)%nh = nhalo
+       grid(lev)%npx = npxg
+       grid(lev)%npy = npyg
 
+       grid(lev)%pj_offset = 0
+       grid(lev)%pi_offset = 0
+    enddo
     do lev=1,nlevs
        ! Allocate memory
        nx = grid(lev)%nx

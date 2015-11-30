@@ -1,10 +1,10 @@
 module mg_restrict
-   implicit none
    !
    ! Collection of restriction subroutines
    !
    use mg_grids
    !      use mg_mpi
+   implicit none
 
 
 
@@ -18,6 +18,15 @@ contains
    integer(kind=is) :: l1,l2
    real(kind=8),dimension(:,:,:),intent(in) :: x
    real(kind=8),dimension(:,:,:),intent(out) :: y
+!!$   real(kind=rl),dimension( &
+!!$         grid(l1)%nz,       &
+!!$         1-grid(l1)%nh:grid(l1)%ny+grid(l1)%nh, &
+!!$         1-grid(l1)%nh:grid(l1)%nx+grid(l1)%nh), intent(in) :: x
+!!$   real(kind=rl),dimension( &
+!!$         grid(l2)%nz,       &
+!!$         1-grid(l2)%nh:grid(l2)%ny+grid(l2)%nh, &
+!!$         1-grid(l2)%nh:grid(l2)%nx+grid(l2)%nh), intent(out) :: y
+
 
    ! local
    integer(kind=is) :: i,j,k,i2,j2,k2
@@ -162,16 +171,17 @@ contains
 
     integer(kind = 4), intent(in):: lev
     integer(kind = 4), intent(in):: nite
-    real*8,dimension(:,:,:), intent(out):: x
+    real*8,dimension(:,:,:), intent(inout):: x
     real*8,dimension(:,:,:), intent(in) :: b
 
     integer(kind = 4):: k, kt, j, i
     integer(kind = 4):: nx, ny
-    real(kind=8)     :: c1, c2, c3
+    real(kind=8)     :: c1, c2, c3, omega
 
     c1 = omega ! relaxation parameter
     c2=1-c1
     k=1
+    x=0.
     do kt=1,nite
        ! SOR is hard to multithread...
        do j=2,ny-1
@@ -205,6 +215,8 @@ contains
     real(kind = 8), dimension(:,:,:), intent(out) :: r
 
     integer(kind = 4):: i, j, k, km, kp, nx, ny, nz
+
+    r=0.
 
 !!$    ! bottom level
 !!$    do k=1,1
@@ -326,4 +338,4 @@ contains
   end subroutine restrict_matrix_xyz
 !!NG: 16 nov 2015 comment this -> #endif
 
-end module mg_optimized
+end module mg_restrict

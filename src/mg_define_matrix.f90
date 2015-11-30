@@ -35,9 +35,9 @@ contains
 
     cA => grid(1)%cA ! check the syntax / lighten the writing
 
-    dxi=1._8/dx
-    dyi=1._8/dy
-    dzi=1._8/dz
+    dxi=1._8!/dx
+    dyi=1._8!/dy
+    dzi=1._8!/dz
 
     !extended loops will be a pain for the real matrix
     do i = 1-nh,nx+nh
@@ -83,7 +83,7 @@ contains
     real(kind=rl), dimension(:,:,:), pointer :: dummy3
     integer(kind=is):: l, k, j, i, kp, jp, ip, k2, j2, i2
     integer(kind=is):: nx2, ny2, nz2, nh
-    real(kind=rl):: diag
+    real(kind=rl):: diag,cff
 
     cA  => grid(lev)%cA
     cA2 => grid(lev+1)%cA
@@ -147,12 +147,18 @@ contains
        enddo
     enddo
 
+    if (myrank.eq.0)write(*,*)"coefficients computed"
+
     ! fill the halo
     ! the data should be contiguous in memory to use fill_halo 
     ! no need to allocate an extra buffer
     ! use the residual as a dummy variable
     dummy3 => grid(lev+1)%r 
+
+    ! the coefficients should be rescaled with 1/4
+    cff = 1._8/4._8
     do l = 1,8       
+       if (myrank.eq.0)write(*,*)"updating halo of coef(",l,",:,:,:)"
        do i2 = 1,nx2
           do j2 = 1,ny2
              do k2 = 1,nz2
@@ -166,7 +172,7 @@ contains
        do i2 = 1-nh,nx2+nh
           do j2 = 1-nh,ny2+nh
              do k2 = 1,nz2
-                cA2(l,k2,j2,i2) = dummy3(k2,j2,i2)
+                cA2(l,k2,j2,i2) = dummy3(k2,j2,i2) * cff
              enddo
           enddo
        enddo
@@ -174,7 +180,7 @@ contains
        ! copy from cA2 to dummy3 only the interior ring used to fill the halo
        ! copy from dummy to cA2 only the halo
     enddo
-
+    if (myrank.eq.0)write(*,*)"coarsening done"
   end subroutine coarsen_matrix
 
 end module mg_define_matrix
