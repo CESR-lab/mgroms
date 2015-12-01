@@ -32,7 +32,7 @@ contains
 
     if (nprocs /= (npxg*npyg)) then
        write(*,*) "Error: in number of processes !"
-       stop 
+       stop -1
     endif
 
     ! WARNING, non divisibility issues !

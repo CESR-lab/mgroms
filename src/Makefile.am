@@ -19,13 +19,27 @@ clean-local:
 	-rm -f *.mod *.o *.log
 
 ##
-SUBDIRS	     = .
-bin_PROGRAMS = mgroms
-##bin_SCRIPTS  = namelist
-##EXTRA_DIST   = namelist
+SUBDIRS	       = .
+bin_PROGRAMS   = testhalo testrelax testcoarsening 
+check_PROGRAMS = $(bin_PROGRAMS)
+TESTS          = $(check_PROGRAMS)
 ##
 ##
-mgroms_SOURCES =         \
+testhalo_SOURCES =       \
+	mg_mpi.f90           \
+	mg_grids.f90         \
+	mg_define_rhs.f90    \
+	mg_testhalo.f90
+##
+testrelax_SOURCES =      \
+	mg_mpi.f90           \
+	mg_grids.f90         \
+	mg_define_rhs.f90    \
+	mg_define_matrix.f90 \
+	mg_relax_line.f90    \
+	mg_testrelax.f90
+##
+testcoarsening_SOURCES = \
 	mg_mpi.f90           \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
@@ -33,11 +47,4 @@ mgroms_SOURCES =         \
 	mg_relax_line.f90    \
 	mg_restrict.f90      \
 	mg_testcoarsening.f90
-#	mg_testhalo.f90
-#	mg_testrelax.f90     
-#	mg_variables.f90     \
-#	mg_smoother.f90      \
-#	mg_interpolation.f90 \
-#	mg_simpleop.f90      \
-#	mg_main.f90
-##
+

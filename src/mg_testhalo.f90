@@ -33,7 +33,7 @@ program mg_testhalo
   nzg   = 128
   nhalo = 1
 
-  npxg  = 4
+  npxg  = 2
   npyg  = 2
 
   nit     = 10
