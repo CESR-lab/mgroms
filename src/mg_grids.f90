@@ -55,7 +55,7 @@ contains
 
     ! for the gathering
     integer(kind=is) :: ngx, ngy
-    integer::     family, color, key, localcomm, ierr
+    integer::     ff, family, color, key, localcomm, ierr
     
     ! 1rst loop about the grid dimensions at deifferent levels
     ! at the end of that loop we have the number of levels 
@@ -201,30 +201,48 @@ contains
     ! prepare the informations for the gathering 
     do lev=1,nlevs-1
        if(grid(lev)%gather.eq.1)then
-
+          
+          nx = grid(lev)%nx
+          ny = grid(lev)%ny
+          nz = grid(lev)%nz
+          nh = grid(lev)%nh
           incx=grid(lev)%incx
           incy=grid(lev)%incy
+          ngx=grid(lev)%ngx
+          ngy=grid(lev)%ngy
+ 
 
+          !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
 
          ! cores having the same family index share the same subdomain
           family=(pi/incx)*incx*incy + (npx/2)*incy*(pj/incy)
 
-          ! assign a color to each core: make a cycling ramp index inside the family
-          ! cores having the same color should be a pair or a quadruplet
+          ! - assign a color to each core: make a cycling ramp index
+          ! through 2 or 4 close families 
+          ! - cores having the same color should be a pair or a quadruplet 
+          ! - colors are all distinct *within* a family
           color=family + mod(pi,incx/2)+mod(pj,incy/2)*incx/2
+
+          ff=family/(incx*incy)
+          key = mod(mod(ff,incx),2)+mod((ff/incy),2)
+
          
+          grid(lev)%color=color
+          grid(lev)%family=family
 
-          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, myrank, localcomm, ierr)
+          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
           grid(lev)%localcomm = localcomm
-
-!          allocate(grid(lev)%dummy3(:,:,:)) ! todo
 
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
 
+          ! this dummy 3D array is to store the restriction from lev-1, before the gathering
+          ! its size can be deduced from the size after the gathering
+          
+          nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
+          ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
+          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
           ! number of elements of dummy3
-          grid(lev)%Ng=(nx*ngx+2*nh)*(ny*ngy+2*nh)*nz
-          grid(lev)%color=color
-          grid(lev)%family=family
+          grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
        endif
     enddo
 
@@ -235,6 +253,7 @@ contains
 
     integer(kind=is) :: nx, ny, nz, nd, nh
     integer(kind=is) :: npx, npy
+    integer(kind=is) :: ngx, ngy
     integer(kind=is) :: lev, n2d, incx, incy, nsmall
     integer(kind=is) :: coarsen, smooth
     logical:: ok
@@ -283,12 +302,22 @@ contains
              npx=npx/2
              nx=nx*2
              incx=incx*2
+             ngx=2
+          else
+             ngx=1
           endif
           if(npy.ge.2)then
              npy=npy/2
              ny=ny*2
              incy=incy*2
+             ngy=2
+          else
+             ngy=1
           endif
+          ! NOTE THIS IMPORTANT POINT
+          ! if level=lev has the gather flag activated
+          ! it means that the gathering occurs between lev-1 and lev
+          ! (not the other way around)
           grid(lev)%gather=1
        else
           grid(lev)%gather=0
@@ -313,6 +342,8 @@ contains
        grid(lev)%nz=nz
        grid(lev)%npx=npx
        grid(lev)%npy=npy
+       grid(lev)%ngx=ngx
+       grid(lev)%ngy=ngy
        grid(lev)%incx=incx
        grid(lev)%incy=incy
        grid(lev)%nd=nd ! number of coefficients for cA

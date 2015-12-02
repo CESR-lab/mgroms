@@ -3,6 +3,7 @@ program mg_testgather
   use mg_mpi ! everything will come from the outside !!!
 
   use mg_grids
+  use mg_gather
 
   implicit none
 
@@ -15,7 +16,9 @@ program mg_testgather
   integer(kind=is):: it     ! iteration loop number
   integer(kind=is):: nit    ! number of iterations
 
+  integer(kind=is):: ngx,ngy
   integer(kind=is):: nsweeps
+  integer(kind=is):: nx,ny,nz,nh
 
   integer(kind=is):: lev, ierr
   real(kind=8)    :: res,res0,conv
@@ -46,13 +49,17 @@ program mg_testgather
                      grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
                      " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
        else
-          write(*,100)"lev=",lev,": ", &
+          ngx=grid(lev)%ngx
+          ngy=grid(lev)%ngy
+          write(*,110)"lev=",lev,": ", &
                      grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                     " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
+                     " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather ",ngx,"x",ngy
        endif
     enddo
  endif
  call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+
+
  if (myrank.eq.0)write(*,*)"---------- check families ----------"
  call MPI_Barrier( MPI_COMM_WORLD ,ierr)
  do lev=1,nlevs-1
@@ -66,7 +73,33 @@ program mg_testgather
     endif
     call MPI_Barrier( MPI_COMM_WORLD ,ierr)
  enddo
+
+ if (myrank.eq.0)write(*,*)"---------- check gathering ----------"
+ do lev=1,nlevs-1
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
+    call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+
+    if (grid(lev)%gather.eq.1)then
+
+       if (myrank.eq.0)then
+          write(*,'(A,I2,A)')"    ---  Level =",lev,' ---'
+       endif
+       call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+
+       grid(lev)%dummy3(:,:,:)=myrank*1._8
+       call gather(lev,grid(lev)%dummy3,grid(lev)%p)
+
+!       write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / dummy(1,ny,nx)=',grid(lev)%dummy3(1,ny/2,nx/2)
+       write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / p(1,ny,nx)=',grid(lev)%p(1,ny/2,nx/2)
+    endif
+ enddo
+ 
+
 100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
+110 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A,I1,A,I1)
 
 
 
