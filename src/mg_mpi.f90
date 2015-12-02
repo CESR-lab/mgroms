@@ -1,8 +1,9 @@
 module mg_mpi
 
-  use mpi
-
   implicit none
+!  use mpi
+  include 'mpif.h'
+
 
   integer(kind=4), parameter:: is=4, rl=8
 

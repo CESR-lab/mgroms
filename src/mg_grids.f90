@@ -7,13 +7,18 @@ module mg_grids
   integer(kind=4), parameter:: maxlev=10
 
   type grid_type
-     real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r
+     ! GR: why are those arrays declared as 'pointer'???
+     ! why not regular arrays?
+     real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
      real(kind=rl),dimension(:,:,:,:),pointer :: cA
+     real(kind=rl),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
      integer(kind=is) :: nx,ny, nz
      integer(kind=is) :: nd ! number of diagonals in cA
      integer(kind=is) :: npx, npy, incx, incy
      integer(kind=is) :: pj_offset, pi_offset
      integer(kind=is) :: nh                 ! number of points in halo
+     integer(kind=is) :: Ng, ngx, ngy
+     integer:: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=is) :: coarsening_method, smoothing_method, gather
      integer(kind=is),dimension(8)::neighb
   end type grid_type
@@ -47,6 +52,10 @@ contains
     integer(kind=is) :: pi, pj
     integer(kind=is) :: lev
 
+    ! for the gathering
+    integer(kind=is) :: ngx, ngy
+    integer::     color, key, localcomm, ierr
+    
     ! 1rst loop about the grid dimensions at deifferent levels
     ! at the end of that loop we have the number of levels 
 
@@ -117,9 +126,18 @@ contains
     enddo
 
     ! Neighbours
-    do lev=1,nlevs
-       npx = grid(1)%npx
+    do lev=1,nlevs       
+       ! Watch out, I continue to use the global indexing
+       ! to locate each core
+       ! a core that has coordinates (2,3) on the finest decomposition
+       ! will remain at this location (2,3) after gathering
+       npx = grid(1)%npx ! grid(1) is not a bug!
        npy = grid(1)%npy
+
+       pj = myrank/npx
+       pi = mod(myrank,npx)
+
+       ! incx is the distance to my neighbours in x (1, 2, 4, ...)
        incx = grid(lev)%incx
        incy = grid(lev)%incy
 
@@ -127,8 +145,6 @@ contains
 !       pj = myrank/grid(lev)%npx    + grid(lev)%pj_offset
 !       pi = myrank-pj*grid(lev)%npx + grid(lev)%pi_offset
 
-       pj = myrank/npx
-       pi = mod(myrank,npx)
 
        if (pj >= incy) then ! south
           grid(lev)%neighb(1) = (pj-incy)*npx+pi
@@ -178,6 +194,25 @@ contains
        endif
     enddo
 
+    return ! not yet ready to go through
+    
+    ! prepare the informations for the gathering 
+    do lev=1,nlevs-1
+       if(grid(lev)%gather.eq.1)then
+
+          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
+          grid(lev)%localcomm = localcomm
+
+!          allocate(grid(lev)%dummy3(:,:,:)) ! todo
+
+          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
+
+          ! number of elements of dummy3
+          grid(lev)%Ng=(nx*ngx+2*nh)*(ny*ngy+2*nh)*nz
+
+       endif
+    enddo
+
   end subroutine define_grids
 
   !----------------------------------------
@@ -204,6 +239,7 @@ contains
     incy = 1
     nsmall=8 ! smallest dimension ever for the global domain 
     do while (.not.(ok))
+       write(*,*)myrank,nx,ny,nz
        if(lev>1) then! coarsen
           if(nz.eq.1)then 
              ! 2D coarsening
