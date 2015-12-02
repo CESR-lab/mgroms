@@ -20,6 +20,7 @@ module mg_grids
      integer(kind=is) :: Ng, ngx, ngy
      integer:: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=is) :: coarsening_method, smoothing_method, gather
+     integer(kind=is) :: color,family
      integer(kind=is),dimension(8)::neighb
   end type grid_type
 
@@ -54,7 +55,7 @@ contains
 
     ! for the gathering
     integer(kind=is) :: ngx, ngy
-    integer::     color, key, localcomm, ierr
+    integer::     family, color, key, localcomm, ierr
     
     ! 1rst loop about the grid dimensions at deifferent levels
     ! at the end of that loop we have the number of levels 
@@ -125,17 +126,18 @@ contains
        allocate(halo(lev)%recvNE(nz,nh,nh))
     enddo
 
+    ! Watch out, I continue to use the global indexing
+    ! to locate each core
+    ! a core that has coordinates (2,3) on the finest decomposition
+    ! will remain at this location (2,3) after gathering
+    npx = grid(1)%npx ! grid(1) is not a bug!
+    npy = grid(1)%npy
+    
+    pj = myrank/npx
+    pi = mod(myrank,npx)
+
     ! Neighbours
     do lev=1,nlevs       
-       ! Watch out, I continue to use the global indexing
-       ! to locate each core
-       ! a core that has coordinates (2,3) on the finest decomposition
-       ! will remain at this location (2,3) after gathering
-       npx = grid(1)%npx ! grid(1) is not a bug!
-       npy = grid(1)%npy
-
-       pj = myrank/npx
-       pi = mod(myrank,npx)
 
        ! incx is the distance to my neighbours in x (1, 2, 4, ...)
        incx = grid(lev)%incx
@@ -194,13 +196,25 @@ contains
        endif
     enddo
 
-    return ! not yet ready to go through
+!    return ! not yet ready to go through
     
     ! prepare the informations for the gathering 
     do lev=1,nlevs-1
        if(grid(lev)%gather.eq.1)then
 
-          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
+          incx=grid(lev)%incx
+          incy=grid(lev)%incy
+
+
+         ! cores having the same family index share the same subdomain
+          family=(pi/incx)*incx*incy + (npx/2)*incy*(pj/incy)
+
+          ! assign a color to each core: make a cycling ramp index inside the family
+          ! cores having the same color should be a pair or a quadruplet
+          color=family + mod(pi,incx/2)+mod(pj,incy/2)*incx/2
+         
+
+          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, myrank, localcomm, ierr)
           grid(lev)%localcomm = localcomm
 
 !          allocate(grid(lev)%dummy3(:,:,:)) ! todo
@@ -209,7 +223,8 @@ contains
 
           ! number of elements of dummy3
           grid(lev)%Ng=(nx*ngx+2*nh)*(ny*ngy+2*nh)*nz
-
+          grid(lev)%color=color
+          grid(lev)%family=family
        endif
     enddo
 
@@ -239,7 +254,6 @@ contains
     incy = 1
     nsmall=8 ! smallest dimension ever for the global domain 
     do while (.not.(ok))
-       write(*,*)myrank,nx,ny,nz
        if(lev>1) then! coarsen
           if(nz.eq.1)then 
              ! 2D coarsening
@@ -307,7 +321,7 @@ contains
 
        ! stop criterion
        ok = (nz.eq.1).or.((n2d.eq.2).or.(min(nx,ny).lt.nsmall))
-       ok = (nx.le.8)
+!       ok = (nx.le.8)
        ! stop after 2 pure horizontal coarsenings
        lev = lev+1
     enddo

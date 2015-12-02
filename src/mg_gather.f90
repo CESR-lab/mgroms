@@ -22,7 +22,7 @@ module mg_gather
 
       integer(kind=is):: nx,ny,nz,nh,N
       integer(kind=is):: ngx,ngy,Ng
-      integer(kind=is):: i,j,k,l,ii,jj
+      integer(kind=is):: i,j,k,l,m,ii,jj
       real(kind=rl),dimension(:,:,:,:,:),pointer :: buffer
       
       buffer => grid(lev)%gatherbuffer
@@ -43,14 +43,14 @@ module mg_gather
 
       call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm)
 
-      do l=1,ngy
+      do m=1,ngy
          ii = 1-nh+(l-1)*nx
          do i=1-nh,nx+nh
-            do k=1,ngx
+            do l=1,ngx
                jj = 1-nh+(k-1)*ny
                do j=1-nh,ny+nh
                   do k=1,nz
-                     y(k,jj,ii) = buffer(k,j,i,k,l)
+                     y(k,jj,ii) = buffer(k,j,i,l,m)
                      jj=jj+1
                   enddo
                enddo
