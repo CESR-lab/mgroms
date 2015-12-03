@@ -207,7 +207,7 @@ contains
           nz = grid(lev)%nz
           nh = grid(lev)%nh
           incx=grid(lev)%incx / 2
-          incy=grid(lev)%incy / 2
+          incy=grid(lev)%incy / 2          
           ngx=grid(lev)%ngx
           ngy=grid(lev)%ngy
  
@@ -309,10 +309,14 @@ contains
 
        ! determine if gathering is needed
        if(((nx.lt.nsmall).or.(ny.lt.nsmall)).and.(npx*npy.ge.2))then
+          if(npx*npy.gt.1)then
+             incx=incx*2
+             incy=incy*2
+          endif
           if(npx.ge.2)then
              npx=npx/2
              nx=nx*2
-             incx=incx*2
+!             incx=incx*2
              ngx=2
           else
              ngx=1
@@ -320,7 +324,7 @@ contains
           if(npy.ge.2)then
              npy=npy/2
              ny=ny*2
-             incy=incy*2
+!             incy=incy*2
              ngy=2
           else
              ngy=1

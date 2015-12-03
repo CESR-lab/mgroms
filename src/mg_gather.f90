@@ -73,4 +73,46 @@ module mg_gather
 
     end subroutine gather
 
+    !----------------------------------------
+    subroutine split(lev,x,y)
+      
+      ! lev is the level of x, where it has to be split
+      ! y is the dummy 3D intermediate array, before interpolation
+
+      integer(kind=is),intent(in) :: lev
+      real(kind=rl),dimension(:,:,:),intent(in) :: x
+      real(kind=rl),dimension(:,:,:),intent(out) :: y
+
+      integer(kind=is):: nx,ny,nz,nh
+      integer(kind=is):: ngx,ngy
+      integer(kind=is):: i,j,k,l,m,ii,jj,key
+
+
+      ! number of cores per direction involved in this gathering (1 or 2)
+      ngx = grid(lev)%ngx
+      ngy = grid(lev)%ngy
+
+      nx = grid(lev)%nx / ngx
+      ny = grid(lev)%ny / ngy
+      nz = grid(lev)%nz
+      nh = grid(lev)%nh
+      key = grid(lev)%key
+
+      l = mod(key,2)
+      m = key/2
+
+      ii = 1-nh+(l-1)*nx
+      do i=1-nh,nx+nh
+         jj = 1-nh+(m-1)*ny
+         do j=1-nh,ny+nh
+            do k=1,nz
+               y(k,j,i) = x(k,jj,ii)
+            enddo
+            jj=jj+1
+         enddo
+         ii=ii+1
+      enddo
+      
+    end subroutine split
+
   end module mg_gather

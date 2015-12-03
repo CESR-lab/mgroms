@@ -18,12 +18,30 @@ module mg_intergrids
       real(kind=rl),dimension(:,:,:),intent(in) :: x
       real(kind=rl),dimension(:,:,:),intent(out) :: y
 
-      select case (grid(l1)%gather)
+      select case (grid(l2)%gather)
          case(0)
             call restrict_generic(l1,l2,x,y) ! regular coarsening
          case(1)
             call restrict_generic(l1,l2,x,grid(l1)%dummy) ! coarsen
             call gather(l2,grid(l1)%dummy,y) ! then gather
+      end select
+
+      end subroutine
+
+      !----------------------------------------
+      subroutine coarsetofine(l1,l2,x,y)
+      
+      integer(kind=is):: l1,l2 ! l1 is the coarse grid index, l2=l1-1
+
+      real(kind=rl),dimension(:,:,:),intent(in) :: x
+      real(kind=rl),dimension(:,:,:),intent(out) :: y
+
+      select case (grid(l1)%gather)
+         case(0)
+            call interpolate_generic(l1,l2,x,y) ! regular interpolation
+         case(1)
+            call split(l1,x,grid(l1)%dummy) ! split
+            call interpolate_generic(l1,l2,grid(l1)%dummy,y) ! then interpolate
       end select
 
       end subroutine
@@ -55,9 +73,43 @@ module mg_intergrids
 !!$      case(4)
 !!$         ! double vertical coarsening
 !!$         call restrict_zz(l1,l2,x,y)
-      case(5)
+!      case(5)
          ! triple vertical coarsening
-         call restrict_zzz(l1,l2,x,y)
+!         call restrict_zzz(l1,l2,x,y)
+      end select
+      
+      end subroutine
+
+      !----------------------------------------
+      subroutine interpolate_generic(l1,l2,x,y)
+
+      ! watch out: the dimensions of x or y do not correspond to a grid level
+      ! if a gather is introduced
+
+      integer(kind=is):: l1,l2 ! l1 is the coarse grid index, l2=l1-1
+
+      real(kind=rl),dimension(:,:,:),intent(in) :: x
+      real(kind=rl),dimension(:,:,:),intent(out) :: y
+
+      select case(grid(l2)%coarsening_method)
+      case(1)
+         ! regular 3D interpolation
+         call interpolate_xyz(l1,l2,x,y)
+         call fill_halo(l2,y)
+      case(2)
+         ! 2D interpolation
+         call interpolate_xy(l1,l2,x,y)
+         call fill_halo(l2,y)
+!!$      case(3)
+!!$         ! simple vertical interpolation
+!!$         call interpolate_z(l1,l2,x,y)
+!!$         ! no fill halo because no coupling in the horizontal!
+!!$      case(4)
+!!$         ! double vertical interpolation
+!!$         call interpolate_zz(l1,l2,x,y)
+!      case(5)
+         ! triple vertical interpolation
+!         call interpolate_zzz(l1,l2,x,y)
       end select
       
       end subroutine

@@ -28,8 +28,8 @@ program mg_testgather
   nzg   = 128
   nhalo = 1
 
-  npxg  = 8
-  npyg  = 8
+  npxg  = 2
+  npyg  = 4
 
   nit     = 10
   nsweeps = 1
