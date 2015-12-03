@@ -28,8 +28,8 @@ program mg_testgather
   nzg   = 128
   nhalo = 1
 
-  npxg  = 4
-  npyg  = 4
+  npxg  = 8
+  npyg  = 8
 
   nit     = 10
   nsweeps = 1
@@ -69,7 +69,7 @@ program mg_testgather
           write(*,'(A,I2,A)')"    ---  Level =",lev,' ---'
        endif
        call MPI_Barrier( MPI_COMM_WORLD ,ierr)
-       write(*,'(A,I,A,I,A,I)')"rank=",myrank," /family=",grid(lev)%family," /color=",grid(lev)%color
+       write(*,'(A,I3,A,I3,A,I2,A,I1)')"rank=",myrank," /family=",grid(lev)%family," /color=",grid(lev)%color," /key=",grid(lev)%key
     endif
     call MPI_Barrier( MPI_COMM_WORLD ,ierr)
  enddo
@@ -90,10 +90,13 @@ program mg_testgather
        call MPI_Barrier( MPI_COMM_WORLD ,ierr)
 
        grid(lev)%dummy3(:,:,:)=myrank*1._8
+!       write(*,*)size(grid(lev)%dummy3),grid(lev)%Ng,size(grid(lev)%p)
        call gather(lev,grid(lev)%dummy3,grid(lev)%p)
 
 !       write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / dummy(1,ny,nx)=',grid(lev)%dummy3(1,ny/2,nx/2)
-       write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / p(1,ny,nx)=',grid(lev)%p(1,ny/2,nx/2)
+       write(*,'(A,I2,A,F3.0,A,F3.0)')'rank=',myrank,' / p(1,1,1)=',grid(lev)%p(1,1,1), &
+            ' / p(1,ny/2,nx/2)=',grid(lev)%p(1,ny/2,nx/2)
+!       if (myrank.eq.3)write(*,*)grid(lev)%p(1,:,:)
     endif
  enddo
  

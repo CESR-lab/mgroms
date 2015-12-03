@@ -20,7 +20,7 @@ module mg_grids
      integer(kind=is) :: Ng, ngx, ngy
      integer:: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=is) :: coarsening_method, smoothing_method, gather
-     integer(kind=is) :: color,family
+     integer(kind=is) :: color,family,key
      integer(kind=is),dimension(8)::neighb
   end type grid_type
 
@@ -55,7 +55,7 @@ contains
 
     ! for the gathering
     integer(kind=is) :: ngx, ngy
-    integer::     ff, family, color, key, localcomm, ierr
+    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
     
     ! 1rst loop about the grid dimensions at deifferent levels
     ! at the end of that loop we have the number of levels 
@@ -206,8 +206,8 @@ contains
           ny = grid(lev)%ny
           nz = grid(lev)%nz
           nh = grid(lev)%nh
-          incx=grid(lev)%incx
-          incy=grid(lev)%incy
+          incx=grid(lev)%incx / 2
+          incy=grid(lev)%incy / 2
           ngx=grid(lev)%ngx
           ngy=grid(lev)%ngy
  
@@ -215,25 +215,29 @@ contains
           !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
 
          ! cores having the same family index share the same subdomain
-          family=(pi/incx)*incx*incy + (npx/2)*incy*(pj/incy)
+          family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
+
+          nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
 
           ! - assign a color to each core: make a cycling ramp index
           ! through 2 or 4 close families 
           ! - cores having the same color should be a pair or a quadruplet 
           ! - colors are all distinct *within* a family
-          color=family + mod(pi,incx/2)+mod(pj,incy/2)*incx/2
+          color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
 
-          ff=family/(incx*incy)
-          key = mod(mod(ff,incx),2)+mod((ff/incy),2)
-
+          
+!          prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
+          N=incx*npx;
+          key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
          
+
           grid(lev)%color=color
-          grid(lev)%family=family
+          grid(lev)%family=nextfamily
+          grid(lev)%key=key
 
           call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
           grid(lev)%localcomm = localcomm
 
-          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
 
           ! this dummy 3D array is to store the restriction from lev-1, before the gathering
           ! its size can be deduced from the size after the gathering
@@ -241,8 +245,15 @@ contains
           nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
           allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
+          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
           ! number of elements of dummy3
           grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
+
+!          if(myrank.eq.0)then
+!             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
+!   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
+!      endif
+
        endif
     enddo
 

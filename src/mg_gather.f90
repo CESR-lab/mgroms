@@ -41,18 +41,10 @@ module mg_gather
       nh = grid(lev)%nh
 
       ! numel(x)
-!      Ng = (nx*ngx+2*nh)*(ny*ngy+2*nh)*nz
       Ng = grid(lev)%Ng
 
        call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
 
-!      z = myrank*1._8
-!      call MPI_ALLGATHER( z,1, MPI_DOUBLE_PRECISION, b, 1, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)      
-
-!      if(myrank.eq.0)write(*,*)b
-!      write(*,*)myrank,b
-!      write(*,*)"IERR=",ierr
-!      return
       ! I can see two possibilities to copy the 4 buffers into y
       !
       ! 1/ either sweep across each buffer and copy it to y
@@ -70,7 +62,7 @@ module mg_gather
                jj = 1-nh+(m-1)*ny
                do j=1-nh,ny+nh
                   do k=1,nz
-                     y(k,jj,ii) = buffer(k,j,i,m,l)
+                     y(k,jj,ii) = buffer(k,j,i,l,m)
                   enddo
                   jj=jj+1
                enddo

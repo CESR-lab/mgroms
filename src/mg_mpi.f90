@@ -32,8 +32,11 @@ contains
     call mpi_comm_size(mpi_comm_world, nprocs, ierr)
 
     if (nprocs /= (npxg*npyg)) then
-       write(*,*) "Error: in number of processes !"
-       stop -1
+       if(myrank.eq.0)then
+          write(*,*) "Error: in number of processes !"
+          write(*,'(A,I3,A)') "call with mpirun -np ",npxg*npyg," ..."
+       endif
+       stop
     endif
 
     ! WARNING, non divisibility issues !
