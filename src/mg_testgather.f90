@@ -28,7 +28,7 @@ program mg_testgather
   nzg   = 128
   nhalo = 1
 
-  npxg  = 2
+  npxg  = 4
   npyg  = 4
 
   nit     = 10
@@ -92,11 +92,16 @@ program mg_testgather
        grid(lev)%dummy3(:,:,:)=myrank*1._8
 !       write(*,*)size(grid(lev)%dummy3),grid(lev)%Ng,size(grid(lev)%p)
        call gather(lev,grid(lev)%dummy3,grid(lev)%p)
+!       call fill_halo(lev,grid(lev)%p)
+!       grid(lev)%p=myrank*1._8
+       call split(lev,grid(lev)%p,grid(lev)%dummy3)
 
-!       write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / dummy(1,ny,nx)=',grid(lev)%dummy3(1,ny/2,nx/2)
-       write(*,'(A,I2,A,F3.0,A,F3.0)')'rank=',myrank,' / p(1,1,1)=',grid(lev)%p(1,1,1), &
-            ' / p(1,ny/2,nx/2)=',grid(lev)%p(1,ny/2,nx/2)
-!       if (myrank.eq.3)write(*,*)grid(lev)%p(1,:,:)
+
+!       write(*,'(A,I2,A,F3.0,A,F3.0)')'rank=',myrank,' / p(1,1,1)=',grid(lev)%p(1,1,1), &
+!            ' / p(1,ny/2,nx/2)=',grid(lev)%p(1,ny/2,nx/2)
+
+       write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / dummy3=',grid(lev)%dummy3(1,1,1)
+
     endif
  enddo
  

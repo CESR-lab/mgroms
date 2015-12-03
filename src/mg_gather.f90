@@ -55,11 +55,11 @@ module mg_gather
       !
       nx = nx / ngx
       ny = ny / ngy
-      do m=1,ngy
-         do l=1,ngx
-            ii = 1-nh+(l-1)*nx
+      do m=0,ngy-1
+         do l=0,ngx-1
+            ii = 1-nh+l*nx
             do i=1-nh,nx+nh
-               jj = 1-nh+(m-1)*ny
+               jj = 1-nh+m*ny
                do j=1-nh,ny+nh
                   do k=1,nz
                      y(k,jj,ii) = buffer(k,j,i,l,m)
@@ -81,12 +81,22 @@ module mg_gather
 
       integer(kind=is),intent(in) :: lev
       real(kind=rl),dimension(:,:,:),intent(in) :: x
+!    real(kind=rl),dimension( &
+!         grid(lev)%nz,       &
+!         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh, &
+!         1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(in) :: x
+
       real(kind=rl),dimension(:,:,:),intent(out) :: y
+!    real(kind=rl),dimension( &
+!         grid(lev)%nz,       &
+!         1-grid(lev)%nh:grid(lev)%ny/grid(lev)%ngy+grid(lev)%nh, &
+!         1-grid(lev)%nh:grid(lev)%nx/grid(lev)%ngx+grid(lev)%nh), intent(out) :: y
+
 
       integer(kind=is):: nx,ny,nz,nh
       integer(kind=is):: ngx,ngy
-      integer(kind=is):: i,j,k,l,m,ii,jj,key
-
+      integer(kind=is):: i,j,k,l,m,ii,jj,key,ierr
+      real(kind=rl):: z
 
       ! number of cores per direction involved in this gathering (1 or 2)
       ngx = grid(lev)%ngx
@@ -96,22 +106,36 @@ module mg_gather
       ny = grid(lev)%ny / ngy
       nz = grid(lev)%nz
       nh = grid(lev)%nh
+
       key = grid(lev)%key
 
       l = mod(key,2)
       m = key/2
 
-      ii = 1-nh+(l-1)*nx
+!      write(*,*)myrank,nx,ny,nz,l,m,nh!size(x),size(y),l,m
+ !     l=0
+ !     m=0
+!      call MPI_Barrier( MPI_COMM_WORLD)
+
+!      y = 0.
+!      z = 0.
+!      return
+!      return
+      ii = 1-nh+l*nx
       do i=1-nh,nx+nh
-         jj = 1-nh+(m-1)*ny
+         jj = 1-nh+m*ny
          do j=1-nh,ny+nh
             do k=1,nz
-               y(k,j,i) = x(k,jj,ii)
+               z=z+1.
+               y(1,1,1) = x(k,jj,ii)
             enddo
             jj=jj+1
          enddo
          ii=ii+1
       enddo
+!      call MPI_Barrier( MPI_COMM_WORLD)
+!      write(*,*)"done",z
+!      call MPI_Barrier( MPI_COMM_WORLD,ierr)
       
     end subroutine split
 
