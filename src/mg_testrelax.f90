@@ -2,6 +2,7 @@ program mg_testrelax
 
   use mg_mpi ! everything will come from the outside !!!
 
+  use mg_tictoc
   use mg_grids
   use mg_define_rhs
   use mg_define_matrix
@@ -23,6 +24,10 @@ program mg_testrelax
   integer(kind=is):: lev
   real(kind=8)    :: res
 
+  real(kind=8)    :: dumt
+
+  call tic(1,'mg_testrelax')
+
   nxg   = 128
   nyg   = 128
   nzg   = 128
@@ -31,12 +36,14 @@ program mg_testrelax
   npxg  = 2
   npyg  = 2
 
-  nit     = 10
-  nsweeps = 1
+  nit     = 150
+  nsweeps = 20
 
   call init_mpi(nxg, nyg, nzg, npxg, npyg)
 
-  call define_grids(nhalo,npxg,npyg)
+  call find_grid_levels(npxg, npyg, nxo, nyo, nzo)
+
+  call define_grids(npxg, npyg, nxo, nyo, nzo)
 
   call define_rhs(nxg, nyg, npxg)
 
@@ -52,10 +59,14 @@ program mg_testrelax
         write(*,1000)"ite=",it," - res=",res
      endif
   enddo
-1000 format(A,I2,A,F6.3)
+1000 format(A,I5,A,F6.3)
 
 !  call check_solution(lev)
 
   call mg_mpi_finalize()
+
+  call toc(1,'mg_testrelax')
+
+  call print_tictoc(myrank)
 
 end program mg_testrelax

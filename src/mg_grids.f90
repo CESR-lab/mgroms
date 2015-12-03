@@ -1,6 +1,7 @@
 module mg_grids
 
   use mg_mpi
+  use mg_tictoc
 
   implicit none
 
@@ -10,51 +11,52 @@ module mg_grids
      real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r
      real(kind=rl),dimension(:,:,:,:),pointer :: cA
      integer(kind=is) :: nx,ny, nz
-     integer(kind=is) :: nd ! number of diagonals in cA
      integer(kind=is) :: npx, npy, incx, incy
-     integer(kind=is) :: pj_offset, pi_offset
      integer(kind=is) :: nh                 ! number of points in halo
-     integer(kind=is) :: coarsening_method, smoothing_method, gather
+     integer(kind=is) :: gather
      integer(kind=is),dimension(8)::neighb
+     real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+     real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+     real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+     real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
   end type grid_type
 
-  type type_halo
-    real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
-    real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
-    real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
-    real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
-  end type type_halo
+  type(grid_type), dimension(:), pointer :: grid
 
-  type(type_halo),dimension(maxlev) :: halo
+  integer(kind=is):: nlevs ! index of the coarsest level (1 is the finest)
+  integer(kind=is):: nhalo
 
-  type(grid_type), dimension(maxlev) :: grid
-  integer:: nlevs ! index of the coarsest level (1 is the finest)
-  integer:: nhalo
+  !- put it in namelist file !
+  logical :: aggressive = .false.
 
 contains
 
   !----------------------------------------
-  subroutine define_grids(nhalo,npxg,npyg)
+  subroutine define_grids(npxg, npyg, nxl, nyl, nzl)
 
-    integer(kind=is), intent(in):: nhalo         ! number of halo points
-    integer(kind=is), intent(in):: npxg,npyg  ! global CPU topology
+    integer(kind=is), intent(in) :: npxg,npyg  ! global CPU topology
+    integer(kind=is), intent(in) :: nxl, nyl, nzl ! local dims
 
-    integer(kind=is) :: nx, ny, nz
+    integer(kind=is) :: nhalo        ! number of halo points
     integer(kind=is) :: nh, nd
     integer(kind=is) :: npx, npy
     integer(kind=is) :: incx, incy
 
-    integer(kind=is) :: pi, pj
+    integer(kind=is) :: nx, ny, nz
+
+
     integer(kind=is) :: lev
 
-    ! 1rst loop about the grid dimensions at deifferent levels
-    ! at the end of that loop we have the number of levels 
+    call  find_grid_levels(npxg, npyg, nzl, nyl, nxl)
 
-    grid(1)%nx = nxo
-    grid(1)%ny = nyo
-    grid(1)%nz = nzo
+    allocate(grid(nlevs))
+
+    nhalo = 2
+
+    grid(1)%nx = nxl 
+    grid(1)%ny = nyl
+    grid(1)%nz = nzl
     grid(1)%nh = nhalo
-    grid(1)%nd = 8
 
     grid(1)%npx = npxg
     grid(1)%npy = npyg
@@ -62,70 +64,186 @@ contains
     grid(1)%incx=1
     grid(1)%incy=1
 
-    grid(1)%pj_offset = 0
-    grid(1)%pi_offset = 0
+    ! define grid dimensions at each level
+    call define_grid_dims()
 
-    call define_grid_hierarchy()
-
-!!$    nlevs=4
-!!$    do lev=2, nlevs
-!!$    ! figure out additional grid dimensions
-!!$    ! TODO: figure out process numbers for grid levels
-!!$       grid(lev)%nx = grid(lev-1)%nx/2
-!!$       grid(lev)%ny = grid(lev-1)%ny/2
-!!$       grid(lev)%nz = grid(lev-1)%nz/2
-!!$       grid(lev)%nh = nhalo
-!!$       grid(lev)%npx = npxg
-!!$       grid(lev)%npy = npyg
-!!$
-!!$       grid(lev)%pj_offset = 0
-!!$       grid(lev)%pi_offset = 0
-!!$    enddo
-
+    ! Allocate memory
     do lev=1,nlevs
-       ! Allocate memory
+
        nx = grid(lev)%nx
        ny = grid(lev)%ny
        nz = grid(lev)%nz
        nh = grid(lev)%nh
-       nd = grid(lev)%nd
-       allocate(grid(lev)%p(   nz,1-nh:ny+nh,1-nh:nx+nh))
-       grid(lev)%p(:,:,:)=0._8
-       allocate(grid(lev)%b(   nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%r(   nz,1-nh:ny+nh,1-nh:nx+nh))
+
+       if (nz == 1) then
+          nd = 3
+       else
+          nd = 8
+       endif
+
+       allocate(grid(lev)%p(    nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%b(    nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%r(    nz,1-nh:ny+nh,1-nh:nx+nh)) ! Need or not ?
        allocate(grid(lev)%cA(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
 
-       allocate(halo(lev)%sendS(nz,nh,nx))
-       allocate(halo(lev)%recvS(nz,nh,nx))
-       allocate(halo(lev)%sendN(nz,nh,nx))
-       allocate(halo(lev)%recvN(nz,nh,nx))
+       allocate(grid(lev)%sendS(nz,nh,nx))
+       allocate(grid(lev)%recvS(nz,nh,nx))
+       allocate(grid(lev)%sendN(nz,nh,nx))
+       allocate(grid(lev)%recvN(nz,nh,nx))
 
-       allocate(halo(lev)%sendE(nz,ny,nh))
-       allocate(halo(lev)%recvE(nz,ny,nh))
-       allocate(halo(lev)%sendW(nz,ny,nh))
-       allocate(halo(lev)%recvW(nz,ny,nh))
+       allocate(grid(lev)%sendE(nz,ny,nh))
+       allocate(grid(lev)%recvE(nz,ny,nh))
+       allocate(grid(lev)%sendW(nz,ny,nh))
+       allocate(grid(lev)%recvW(nz,ny,nh))
 
-       allocate(halo(lev)%sendSW(nz,nh,nh))
-       allocate(halo(lev)%sendSE(nz,nh,nh))
-       allocate(halo(lev)%sendNW(nz,nh,nh))
-       allocate(halo(lev)%sendNE(nz,nh,nh))
+       allocate(grid(lev)%sendSW(nz,nh,nh))
+       allocate(grid(lev)%sendSE(nz,nh,nh))
+       allocate(grid(lev)%sendNW(nz,nh,nh))
+       allocate(grid(lev)%sendNE(nz,nh,nh))
 
-       allocate(halo(lev)%recvSW(nz,nh,nh))
-       allocate(halo(lev)%recvSE(nz,nh,nh))
-       allocate(halo(lev)%recvNW(nz,nh,nh))
-       allocate(halo(lev)%recvNE(nz,nh,nh))
+       allocate(grid(lev)%recvSW(nz,nh,nh))
+       allocate(grid(lev)%recvSE(nz,nh,nh))
+       allocate(grid(lev)%recvNW(nz,nh,nh))
+       allocate(grid(lev)%recvNE(nz,nh,nh))
     enddo
 
+  end subroutine define_grids
+
+ !----------------------------------------
+  subroutine find_grid_levels(npxg, npyg, nz,ny,nx)
+
+    integer(kind=4) , intent(in) :: npxg, npyg
+    integer(kind=is), intent(in) :: nx, ny, nz
+
+    integer(kind=is) :: nxg, nyg, nzg
+    integer(kind=is) :: npx, npy
+    integer(kind=is) :: nsmall
+
+
+    nxg = npxg * nx
+    nyg = npyg * ny
+    nzg = nz
+
+    nlevs = 1
+    nsmall=8 ! smallest dimension ever for the global domain 
+
+    do 
+       ! stop criterion
+       if (min(nxg,nyg).lt.nsmall) exit
+
+       nlevs = nlevs+1
+
+       if(nz.eq.1)then 
+          ! 2D coarsening
+          if ((mod(nxg,2) == 0).or.(mod(nyg,2) == 0)) then
+             nxg = nxg/2
+             nyg = nyg/2
+          else
+             write(*,*)'Error:grid dimension not a power of 2!'
+             stop -1
+          end if
+       else
+          ! regular 3D coarsening
+          if ((mod(nxg,2) == 0).or.(mod(nyg,2) == 0).or.(mod(nzg,2) == 0)) then
+             nxg = nxg/2
+             nyg = nyg/2
+             nzg = nzg/2
+          else
+             write(*,*)'Error:grid dimension not a power of 2!'
+             stop -1
+          end if
+       endif
+
+    enddo
+
+  end subroutine find_grid_levels
+
+  !----------------------------------------
+  subroutine define_grid_dims()
+
+    integer(kind=is) :: nx, ny, nz, nd, nh
+    integer(kind=is) :: npx, npy
+    integer(kind=is) :: lev, n2d, incx, incy, nsmall
+    integer(kind=is) :: coarsen, smooth
+
+    nx = grid(1)%nx
+    ny = grid(1)%ny
+    nz = grid(1)%nz
+    nh = grid(1)%nh
+    npx = grid(1)%npx
+    npy = grid(1)%npy
+
+    incx = 1
+    incy = 1
+    nsmall=8 ! smallest dimension ever for the global domain 
+
+    do lev = 2, nlevs
+
+       if (aggressive.and.(lev==2)) then
+          if (mod(nz,8) == 0) then
+             nz = nz/8
+          else
+             write(*,*)'Error: aggressive coarsening not possible'
+             stop -1
+          endif
+       else
+          if (nz.eq.1) then ! 2D coarsening
+             nx = nx/2
+             ny = ny/2
+          else              ! regular 3D coarsening
+             nx = nx/2
+             ny = ny/2
+             nz = nz/2
+          endif
+       endif
+
+       ! determine if gathering is needed
+       !- assumes squarish nxg nyg dimensions !
+
+       grid(lev)%gather=0
+
+       if((nx < nsmall).and.(npx > 1))then
+          npx  = npx/2
+          nx   = nx*2
+          incx = incx*2
+          grid(lev)%gather = grid(lev)%gather + 1
+       endif
+
+       if((ny < nsmall).and.(npy > 1))then
+          npy  = npy/2
+          ny   = ny*2
+          incy = incy*2
+          grid(lev)%gather = grid(lev)%gather + 2
+       endif
+
+       grid(lev)%nx   = nx
+       grid(lev)%ny   = ny
+       grid(lev)%nz   = nz
+       grid(lev)%npx  = npx
+       grid(lev)%npy  = npy
+       grid(lev)%incx = incx
+       grid(lev)%incy = incy
+       grid(lev)%nh   = nh
+
+    enddo
+
+  end subroutine define_grid_dims
+
+  !----------------------------------------
+  subroutine define_neighbours(neighb)
+    integer(kind=4), dimension(4), intent(in) :: neighb ! S, E, N, W
+
+    integer(kind=4) :: lev
+    integer(kind=is) :: npx, npy
+    integer(kind=is) :: incx, incy
+    integer(kind=is) :: pi, pj
+    
     ! Neighbours
     do lev=1,nlevs
        npx = grid(1)%npx
        npy = grid(1)%npy
        incx = grid(lev)%incx
        incy = grid(lev)%incy
-
-       !! rank/grid(1)%npx = floor(myrank/grid(1)%npx) with integers
-!       pj = myrank/grid(lev)%npx    + grid(lev)%pj_offset
-!       pi = myrank-pj*grid(lev)%npx + grid(lev)%pi_offset
 
        pj = myrank/npx
        pi = mod(myrank,npx)
@@ -178,118 +296,28 @@ contains
        endif
     enddo
 
-  end subroutine define_grids
+    ! Test for level 1 the coherency with the ocean model
+    If  ((grid(1)%neighb(1) /= neighb(1)).or. &
+         (grid(1)%neighb(2) /= neighb(2)).or. &
+         (grid(1)%neighb(3) /= neighb(3)).or. &
+         (grid(1)%neighb(4) /= neighb(4))) then
+       write(*,*)'Error: neighbour definition problem !'
+       stop -1
+    endif
 
-  !----------------------------------------
-  subroutine define_grid_hierarchy
-
-    integer(kind=is) :: nx, ny, nz, nd, nh
-    integer(kind=is) :: npx, npy
-    integer(kind=is) :: lev, n2d, incx, incy, nsmall
-    integer(kind=is) :: coarsen, smooth
-    logical:: ok
-
-    nx = grid(1)%nx
-    ny = grid(1)%ny
-    nz = grid(1)%nz
-    nh = grid(1)%nh
-
-    npx = grid(1)%npx
-    npy = grid(1)%npy
-
-    ok = .false.
-    lev=2
-    n2d = 0 ! number of 2D coarsening
-    incx = 1
-    incy = 1
-    nsmall=8 ! smallest dimension ever for the global domain 
-    do while (.not.(ok))
-       if(lev>1) then! coarsen
-          if(nz.eq.1)then 
-             ! 2D coarsening
-             n2d=n2d+1
-             nx=nx/2
-             ny=ny/2
-             coarsen=2
-          else
-!!$             if(aspect_ratio.le.0.25)then !pure vertical coarsening
-!!$                aspect_ratio=aspect_ratio*8
-!!$                nz=nz/8
-!!$                coarsen=5
-!!$             else 
-             ! regular 3D coarsening
-             nx=nx/2
-             ny=ny/2
-             nz=nz/2
-             coarsen=1
-!!$             endif
-          endif
-          grid(lev-1)%coarsening_method=coarsen
-       endif
-
-       ! determine if gathering is needed
-       if(((nx.lt.nsmall).or.(ny.lt.nsmall)).and.(npx*npy.ge.2))then
-          if(npx.ge.2)then
-             npx=npx/2
-             nx=nx*2
-             incx=incx*2
-          endif
-          if(npy.ge.2)then
-             npy=npy/2
-             ny=ny*2
-             incy=incy*2
-          endif
-          grid(lev)%gather=1
-       else
-          grid(lev)%gather=0
-       endif
-
-       !now determine what is the appropriate smoothing on this grid
-       if(nz.eq.1)then
-          smooth=2
-          nd=3
-       else
-!!$          if(aspect_ratio.le.0.25)then
-!!$             smooth=1
-!!$             nd=8
-!!$          else
-          smooth=0
-          nd=8
-!!$          endif
-       endif
-       
-       grid(lev)%nx=nx
-       grid(lev)%ny=ny
-       grid(lev)%nz=nz
-       grid(lev)%npx=npx
-       grid(lev)%npy=npy
-       grid(lev)%incx=incx
-       grid(lev)%incy=incy
-       grid(lev)%nd=nd ! number of coefficients for cA
-       grid(lev)%nh=nh
-       grid(lev)%smoothing_method=smooth
-
-       ! stop criterion
-       ok = (nz.eq.1).or.((n2d.eq.2).or.(min(nx,ny).lt.nsmall))
-       ok = (nx.le.8)
-       ! stop after 2 pure horizontal coarsenings
-       lev = lev+1
-    enddo
-    nlevs = lev-1
-
-  end subroutine define_grid_hierarchy
+  end subroutine define_neighbours
 
   !----------------------------------------
   subroutine fill_halo(lev,p)
 
     integer(kind=is), intent(in):: lev
 
-    real(kind=rl),dimension( &
-         grid(lev)%nz,       &
-         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh, &
-         1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(inout) :: p
- 
-!    real(kind=rl),dimension(:,:,:),intent(inout)::p
+    !!real(kind=rl),dimension( &
+    !!     grid(lev)%nz,       &
+    !!    1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh, &
+    !!     1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(inout) :: p
+
+    real(kind=rl), dimension(:,:,:), pointer, intent(inout)::p
 
     integer(kind=is) :: nx, ny, nz
     integer(kind=is) :: nh
@@ -306,12 +334,16 @@ contains
     real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
     real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
 
+    real(kind=rl) :: dumt
+
+    call tic(lev,'fill_halo')
+
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-!    p => grid(lev)%p
+    !    p => grid(lev)%p
 
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)
@@ -322,25 +354,25 @@ contains
     northeast = grid(lev)%neighb(7)
     northwest = grid(lev)%neighb(8)
 
-    sendS => halo(lev)%sendS
-    recvS => halo(lev)%recvS
-    sendN => halo(lev)%sendN
-    recvN => halo(lev)%recvN
+    sendS => grid(lev)%sendS
+    recvS => grid(lev)%recvS
+    sendN => grid(lev)%sendN
+    recvN => grid(lev)%recvN
 
-    sendE => halo(lev)%sendE
-    recvE => halo(lev)%recvE
-    sendW => halo(lev)%sendW
-    recvW => halo(lev)%recvW
+    sendE => grid(lev)%sendE
+    recvE => grid(lev)%recvE
+    sendW => grid(lev)%sendW
+    recvW => grid(lev)%recvW
 
-    sendSW => halo(lev)%sendSW
-    sendSE => halo(lev)%sendSE
-    sendNW => halo(lev)%sendNW
-    sendNE => halo(lev)%sendNE
+    sendSW => grid(lev)%sendSW
+    sendSE => grid(lev)%sendSE
+    sendNW => grid(lev)%sendNW
+    sendNE => grid(lev)%sendNE
 
-    recvSW => halo(lev)%recvSW
-    recvSE => halo(lev)%recvSE
-    recvNW => halo(lev)%recvNW
-    recvNE => halo(lev)%recvNE
+    recvSW => grid(lev)%recvSW
+    recvSE => grid(lev)%recvSE
+    recvNW => grid(lev)%recvNW
+    recvNE => grid(lev)%recvNE
 
     !-----------
     !    Fill West-East ghost cells
@@ -493,6 +525,8 @@ contains
     !write(*,*)'rank- p(nz/2,ny:ny+1,nx/2):', myrank, p(nz/2,ny:ny+1,nx/2)
     !write(*,*)'rank- p(nz/2,ny:ny+1,nx+1):', myrank, p(nz/2,ny:ny+1,nx+1), p(nz/2,ny,nx)
 
+    call toc(lev,'fill_halo')
+
   end subroutine fill_halo
 
   !----------------------------------------
@@ -504,14 +538,14 @@ contains
     real(kind=rl),intent(out) :: maxglo
 
     integer(kind=is) :: ierr
-    
+
     ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
     ! where subdomains are gathered
     ! this is not optimal, but not wrong
     call MPI_ALLREDUCE(maxloc,maxglo,1,MPI_DOUBLE_PRECISION,MPI_max,MPI_COMM_WORLD,ierr)   
 
   end subroutine global_max
-  
+
   !----------------------------------------
   subroutine global_sum(lev,sumloc,sumglo)
     ! return the global sum: sumglo
@@ -521,14 +555,14 @@ contains
     real(kind=rl),intent(out) :: sumglo
 
     integer(kind=is) :: ierr
-    
+
     ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
     ! where subdomains are gathered
     call MPI_ALLREDUCE(sumloc,sumglo,1,MPI_DOUBLE_PRECISION,MPI_sum,MPI_COMM_WORLD,ierr)   
     ! therefore we need to rescale the global sum
     sumglo = sumglo * (grid(lev)%npx*grid(lev)%npy)/(grid(1)%npx*grid(1)%npy)
-    
+
   end subroutine global_sum
-  
-  
+
+
 end module mg_grids

@@ -2,6 +2,7 @@ program mg_testcoarsening
 
   use mg_mpi ! everything will come from the outside !!!
 
+  use mg_tictoc
   use mg_grids
   use mg_define_rhs
   use mg_define_matrix
@@ -24,10 +25,13 @@ program mg_testcoarsening
   integer(kind=is):: lev, ierr
   real(kind=8)    :: res,res0,conv
 
-  nxg   = 128
-  nyg   = 128
-  nzg   = 128
-  nhalo = 1
+  !- timing
+  call tic(1,'mg_testcoarsening')
+
+  nxg   = 1024
+  nyg   = 1024
+  nzg   = 64
+  nhalo = 2
 
   npxg  = 2
   npyg  = 2
@@ -37,8 +41,9 @@ program mg_testcoarsening
 
   call init_mpi(nxg, nyg, nzg, npxg, npyg)
 
-  call define_grids(nhalo,npxg,npyg)
+  call find_grid_levels(npxg, npyg, nxo, nyo, nzo)
 
+  call define_grids(npxg, npyg, nxo, nyo, nzo)
 
   call MPI_Barrier( MPI_COMM_WORLD ,ierr)
   if (myrank.eq.0)then
@@ -55,8 +60,6 @@ program mg_testcoarsening
     enddo
  endif
 100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
-
-
 
   call define_rhs(nxg, nyg, npxg)
 
@@ -107,7 +110,10 @@ program mg_testcoarsening
 
 !  call check_solution(lev)
 
-
   call mg_mpi_finalize()
+
+  !- timing
+  call toc(1,'mg_testcoarsening')
+  call print_tictoc(myrank)
 
 end program mg_testcoarsening

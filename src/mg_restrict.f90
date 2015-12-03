@@ -1,88 +1,89 @@
 module mg_restrict
-   !
-   ! Collection of restriction subroutines
-   !
-   use mg_grids
-   !      use mg_mpi
-   implicit none
-
-
+  !
+  ! Collection of restriction subroutines
+  !
+  use mg_tictoc
+  use mg_grids
+  !      use mg_mpi
+  implicit none
 
 contains
+  !------------!
+  !- RESTRICT -!
+  !------------------------------------------------------------
+  subroutine restrict(lev)
 
-   !------------------------------------------------------------
-   subroutine restrict_xyz(l1,l2,x,y)
-   !
-   ! Restrict 'x' from fine level l1 to 'y' on coarse level l2=l1+1
+    integer(kind=is), intent(in) :: lev
 
-   integer(kind=is) :: l1,l2
-   real(kind=8),dimension(:,:,:),intent(in) :: x
-   real(kind=8),dimension(:,:,:),intent(out) :: y
-!!$   real(kind=rl),dimension( &
-!!$         grid(l1)%nz,       &
-!!$         1-grid(l1)%nh:grid(l1)%ny+grid(l1)%nh, &
-!!$         1-grid(l1)%nh:grid(l1)%nx+grid(l1)%nh), intent(in) :: x
-!!$   real(kind=rl),dimension( &
-!!$         grid(l2)%nz,       &
-!!$         1-grid(l2)%nh:grid(l2)%ny+grid(l2)%nh, &
-!!$         1-grid(l2)%nh:grid(l2)%nx+grid(l2)%nh), intent(out) :: y
+    real(kind=8),dimension(:,:,:),pointer :: r
+    real(kind=8),dimension(:,:,:),pointer :: b
 
+    integer(kind=is) :: nx, ny, nz
 
-   ! local
-   integer(kind=is) :: i,j,k,i2,j2,k2
-   real(kind=8):: z
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
 
-   ! 
-   do i2=1,grid(l2)%nx
-      i=2*i2-1
-      do j2=1,grid(l2)%ny
-         j=2*j2-1
-         do k2=1,grid(l2)%nz
-            k=2*k2-1
-            z = x(k,j,i)  +x(k,j,i+1)  +x(k,j+1,i)  +x(k,j+1,i+1) &
-              + x(k+1,j,i)+x(k+1,j,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
-            y(k2,j2,i2) = z * 0.125_8
-          enddo
-       enddo
-    enddo
+    r => grid(lev)%r
+    b => grid(lev+1)%b
 
-   end subroutine restrict_xyz
+    grid(lev+1)%p = 0._8
 
-   !------------------------------------------------------------
-   subroutine interp_xyz(l2,l1,x,y)
-   !
-   ! Transpose operation of restrict_xyz
-   ! Interpolate 'x' from coarse level l2 to 'y' on fine level l1=l2-1
+    if ((aggressive).and.(lev==1)) then
+       call restrict_aggressive(r,b,nx,ny,nz)
 
-   integer(kind=is) :: l1,l2
-   real(kind=8),dimension(:,:,:),intent(in) :: x
-   real(kind=8),dimension(:,:,:),intent(out) :: y
+    elseif (grid(lev)%nz == 1) then
+       call restrict_2D(r,b,nx,ny)
 
-   ! local
-   integer(kind=is) :: i,j,k,i2,j2,k2
+    else
+       call tic(lev,'restrict_3D')
 
-   ! 
-   do i2=1,grid(l2)%nx
-      i=2*i2-1
-      do j2=1,grid(l2)%ny
-         j=2*j2-1
-         do k2=1,grid(l2)%nz
-            k=2*k2-1
-            y(k  ,j  ,i  ) = x(k2,j2,i2)
-            y(k+1,j  ,i  ) = x(k2,j2,i2)
-            y(k  ,j+1,i  ) = x(k2,j2,i2)
-            y(k+1,j+1,i  ) = x(k2,j2,i2)
-            y(k  ,j  ,i+1) = x(k2,j2,i2)
-            y(k+1,j  ,i+1) = x(k2,j2,i2)
-            y(k  ,j+1,i+1) = x(k2,j2,i2)
-            y(k+1,j+1,i+1) = x(k2,j2,i2)
-          enddo
-       enddo
-    enddo
+       call restrict_3D(r,b,nx,ny,nz)
 
-   end subroutine interp_xyz
+      call toc(lev,'restrict_3D')
+
+    end if
+
+  end subroutine restrict
 
   !----------------------------------------
+  subroutine restrict_aggressive(x,y,nx,ny,nz)
+
+    real(kind=rl),dimension(:,:,:), intent(in) :: x !fine
+    real(kind=rl),dimension(:,:,:), intent(inout) :: y ! coarse
+    integer(kind=is), intent(in) :: nx, ny, nz
+
+    ! local
+    integer(kind=is):: i,j,k,k2
+
+    do k=1,nz
+       k2=(k-1)/8+1
+       if(mod(k,8).eq.1)then
+          do j=1,ny
+             do i=1,nx               
+                y(i,j,k2) = x(i,j,k)*0.125_8
+             enddo
+          enddo
+       else
+          do j=1,ny
+             do i=1,nx               
+                y(i,j,k2) = y(i,j,k2)+x(i,j,k)*0.125_8
+             enddo
+          enddo
+       endif
+    enddo
+
+  end subroutine restrict_aggressive
+
+  !------------------------------------------------------------
+  subroutine restrict_2D(x,y,nx,ny)
+    real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
+    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=is), intent(in) :: nx, ny
+
+  end subroutine restrict_2D
+
+ !----------------------------------------
   subroutine restrict_xy(l1,l2,x,y)
 
     integer:: l1,l2
@@ -97,7 +98,6 @@ contains
     ny2 = grid(l2)%ny
     nz2 = grid(l2)%nz      
 
-
     ! indices (nh+1,nh+2) on fine grid are glued to (nh+1) on coarse grid
     do j2=2,ny2-1
        j=2*(j2-nhalo)+1       ! take into account the halo!!!
@@ -109,41 +109,135 @@ contains
 
   end subroutine restrict_xy
 
-  !----------------------------------------
-  subroutine restrict_zzz(l1,l2,x,y)
-
-    integer:: l1,l2
-    real*8,dimension(grid(l1)%nx,grid(l1)%ny,grid(l1)%nz) :: x
-    real*8,dimension(grid(l2)%nx,grid(l2)%ny,grid(l2)%nz) :: y
-
+  !------------------------------------------------------------
+  subroutine restrict_3D(x,y,nx,ny,nz)
+    !
+    ! Restrict 'x' from fine level l1 to 'y' on coarse level l2=l1+1
+    real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
+    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=is), intent(in) :: nx, ny, nz
     ! local
-    integer:: i,j,k,k2
-    integer:: nx,ny,nz
+    integer(kind=is) :: i,j,k,i2,j2,k2
+    real(kind=8):: z
 
-    nx = grid(l1)%nx
-    ny = grid(l1)%ny
-    nz = grid(l1)%nz      
-
-    do k=1,nz
-       k2=(k-1)/8+1
-       if(mod(k,8).eq.1)then
-          do j=1,ny
-             do i=1,nx               
-                y(i,j,k2) = x(i,j,k)*0.125
-             enddo
+    ! 
+    do i2=1,nx
+       i=2*i2-1
+       do j2=1,ny
+          j=2*j2-1
+          do k2=1,nz
+             k=2*k2-1
+             z = x(k,j,i)  +x(k,j,i+1)  +x(k,j+1,i)  +x(k,j+1,i+1) &
+                  + x(k+1,j,i)+x(k+1,j,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
+             y(k2,j2,i2) = z * 0.125_8
           enddo
-       else
-          do j=1,ny
-             do i=1,nx               
-                y(i,j,k2) = y(i,j,k2)+x(i,j,k)*0.125
-             enddo
-          enddo
-       endif
+       enddo
     enddo
 
-  end subroutine restrict_zzz
+  end subroutine restrict_3D
 
-!!NG: 16 nov 2015 comment this -> #if defined FULLSET
+  !-----------!
+  !- PROLONG -!
+  !------------------------------------------------------------
+  subroutine prolong(lev)
+
+    !- prolong from level lev+1 to level lev
+    integer(kind=is), intent(in) :: lev
+
+    real(kind=8),dimension(:,:,:),pointer :: pf
+    real(kind=8),dimension(:,:,:),pointer :: pc
+
+    integer(kind=is) :: nxc, nyc, nzc
+
+    nxc = grid(lev+1)%nx
+    nyc = grid(lev+1)%ny
+    nzc = grid(lev+1)%nz
+
+    pf => grid(lev)%p
+    pc => grid(lev+1)%p
+
+    if ((aggressive).and.(lev==1)) then
+       call prolong_aggressive(pf,pc,nxc,nyc,nzc)
+
+    elseif (grid(lev)%nz == 1) then
+       call prolong_2D(pf,pc,nxc,nyc)
+
+    else
+       call prolong_3D(pf,pc,nxc,nyc,nzc)
+
+    end if
+
+  end subroutine prolong
+
+  !------------------------------------------------------------
+  subroutine prolong_aggressive(x,y,nx,ny,nz)
+    real(kind=8),dimension(:,:,:),intent(in)  :: x
+    real(kind=8),dimension(:,:,:),intent(out) :: y
+    integer(kind=is),intent(in) :: nx, ny, nz
+
+    y = x
+
+  end subroutine prolong_aggressive
+
+  !------------------------------------------------------------
+  subroutine prolong_2D(x,y,nx,ny)
+    real(kind=8),dimension(:,:,:),intent(in)  :: x
+    real(kind=8),dimension(:,:,:),intent(out) :: y
+    integer(kind=is),intent(in) :: nx, ny
+
+    y = x
+
+  end subroutine prolong_2D
+
+  !------------------------------------------------------------
+  subroutine prolong_3D(x,y,nx,ny,nz)
+    real(kind=8),dimension(:,:,:),intent(in)  :: x
+    real(kind=8),dimension(:,:,:),intent(out) :: y
+    integer(kind=is),intent(in) :: nx, ny, nz
+
+    ! local
+    integer(kind=is) :: i,j,k,i2,j2,k2
+    ! 
+    do i2=1,nx
+       i=2*i2-1
+       do j2=1,ny
+          j=2*j2-1
+          do k2=1,nz
+             k=2*k2-1
+             y(k  ,j  ,i  ) = x(k2,j2,i2)
+             y(k+1,j  ,i  ) = x(k2,j2,i2)
+             y(k  ,j+1,i  ) = x(k2,j2,i2)
+             y(k+1,j+1,i  ) = x(k2,j2,i2)
+             y(k  ,j  ,i+1) = x(k2,j2,i2)
+             y(k+1,j  ,i+1) = x(k2,j2,i2)
+             y(k  ,j+1,i+1) = x(k2,j2,i2)
+             y(k+1,j+1,i+1) = x(k2,j2,i2)
+          enddo
+       enddo
+    enddo
+
+  end subroutine prolong_3D
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  !!NG: 16 nov 2015 comment this -> #if defined FULLSET
   !----------------------------------------
   subroutine interpolate_zzz(l2,l1,y,x)
 
@@ -336,6 +430,6 @@ contains
 !!$    call fill_halo_matrix(lev+1,grid(lev+1)%A)
 
   end subroutine restrict_matrix_xyz
-!!NG: 16 nov 2015 comment this -> #endif
+  !!NG: 16 nov 2015 comment this -> #endif
 
 end module mg_restrict

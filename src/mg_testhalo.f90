@@ -41,7 +41,9 @@ program mg_testhalo
 
   call init_mpi(nxg, nyg, nzg, npxg, npyg)
 
-  call define_grids(nhalo,npxg,npyg)
+  call find_grid_levels(npxg, npyg, nxo, nyo, nzo)
+
+  call define_grids(npxg, npyg, nxo, nyo, nzo)
 
   call define_rhs(nxg, nyg, npxg)
 

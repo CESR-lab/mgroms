@@ -1,13 +1,30 @@
 module mg_define_matrix
 
+  use mg_tictoc
   use mg_grids
-  use mg_define_rhs
 
   implicit none
 
 contains
+  !-------------------------------------------------------------------------     
+  subroutine define_matrices()
+
+    integer(kind=is)::  lev
+
+    lev = 1
+    call define_matrix_simple(lev)
+
+    do lev=1, nlevs-1
+       call coarsen_matrix(lev)
+    enddo
+
+  end subroutine define_matrices
+
+
   !----------------------------------------
-  subroutine define_matrix_simple()
+  subroutine define_matrix_simple(lev)
+
+    integer(kind=is),intent(in):: lev
 
     ! Define matrix coefficients cA
     ! Coefficients are stored in order of diagonals
@@ -17,7 +34,7 @@ contains
     ! cA(4,:,:,:)      -> p(k,j-1,i)
     ! cA(5,:,:,:)      -> p(k-1,j-1,i)
     ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-    ! cA(7,:,:,:)      -> p(k,j,i-1)
+    ! cA(7,:,:,:)      -> p(k,j,i-1)xd
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
     real(kind=rl), dimension(:,:,:,:), pointer :: cA
@@ -25,8 +42,6 @@ contains
     real(kind=rl):: dxi, dyi, dzi
     integer(kind=is):: nx, ny, nz
     integer(kind=is):: nh
-
-    integer(kind=is):: lev=1
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -58,32 +73,50 @@ contains
     enddo
 
   end subroutine define_matrix_simple
-  !-------------------------------------------------------------------------     
-  subroutine define_matrix
-
-    ! Define matrix coefficients cA
-    ! Coefficients are stored in order of diagonals
-    ! cA(1,:,:,:)      -> p(k,j,i)
-    ! cA(2,:,:,:)      -> p(k-1,j,i)
-    ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-    ! cA(4,:,:,:)      -> p(k,j-1,i)
-    ! cA(5,:,:,:)      -> p(k-1,j-1,i)
-    ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-    ! cA(7,:,:,:)      -> p(k,j,i-1)
-    ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-
-  end subroutine define_matrix
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix(lev) ! from lev to lev+1
-    
+  subroutine coarsen_matrix(lev)
+    integer(kind=is),intent(in):: lev
+
+    if ((aggressive).and.(lev==1)) then
+       call coarsen_matrix_aggressive(lev)
+
+    elseif (grid(lev)%nz == 1) then
+       call coarsen_matrix_2D(lev)
+
+    else
+       call coarsen_matrix_3D(lev)
+
+    end if
+
+  end subroutine coarsen_matrix
+
+  !-------------------------------------------------------------------------     
+  subroutine coarsen_matrix_aggressive(lev)
+    integer(kind=is),intent(in):: lev
+    write(*,*)'Error: coarsen matrix aggressive not available yet !'
+    stop -1
+  end subroutine coarsen_matrix_aggressive
+
+
+  !-------------------------------------------------------------------------     
+  subroutine coarsen_matrix_2D(lev)
+    integer(kind=is),intent(in):: lev
+
+  end subroutine coarsen_matrix_2D
+
+  !-------------------------------------------------------------------------     
+  subroutine coarsen_matrix_3D(lev) ! from lev to lev+1
+
     integer(kind=is),intent(in):: lev
 
     real(kind=rl), dimension(:,:,:,:), pointer :: cA, cA2
-    real(kind=rl), dimension(:,:,:), pointer :: dummy3
     integer(kind=is):: l, k, j, i, kp, jp, ip, k2, j2, i2
+    integer(kind=is):: d
     integer(kind=is):: nx2, ny2, nz2, nh
     real(kind=rl):: diag,cff
+
+    call tic(lev,'coarsen_matrix_3D')
 
     cA  => grid(lev)%cA
     cA2 => grid(lev+1)%cA
@@ -92,7 +125,6 @@ contains
     nz2 = grid(lev+1)%nz
     nh  = grid(lev+1)%nh
 
-    
     do i2 = 1,nx2
        i = 2*i2-1
        ip = i+1
@@ -136,10 +168,10 @@ contains
 
              ! double that to account for symmetry of connections, we've now 40 terms
              diag = diag+diag
-             
+
              ! add the 8 self-interacting terms
              diag = cA(1,k,j,i) +cA(1,kp,j,i) +cA(1,k,jp,i) +cA(1,kp,jp,i) &
-                   +cA(1,k,j,ip)+cA(1,kp,j,ip)+cA(1,k,jp,ip)+cA(1,kp,jp,ip) + diag
+                  +cA(1,k,j,ip)+cA(1,kp,j,ip)+cA(1,k,jp,ip)+cA(1,kp,jp,ip) + diag
 
              ! here we go!
              cA2(1,k2,j2,i2) = diag
@@ -149,38 +181,25 @@ contains
 
     if (myrank.eq.0)write(*,*)"coefficients computed"
 
-    ! fill the halo
-    ! the data should be contiguous in memory to use fill_halo 
-    ! no need to allocate an extra buffer
-    ! use the residual as a dummy variable
-    dummy3 => grid(lev+1)%r 
-
     ! the coefficients should be rescaled with 1/4
+
     cff = 1._8/4._8
-    do l = 1,8       
+
+    do d = 1,8       
        if (myrank.eq.0)write(*,*)"updating halo of coef(",l,",:,:,:)"
-       do i2 = 1,nx2
-          do j2 = 1,ny2
-             do k2 = 1,nz2
-                dummy3(k2,j2,i2) = cA2(l,k2,j2,i2)
-             enddo
-          enddo
-       enddo
 
-       call fill_halo(lev+1,dummy3)
+       !NG !? call fill_halo(lev+1, cA2(d,:,:,:))
 
-       do i2 = 1-nh,nx2+nh
-          do j2 = 1-nh,ny2+nh
-             do k2 = 1,nz2
-                cA2(l,k2,j2,i2) = dummy3(k2,j2,i2) * cff
-             enddo
-          enddo
-       enddo
+       cA2(d,:,:,:) =  cA2(d,:,:,:) * cff
+
        ! a way of improvement (only if it impacts perfs):
        ! copy from cA2 to dummy3 only the interior ring used to fill the halo
        ! copy from dummy to cA2 only the halo
     enddo
     if (myrank.eq.0)write(*,*)"coarsening done"
-  end subroutine coarsen_matrix
+
+    call toc(lev,'coarsen_matrix_3D')
+
+  end subroutine coarsen_matrix_3D
 
 end module mg_define_matrix

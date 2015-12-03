@@ -20,18 +20,30 @@ clean-local:
 
 ##
 SUBDIRS	       = .
-bin_PROGRAMS   = testhalo testrelax testcoarsening 
+bin_PROGRAMS   = mainmodel testhalo testrelax testcoarsening 
 check_PROGRAMS = $(bin_PROGRAMS)
 TESTS          = $(check_PROGRAMS)
 ##
 ##
+mainmodel_SOURCES=       \
+	mg_tictoc.f90        \
+	mg_mpi.f90           \
+	mg_grids.f90         \
+	mg_define_matrix.f90 \
+	mg_relax_line.f90    \
+	mg_restrict.f90      \
+	nhydro.f90           \
+	main_model.f90
+##
 testhalo_SOURCES =       \
+	mg_tictoc.f90        \
 	mg_mpi.f90           \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
 	mg_testhalo.f90
 ##
 testrelax_SOURCES =      \
+	mg_tictoc.f90        \
 	mg_mpi.f90           \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
@@ -40,6 +52,7 @@ testrelax_SOURCES =      \
 	mg_testrelax.f90
 ##
 testcoarsening_SOURCES = \
+	mg_tictoc.f90        \
 	mg_mpi.f90           \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
