@@ -1,0 +1,6 @@
+- horizontal dimensions are power of 2
+- number of CPUs in x and y directions are power of 2
+- MPI_COMM_WORLD for the MPI communicator of the model (call mpi_init())
+- (k,j,i) k is the first dimension and i the last
+- cartesian topology (MPI)
+- not a big difference (a factor of two) between nxg and nyg
