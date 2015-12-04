@@ -27,7 +27,7 @@ TESTS          = $(check_PROGRAMS)
 ##
 mainmodel_SOURCES=       \
 	mg_tictoc.f90        \
-	mg_mpi.f90           \
+	main_model_mpi.f90   \
 	mg_grids.f90         \
 	mg_define_matrix.f90 \
 	mg_relax_line.f90    \
@@ -37,14 +37,14 @@ mainmodel_SOURCES=       \
 ##
 testhalo_SOURCES =       \
 	mg_tictoc.f90        \
-	mg_mpi.f90           \
+	main_model_mpi.f90   \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
 	mg_testhalo.f90
 ##
 testrelax_SOURCES =      \
 	mg_tictoc.f90        \
-	mg_mpi.f90           \
+	main_model_mpi.f90   \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
@@ -53,7 +53,7 @@ testrelax_SOURCES =      \
 ##
 testcoarsening_SOURCES = \
 	mg_tictoc.f90        \
-	mg_mpi.f90           \
+	main_model_mpi.f90   \
 	mg_grids.f90         \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
@@ -62,7 +62,7 @@ testcoarsening_SOURCES = \
 	mg_testcoarsening.f90
 ##
 testgather_SOURCES =     \
-	mg_mpi.f90           \
+	main_model_mpi.f90   \
 	mg_grids.f90         \
 	mg_gather.f90        \
 	mg_testgather.f90

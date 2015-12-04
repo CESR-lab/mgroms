@@ -1,119 +1,250 @@
-module mg_intergrids
-  ! define the interface to grid restriction/interpolation
-  use mg_mpi 
-
+module mg_restrict
+  !
+  ! Collection of restriction subroutines
+  !
+  use mg_tictoc
   use mg_grids
-  use mg_restrict
-  use mg_gather
-
+  !      use mg_mpi
   implicit none
 
-  contains
+contains
+  !------------!
+  !- RESTRICT -!
+  !------------------------------------------------------------
+  subroutine restrict(lev)
 
-      !----------------------------------------
-      subroutine finetocoarse(l1,l2,x,y)
-      
-      integer(kind=is):: l1,l2 ! l1 is the fine grid index, l2=l1+1
+    integer(kind=is), intent(in) :: lev
 
-      real(kind=rl),dimension(:,:,:),intent(in) :: x
-      real(kind=rl),dimension(:,:,:),intent(out) :: y
+    real(kind=8),dimension(:,:,:),pointer :: r
+    real(kind=8),dimension(:,:,:),pointer :: b
 
-      select case (grid(l2)%gather)
-         case(0)
-            call restrict_generic(l1,l2,x,y) ! regular coarsening
-         case(1)
-            call restrict_generic(l1,l2,x,grid(l1)%dummy) ! coarsen
-            call gather(l2,grid(l1)%dummy,y) ! then gather
-      end select
+    integer(kind=is) :: nx, ny, nz
 
-      end subroutine
+    nx = grid(lev+1)%nx
+    ny = grid(lev+1)%ny
+    nz = grid(lev+1)%nz
 
-      !----------------------------------------
-      subroutine coarsetofine(l1,l2,x,y)
-      
-      integer(kind=is):: l1,l2 ! l1 is the coarse grid index, l2=l1-1
+    r => grid(lev)%r
+    b => grid(lev+1)%b
 
-      real(kind=rl),dimension(:,:,:),intent(in) :: x
-      real(kind=rl),dimension(:,:,:),intent(out) :: y
+    grid(lev+1)%p = 0._8
 
-      select case (grid(l1)%gather)
-         case(0)
-            call interpolate_generic(l1,l2,x,y) ! regular interpolation
-         case(1)
-            call split(l1,x,grid(l1)%dummy) ! split
-            call interpolate_generic(l1,l2,grid(l1)%dummy,y) ! then interpolate
-      end select
+    if ((aggressive).and.(lev==1)) then
+       call restrict_aggressive(r,b,nx,ny,nz)
 
-      end subroutine
+    elseif (grid(lev)%nz == 1) then
+       call restrict_2D(r,b,nx,ny)
 
-      !----------------------------------------
-      subroutine restrict_generic(l1,l2,x,y)
+    else
+       call tic(lev,'restrict_3D')
 
-      ! watch out: the dimensions of x or y do not correspond to a grid level
-      ! if a gather is introduced
+       call restrict_3D(r,b,nx,ny,nz)
 
-      integer(kind=is):: l1,l2 ! l1 is the fine grid index, l2=l1+1
+      call toc(lev,'restrict_3D')
 
-      real(kind=rl),dimension(:,:,:),intent(in) :: x
-      real(kind=rl),dimension(:,:,:),intent(out) :: y
+    end if
 
-      select case(grid(l1)%coarsening_method)
-      case(1)
-         ! regular 3D coarsening
-         call restrict_xyz(l1,l2,x,y)
-         call fill_halo(l2,y)
-      case(2)
-         ! 2D coarsening
-         call restrict_xy(l1,l2,x,y)
-         call fill_halo(l2,y)
-!!$      case(3)
-!!$         ! simple vertical coarsening
-!!$         call restrict_z(l1,l2,x,y)
-!!$         ! no fill halo because no coupling in the horizontal!
-!!$      case(4)
-!!$         ! double vertical coarsening
-!!$         call restrict_zz(l1,l2,x,y)
-!      case(5)
-         ! triple vertical coarsening
-!         call restrict_zzz(l1,l2,x,y)
-      end select
-      
-      end subroutine
+  end subroutine restrict
 
-      !----------------------------------------
-      subroutine interpolate_generic(l1,l2,x,y)
+  !----------------------------------------
+  subroutine restrict_aggressive(x,y,nx,ny,nz)
 
-      ! watch out: the dimensions of x or y do not correspond to a grid level
-      ! if a gather is introduced
+    real(kind=rl),dimension(:,:,:), intent(in) :: x !fine
+    real(kind=rl),dimension(:,:,:), intent(inout) :: y ! coarse
+    integer(kind=is), intent(in) :: nx, ny, nz
 
-      integer(kind=is):: l1,l2 ! l1 is the coarse grid index, l2=l1-1
+    ! local
+    integer(kind=is):: i,j,k,k2
 
-      real(kind=rl),dimension(:,:,:),intent(in) :: x
-      real(kind=rl),dimension(:,:,:),intent(out) :: y
+    do k=1,nz
+       k2=(k-1)/8+1
+       if(mod(k,8).eq.1)then
+          do j=1,ny
+             do i=1,nx               
+                y(i,j,k2) = x(i,j,k)*0.125_8
+             enddo
+          enddo
+       else
+          do j=1,ny
+             do i=1,nx               
+                y(i,j,k2) = y(i,j,k2)+x(i,j,k)*0.125_8
+             enddo
+          enddo
+       endif
+    enddo
 
-      select case(grid(l2)%coarsening_method)
-      case(1)
-         ! regular 3D interpolation
-         call interpolate_xyz(l1,l2,x,y)
-         call fill_halo(l2,y)
-      case(2)
-         ! 2D interpolation
-         call interpolate_xy(l1,l2,x,y)
-         call fill_halo(l2,y)
-!!$      case(3)
-!!$         ! simple vertical interpolation
-!!$         call interpolate_z(l1,l2,x,y)
-!!$         ! no fill halo because no coupling in the horizontal!
-!!$      case(4)
-!!$         ! double vertical interpolation
-!!$         call interpolate_zz(l1,l2,x,y)
-!      case(5)
-         ! triple vertical interpolation
-!         call interpolate_zzz(l1,l2,x,y)
-      end select
-      
-      end subroutine
+  end subroutine restrict_aggressive
 
-  end module mg_intergrids
-  
-  
+  !------------------------------------------------------------
+  subroutine restrict_2D(x,y,nx,ny)
+    real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
+    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=is), intent(in) :: nx, ny
+
+  end subroutine restrict_2D
+
+ !----------------------------------------
+  subroutine restrict_xy(l1,l2,x,y)
+
+    integer:: l1,l2
+    real*8,dimension(grid(l1)%nz,grid(l1)%ny,grid(l1)%nx) :: x
+    real*8,dimension(grid(l2)%nz,grid(l2)%ny,grid(l2)%nx) :: y
+
+    ! local
+    integer:: i,j,i2,j2
+    integer:: nx2,ny2
+
+    nx2 = grid(l2)%nx
+    ny2 = grid(l2)%ny
+
+!!$<<<<<<< HEAD
+!!$    ! indices (nh+1,nh+2) on fine grid are glued to (nh+1) on coarse grid
+!!$    do j2=2,ny2-1
+!!$       j=2*(j2-nhalo)+1       ! take into account the halo!!!
+!!$       do i2=2,nx2-1
+!!$          i=2*(i2-nhalo)+1
+!!$          y(i2,j2,1) = (x(i,j,1)+x(i+1,j,1)+x(i,j+1,1)+x(i+1,j+1,1))*0.25
+!!$=======
+    do j2=1,ny2
+       j=2*j2-1       
+       do i2=1,nx2
+          i=2*i2-1
+          y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*0.25
+!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
+       enddo
+    enddo
+
+  end subroutine restrict_xy
+
+  !------------------------------------------------------------
+  subroutine restrict_3D(x,y,nx,ny,nz)
+    !
+    ! Restrict 'x' from fine level l1 to 'y' on coarse level l2=l1+1
+    real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
+    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=is), intent(in) :: nx, ny, nz
+    ! local
+    integer(kind=is) :: i,j,k,i2,j2,k2
+    real(kind=8):: z
+
+    ! 
+    do i2=1,nx
+       i=2*i2-1
+       do j2=1,ny
+          j=2*j2-1
+          do k2=1,nz
+             k=2*k2-1
+             z = x(k,j,i)  +x(k,j,i+1)  +x(k,j+1,i)  +x(k,j+1,i+1) &
+                  + x(k+1,j,i)+x(k+1,j,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
+             y(k2,j2,i2) = z * 0.125_8
+          enddo
+       enddo
+    enddo
+
+  end subroutine restrict_3D
+
+  !-----------!
+  !- PROLONG -!
+  !------------------------------------------------------------
+  subroutine prolong(lev)
+
+    !- prolong from level lev+1 to level lev
+    integer(kind=is), intent(in) :: lev
+
+    real(kind=8),dimension(:,:,:),pointer :: pf
+    real(kind=8),dimension(:,:,:),pointer :: pc
+
+    integer(kind=is) :: nxc, nyc, nzc
+
+    nxc = grid(lev+1)%nx
+    nyc = grid(lev+1)%ny
+    nzc = grid(lev+1)%nz
+
+    pf => grid(lev)%p
+    pc => grid(lev+1)%p
+
+    if ((aggressive).and.(lev==1)) then
+       call prolong_aggressive(pf,pc,nxc,nyc,nzc)
+
+    elseif (grid(lev)%nz == 1) then
+       call prolong_2D(pf,pc,nxc,nyc)
+
+    else
+       call prolong_3D(pf,pc,nxc,nyc,nzc)
+
+    end if
+
+  end subroutine prolong
+
+  !------------------------------------------------------------
+  subroutine prolong_aggressive(x,y,nx,ny,nz)
+    real(kind=8),dimension(:,:,:),intent(in)  :: x
+    real(kind=8),dimension(:,:,:),intent(out) :: y
+    integer(kind=is),intent(in) :: nx, ny, nz
+
+    y = x
+
+  end subroutine prolong_aggressive
+
+  !------------------------------------------------------------
+  subroutine prolong_2D(x,y,nx,ny)
+    real(kind=8),dimension(:,:,:),intent(in)  :: x
+    real(kind=8),dimension(:,:,:),intent(out) :: y
+    integer(kind=is),intent(in) :: nx, ny
+
+    y = x
+
+  end subroutine prolong_2D
+
+  !------------------------------------------------------------
+  subroutine prolong_3D(x,y,nx,ny,nz)
+    real(kind=8),dimension(:,:,:),intent(in)  :: x
+    real(kind=8),dimension(:,:,:),intent(out) :: y
+    integer(kind=is),intent(in) :: nx, ny, nz
+
+    ! local
+    integer(kind=is) :: i,j,k,i2,j2,k2
+    ! 
+    do i2=1,nx
+       i=2*i2-1
+       do j2=1,ny
+          j=2*j2-1
+          do k2=1,nz
+             k=2*k2-1
+             y(k  ,j  ,i  ) = x(k2,j2,i2)
+             y(k+1,j  ,i  ) = x(k2,j2,i2)
+             y(k  ,j+1,i  ) = x(k2,j2,i2)
+             y(k+1,j+1,i  ) = x(k2,j2,i2)
+             y(k  ,j  ,i+1) = x(k2,j2,i2)
+             y(k+1,j  ,i+1) = x(k2,j2,i2)
+             y(k  ,j+1,i+1) = x(k2,j2,i2)
+             y(k+1,j+1,i+1) = x(k2,j2,i2)
+          enddo
+       enddo
+    enddo
+
+  end subroutine prolong_3D
+
+  !----------------------------------------
+  subroutine interpolate_zzz(l2,l1,y,x)
+
+    integer(kind = 4), intent(in):: l1,l2
+    real*8,dimension(:,:,:), intent(out):: x
+    real*8,dimension(:,:,:), intent(in) :: y
+
+    integer(kind = 4):: i, j, k, k2
+    integer(kind = 4):: nx, ny, nz
+
+    do k=1,nz
+       k2=(k-1)/8+1
+       do j=1,ny
+          do i=1,nx               
+             x(i,j,k)=y(i,j,k2)
+          enddo
+       enddo
+    enddo
+
+  end subroutine interpolate_zzz
+
+
+end module mg_restrict

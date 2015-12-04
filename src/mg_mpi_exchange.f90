@@ -437,5 +437,39 @@ contains
 
   end subroutine fill_halo
 
+    !----------------------------------------
+  subroutine global_max(maxloc,maxglo)
+    ! return the global max: maxglo
+    ! using the local max on each subdomain
+    real(kind=rl),intent(in) :: maxloc
+    real(kind=rl),intent(out) :: maxglo
+
+    integer(kind=is) :: ierr
+
+    ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
+    ! where subdomains are gathered
+    ! this is not optimal, but not wrong
+    call MPI_ALLREDUCE(maxloc,maxglo,1,MPI_DOUBLE_PRECISION,MPI_max,MPI_COMM_WORLD,ierr)   
+
+  end subroutine global_max
+
+  !----------------------------------------
+  subroutine global_sum(lev,sumloc,sumglo)
+    ! return the global sum: sumglo
+    ! using the local sum on each subdomain
+    integer(kind=is),intent(in) :: lev
+    real(kind=rl),intent(in) :: sumloc
+    real(kind=rl),intent(out) :: sumglo
+
+    integer(kind=is) :: ierr
+
+    ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
+    ! where subdomains are gathered
+    call MPI_ALLREDUCE(sumloc,sumglo,1,MPI_DOUBLE_PRECISION,MPI_sum,MPI_COMM_WORLD,ierr)   
+    ! therefore we need to rescale the global sum
+    sumglo = sumglo * (grid(lev)%npx*grid(lev)%npy)/(grid(1)%npx*grid(1)%npy)
+
+  end subroutine global_sum
+
 
 end module mg_halo
