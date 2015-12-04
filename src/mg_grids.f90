@@ -8,12 +8,21 @@ module mg_grids
   integer(kind=4), parameter:: maxlev=10
 
   type grid_type
-     real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r
+     ! GR: why are those arrays declared as 'pointer'???
+     ! why not regular arrays?
+     real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
      real(kind=rl),dimension(:,:,:,:),pointer :: cA
+     !GR real(kind=rl),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
      integer(kind=is) :: nx,ny, nz
      integer(kind=is) :: npx, npy, incx, incy
      integer(kind=is) :: nh                 ! number of points in halo
      integer(kind=is) :: gather
+!!$=======
+!!$     integer(kind=is) :: Ng, ngx, ngy
+!!$     integer:: localcomm ! should be integer (output of MPI_SPLIT)
+!!$     integer(kind=is) :: coarsening_method, smoothing_method, gather
+!!$     integer(kind=is) :: color,family,key
+!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
      integer(kind=is),dimension(8)::neighb
      real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
      real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
@@ -48,6 +57,14 @@ contains
     integer(kind=is) :: lev
 
     call  find_grid_levels(npxg, npyg, nzl, nyl, nxl)
+!!$=======
+!!$    ! for the gathering
+!!$    integer(kind=is) :: ngx, ngy
+!!$    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
+!!$    
+!!$    ! 1rst loop about the grid dimensions at deifferent levels
+!!$    ! at the end of that loop we have the number of levels 
+!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
     allocate(grid(nlevs))
 
@@ -237,11 +254,23 @@ contains
     integer(kind=is) :: npx, npy
     integer(kind=is) :: incx, incy
     integer(kind=is) :: pi, pj
+!!$=======
+!!$    ! Watch out, I continue to use the global indexing
+!!$    ! to locate each core
+!!$    ! a core that has coordinates (2,3) on the finest decomposition
+!!$    ! will remain at this location (2,3) after gathering
+!!$    npx = grid(1)%npx ! grid(1) is not a bug!
+!!$    npy = grid(1)%npy
+!!$    
+!!$    pj = myrank/npx
+!!$    pi = mod(myrank,npx)
+!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
     ! Neighbours
-    do lev=1,nlevs
-       npx = grid(1)%npx
+    do lev=1,nlevs       
+	   npx = grid(1)%npx
        npy = grid(1)%npy
+       ! incx is the distance to my neighbours in x (1, 2, 4, ...)
        incx = grid(lev)%incx
        incy = grid(lev)%incy
 
@@ -306,42 +335,70 @@ contains
           stop -1
        endif
     endif
+!GR =======
+!GR!    return ! not yet ready to go through
+!GR    
+!GR    ! prepare the informations for the gathering 
+ !GR   do lev=1,nlevs-1
+!GR       if(grid(lev)%gather.eq.1)then
+!GR          
+!GR          nx = grid(lev)%nx
+!GR          ny = grid(lev)%ny
+ !GR         nz = grid(lev)%nz
+!GR          nh = grid(lev)%nh
+!GR          incx=grid(lev)%incx / 2
+!GR          incy=grid(lev)%incy / 2          
+!GR          ngx=grid(lev)%ngx
+!GR          ngy=grid(lev)%ngy
+ 
+
+ !GR         !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
+!GR
+!GR         ! cores having the same family index share the same subdomain
+!GR          family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
+!GR
+ !GR         nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
+!GR
+!GR          ! - assign a color to each core: make a cycling ramp index
+!GR          ! through 2 or 4 close families 
+!GR          ! - cores having the same color should be a pair or a quadruplet 
+!GR          ! - colors are all distinct *within* a family
+!GR          color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
+!GR
+!GR          
+!          prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
+!GR          N=incx*npx;
+!GR          key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
+!GR         
+!GR
+!GR          grid(lev)%color=color
+!GR          grid(lev)%family=nextfamily
+!GR          grid(lev)%key=key
+!GR
+!GR          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
+!GR          grid(lev)%localcomm = localcomm
+!GR
+!GR
+!GR          ! this dummy 3D array is to store the restriction from lev-1, before the gathering
+!GR          ! its size can be deduced from the size after the gathering
+!GR          
+!GR          nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
+!GR          ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
+!GR          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
+!GR          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
+!GR          ! number of elements of dummy3
+!GR          grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
+!GR
+!          if(myrank.eq.0)then
+!             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
+!   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
+!      endif
+!GR
+!GR      endif
+!GR   enddo
+!GR
+!GR  end subroutine define_grids
 
   end subroutine define_neighbours
-
-  !----------------------------------------
-  subroutine global_max(maxloc,maxglo)
-    ! return the global max: maxglo
-    ! using the local max on each subdomain
-    real(kind=rl),intent(in) :: maxloc
-    real(kind=rl),intent(out) :: maxglo
-
-    integer(kind=is) :: ierr
-
-    ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
-    ! where subdomains are gathered
-    ! this is not optimal, but not wrong
-    call MPI_ALLREDUCE(maxloc,maxglo,1,MPI_DOUBLE_PRECISION,MPI_max,MPI_COMM_WORLD,ierr)   
-
-  end subroutine global_max
-
-  !----------------------------------------
-  subroutine global_sum(lev,sumloc,sumglo)
-    ! return the global sum: sumglo
-    ! using the local sum on each subdomain
-    integer(kind=is),intent(in) :: lev
-    real(kind=rl),intent(in) :: sumloc
-    real(kind=rl),intent(out) :: sumglo
-
-    integer(kind=is) :: ierr
-
-    ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
-    ! where subdomains are gathered
-    call MPI_ALLREDUCE(sumloc,sumglo,1,MPI_DOUBLE_PRECISION,MPI_sum,MPI_COMM_WORLD,ierr)   
-    ! therefore we need to rescale the global sum
-    sumglo = sumglo * (grid(lev)%npx*grid(lev)%npy)/(grid(1)%npx*grid(1)%npy)
-
-  end subroutine global_sum
-
 
 end module mg_grids

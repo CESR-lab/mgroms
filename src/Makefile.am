@@ -60,4 +60,10 @@ testcoarsening_SOURCES = \
 	mg_relax_line.f90    \
 	mg_restrict.f90      \
 	mg_testcoarsening.f90
+##
+testgather_SOURCES =     \
+	mg_mpi.f90           \
+	mg_grids.f90         \
+	mg_gather.f90        \
+	mg_testgather.f90
 
