@@ -111,6 +111,7 @@ contains
     integer(kind=is),intent(in):: lev
 
     real(kind=rl), dimension(:,:,:,:), pointer :: cA, cA2
+     real(kind=rl), dimension(:,:,:) , pointer :: dummy3D
     integer(kind=is):: l, k, j, i, kp, jp, ip, k2, j2, i2
     integer(kind=is):: d
     integer(kind=is):: nx2, ny2, nz2, nh
@@ -181,22 +182,58 @@ contains
 
     if (myrank.eq.0)write(*,*)"coefficients computed"
 
-    ! the coefficients should be rescaled with 1/4
+    ! fill the halo
+    ! the data should be contiguous in memory to use fill_halo 
+    ! no need to allocate an extra buffer
+    ! use the residual as a dummy variable
+    dummy3D => grid(lev+1)%r 
 
+    !- we should consider a specific fill_halo(4D) -!
+
+    ! the coefficients should be rescaled with 1/4
     cff = 1._8/4._8
 
+   ! the coefficients should be rescaled with 1/4
+    cff = 1._8/4._8
     do d = 1,8       
-       if (myrank.eq.0)write(*,*)"updating halo of coef(",l,",:,:,:)"
+       if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
+       do i2 = 1,nx2
+          do j2 = 1,ny2
+             do k2 = 1,nz2
+                dummy3D(k2,j2,i2) = cA2(d,k2,j2,i2)
+             enddo
+          enddo
+       enddo
 
-       !NG !? call fill_halo(lev+1, cA2(d,:,:,:))
+       call fill_halo(lev+1,dummy3D)
 
-       cA2(d,:,:,:) =  cA2(d,:,:,:) * cff
-
+       do i2 = 1-nh,nx2+nh
+          do j2 = 1-nh,ny2+nh
+             do k2 = 1,nz2
+                cA2(d,k2,j2,i2) = dummy3D(k2,j2,i2) * cff
+             enddo
+          enddo
+       enddo
        ! a way of improvement (only if it impacts perfs):
        ! copy from cA2 to dummy3 only the interior ring used to fill the halo
        ! copy from dummy to cA2 only the halo
     enddo
-    if (myrank.eq.0)write(*,*)"coarsening done"
+
+!!$    do d = 1,8       
+!!$       if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
+!!$
+!!$       dummy3D(1:nx2,1:ny2,1:nz2) = cA2(d,1:nx2,1:ny2,1:nz2)
+!!$
+!!$       call fill_halo(lev+1, dummy3D)
+!!$
+!!$       cA2(d,:,:,:) =  dummy3D(:,:,:) * cff
+!!$
+!!$       ! a way of improvement (only if it impacts perfs):
+!!$       ! copy from cA2 to dummy3 only the interior ring used to fill the halo
+!!$       ! copy from dummy to cA2 only the halo
+!!$    enddo
+
+    if (myrank.eq.0) write(*,*)"coarsening done"
 
     call toc(lev,'coarsen_matrix_3D')
 

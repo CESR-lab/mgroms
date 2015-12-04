@@ -148,7 +148,7 @@ contains
 
     ! don't call mpi at every pass if nh>1
     call fill_halo(lev,p)
-         
+
     call toc(lev,'relax_line')
 
   end subroutine relax_3D_line
@@ -263,6 +263,9 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
     integer(kind=is)           :: i,j,k
+    real(kind=8)               :: norm
+
+    res = 0._8
 
     do i = 1,nx
        do j = 1,ny
@@ -278,6 +281,8 @@ contains
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
+          res = max(res,abs(r(k,j,i)))
+
           do k = 2,nz-1!interior levels
              r(k,j,i) = b(k,j,i)                                                &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
@@ -288,6 +293,8 @@ contains
                   - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                   - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+
+             res = max(res,abs(r(k,j,i)))
           enddo
 
           k=nz!upper level
@@ -300,13 +307,15 @@ contains
                - cA(6,k-1,j,i+1)*p(k-1,j,i+1)  &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k,j,i)*p(k-1,j,i-1)
+          
+          res = max(res,abs(r(k,j,i)))
    
        enddo
     enddo
 
-    res = maxval(abs(r(:,:,:)))
+    call global_max(res,norm)
 
-    !!NG call global_max(lev,resmax,norm)
+    res = norm
 
   end subroutine compute_residual_3D
 

@@ -28,10 +28,10 @@ program mg_testcoarsening
   !- timing
   call tic(1,'mg_testcoarsening')
 
-  nxg   = 1024
-  nyg   = 1024
-  nzg   = 64
-  nhalo = 2
+  nxg   = 128
+  nyg   = 128
+  nzg   = 128
+  nhalo = 1
 
   npxg  = 2
   npyg  = 2
@@ -41,9 +41,9 @@ program mg_testcoarsening
 
   call init_mpi(nxg, nyg, nzg, npxg, npyg)
 
-  call find_grid_levels(npxg, npyg, nxo, nyo, nzo)
-
   call define_grids(npxg, npyg, nxo, nyo, nzo)
+
+  call define_neighbours()
 
   call MPI_Barrier( MPI_COMM_WORLD ,ierr)
   if (myrank.eq.0)then
@@ -65,15 +65,10 @@ program mg_testcoarsening
 
   write(*,*)"rhs  done"
 
-  call define_matrix_simple()
+  call define_matrices()
 
-  write(*,*)"matrix simple done"
+  write(*,*)"define matrices done"
 
-  ! coarsen matrix on all grids
-  do lev=1,nlevs-1
-     call coarsen_matrix(lev)
-  enddo
-  write(*,*)"coarsening done"
   do lev=1,nlevs
      call MPI_Barrier( MPI_COMM_WORLD ,ierr)
      if (myrank.eq.0)then
@@ -87,7 +82,7 @@ program mg_testcoarsening
 
   ! coarsen RHS on all grids
   do lev=1,nlevs-1
-     call restrict_xyz(lev,lev+1,grid(lev)%b,grid(lev+1)%b)
+     call restrict(lev)
   enddo
 
   ! check smoothing on all grids
@@ -98,10 +93,10 @@ program mg_testcoarsening
      endif
      res0=0.
      do it=1, nit
-        call relax_line(lev,nsweeps)
+        call relax(lev,nsweeps)
         call compute_residual(lev,res)
         conv = log(res0/res)/log(10.)
-        if (myrank.eq.0)then
+        if (myrank.eq.0) then
            write(*,'(A,I2,A,F6.3,A,F6.3)')"  ite=",it," - res=",res," - conv rate =",conv
         endif
         res0=res

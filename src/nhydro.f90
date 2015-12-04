@@ -4,6 +4,7 @@ module nhydro
   use mg_define_matrix
   use mg_restrict
   use mg_relax
+  use mg_solvers
 
 contains
 
@@ -35,29 +36,7 @@ contains
 
     real(kind=8) :: res
 
-    do lev=1,nlevs-1
-       !- discuss with Guillaume !!!
-       call compute_residual(lev,res)
-       call restrict(lev)
-    enddo
-
-    !- discuss with Guillaume !!!
-    do lev=1,nlevs
-
-       res0=0.
-
-       do it=1, nit
-          call relax(lev,nsweeps)
-          call compute_residual(lev,res)
-
-          call prolong(lev) ! interpolation
-
-          conv = log(res0/res)/log(10.)
-          res0=res
-
-       enddo
-
-    enddo
+    call mg_solve()
 
   end subroutine nhydro_solve
 

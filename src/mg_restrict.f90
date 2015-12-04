@@ -20,9 +20,9 @@ contains
 
     integer(kind=is) :: nx, ny, nz
 
-    nx = grid(lev)%nx
-    ny = grid(lev)%ny
-    nz = grid(lev)%nz
+    nx = grid(lev+1)%nx
+    ny = grid(lev+1)%ny
+    nz = grid(lev+1)%nz
 
     r => grid(lev)%r
     b => grid(lev+1)%b

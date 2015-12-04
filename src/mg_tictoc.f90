@@ -9,10 +9,11 @@ module mg_tictoc
 
   integer(kind=st), parameter :: levmax=32, submax=32
 
-  real(kind = lg), dimension(levmax,submax) :: ntic
-  real(kind = lg), dimension(levmax,submax) :: ntoc
-  real(kind = lg), dimension(levmax,submax) :: time
-  character(len=32),dimension(submax)    :: subname
+  real(kind = lg)  , dimension(levmax,submax) :: ntic
+  real(kind = lg)  , dimension(levmax,submax) :: ntoc
+  real(kind = lg)  , dimension(levmax,submax) :: time
+  integer(kind=st) , dimension(levmax,submax) :: calls
+  character(len=32),dimension(submax)         :: subname
   integer(kind=st) :: nblev = 0, nbsub = 0
 
 contains
@@ -40,13 +41,14 @@ contains
        end do
 
        !- New subroutine to time
-       !- add its name to "subname"
+       !- Add its name to "subname"
        !- cpu_time(tic)
        if (flag) then
           nbsub = nbsub + 1
           subname(nbsub)=TRIM(string)
           call cpu_time(ntic(lev,nbsub))
-          time(lev,nbsub) = 0._8
+          time(lev,nbsub)  = 0._8
+          calls(lev,nbsub) = 0
        endif
 
     else
@@ -56,7 +58,8 @@ contains
        nbsub = 1
        subname(nbsub)=TRIM(string)
        call cpu_time(ntic(lev,nbsub))
-       time(lev,nbsub) = 0._8
+       time(lev,nbsub)  = 0._8
+       calls(lev,nbsub) = 0
     endif
 
     if (lev > nblev) nblev = lev
@@ -79,6 +82,7 @@ contains
           if (TRIM(string) == subname(ns)) then
              call cpu_time(ntoc(lev,ns))
              time(lev,ns) = time(lev,ns) + ntoc(lev,ns) - ntic(lev,ns)
+             calls(lev,nbsub) = calls(lev,nbsub) + 1
              if (lev > nblev) nblev = lev
              flag = .false.
              exit
@@ -97,8 +101,47 @@ contains
 
   end subroutine toc
 
-  !------------------------------------------------
+ !------------------------------------------------
   subroutine print_tictoc(myrank)
+    integer(kind=st), optional, intent(in)::myrank
+
+    integer(kind=st)  :: lev
+    integer(kind=st)  :: ii
+    integer(kind=st)  :: lun
+    CHARACTER(len=14) :: cmftf, cmfti
+
+    if (present(myrank)) then
+       lun = myrank + 10
+    else
+       lun = 10
+    endif
+
+    WRITE(cmftf , 1000) nblev
+    WRITE(cmfti , 1001) nblev
+
+1000 FORMAT('(', I3, '(x,f9.2))')
+1001 FORMAT('(', I3, '(x,I9))')
+
+    write(lun,'(t16)', ADVANCE="no")
+    do lev=1, nblev
+       write(lun,'(x,I9)', ADVANCE="no") lev
+    enddo
+
+    write(lun,'(x)', ADVANCE="yes")
+
+    do ii=1, nbsub
+       write(lun,'(x,A16)' , ADVANCE="no" ) TRIM(subname(ii))
+       write(lun,FMT=cmftf , ADVANCE="no" ) time(1:nblev,ii)
+       write(lun,'(x)'     , ADVANCE="yes")
+       write(lun,'(t16)'   , ADVANCE="no" )
+       write(lun,FMT=cmfti , ADVANCE="no" ) calls(1:nblev,ii)
+       write(lun,'(x)'     , ADVANCE="yes")
+    end do
+
+  end subroutine print_tictoc
+
+  !------------------------------------------------
+  subroutine print_tictoc_old(myrank)
     integer(kind=st), optional, intent(in)::myrank
 
     integer(kind=st) :: lev
@@ -115,13 +158,17 @@ contains
 
     write(lun,'(A)',ADVANCE="no")'   '
     do ii=1, nbsub
-       write(lun,'(A16)',ADVANCE="no") TRIM(subname(ii))
+       write(lun,'(x,A10)',ADVANCE="no") TRIM(subname(ii))
     end do
 
     do lev=1, nblev
-       write(lun,'(I2,x,10f16.2)')lev, time(lev,1:nbsub)
+       write(lun,'(I2,x,7f10.2)', ADVANCE="yes")lev, time(lev,1:nbsub)
+    enddo
+    write(lun,'(I2,x,I10)', ADVANCE="yes")''
+    do lev=1, nblev
+       write(lun,'(I2,x,I10)', ADVANCE="yes")lev, calls(lev,1:nbsub)
     enddo
 
-  end subroutine print_tictoc
+  end subroutine print_tictoc_old
 
 end module mg_tictoc
