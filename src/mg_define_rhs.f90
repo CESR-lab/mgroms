@@ -1,6 +1,7 @@
 module mg_define_rhs
 
   use mg_grids
+  use mg_mpi_exchange
 
   implicit none
 

@@ -1,7 +1,6 @@
 program mg_testrelax
 
-  use mg_mpi ! everything will come from the outside !!!
-
+  use mg_mpi 
   use mg_tictoc
   use mg_grids
   use mg_define_rhs
@@ -18,16 +17,18 @@ program mg_testrelax
   integer(kind=is):: npyg   ! number of processes in y
   integer(kind=is):: it     ! iteration loop number
   integer(kind=is):: nit    ! number of iterations
+  integer(kind=is) :: nx, ny, nz ! local dimensions
 
   integer(kind=is):: nsweeps
 
-  integer(kind=is):: lev
+  integer(kind=is):: lev,ierr, np
   real(kind=8)    :: res
-
-  real(kind=8)    :: dumt
 
   call tic(1,'mg_testrelax')
 
+  !---------------!
+  !- Ocean model -!
+  !---------------!
   nxg   = 128
   nyg   = 128
   nzg   = 128
@@ -36,24 +37,38 @@ program mg_testrelax
   npxg  = 2
   npyg  = 2
 
-  nit     = 150
-  nsweeps = 20
+  nit     = 10
+  nsweeps = 1
 
-  call init_mpi(nxg, nyg, nzg, npxg, npyg)
+  call mpi_init(ierr)
 
-  call find_grid_levels(npxg, npyg, nxo, nyo, nzo)
+  call mpi_comm_size(mpi_comm_world, np, ierr)
 
-  call define_grids(npxg, npyg, nxo, nyo, nzo)
+  if (np /= (npxg*npyg)) then
+     write(*,*) "Error: in number of processes !"
+     stop -1
+  endif
 
+  nx = nxg / npxg
+  ny = nyg / npyg
+  nz = nzg
+
+  !-------------------!
+  !- Enter in nhydro -!
+  !-------------------!
+  call mg_mpi_init()
+  call define_grids(npxg, npyg, nx, ny, nz)
+  call define_neighbours()
   call define_rhs(nxg, nyg, npxg)
 
-  call define_matrix_simple()
-
   lev = 1
+
+  call define_matrix_simple(lev)
+
   call compute_residual(lev,res)
 
   do it=1, nit
-     call relax_line(lev,nsweeps)
+     call relax(lev,nsweeps)
      call compute_residual(lev,res)
      if (myrank.eq.0)then
         write(*,1000)"ite=",it," - res=",res
@@ -63,10 +78,9 @@ program mg_testrelax
 
 !  call check_solution(lev)
 
-  call mg_mpi_finalize()
+  call mpi_finalize(ierr)
 
   call toc(1,'mg_testrelax')
-
   call print_tictoc(myrank)
 
 end program mg_testrelax

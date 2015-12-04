@@ -82,7 +82,7 @@ contains
           if (TRIM(string) == subname(ns)) then
              call cpu_time(ntoc(lev,ns))
              time(lev,ns) = time(lev,ns) + ntoc(lev,ns) - ntic(lev,ns)
-             calls(lev,nbsub) = calls(lev,nbsub) + 1
+             calls(lev,ns) = calls(lev,ns) + 1
              if (lev > nblev) nblev = lev
              flag = .false.
              exit
@@ -122,7 +122,7 @@ contains
 1000 FORMAT('(', I3, '(x,f9.2))')
 1001 FORMAT('(', I3, '(x,I9))')
 
-    write(lun,'(t16)', ADVANCE="no")
+    write(lun,'(t22)', ADVANCE="no")
     do lev=1, nblev
        write(lun,'(x,I9)', ADVANCE="no") lev
     enddo
@@ -130,10 +130,10 @@ contains
     write(lun,'(x)', ADVANCE="yes")
 
     do ii=1, nbsub
-       write(lun,'(x,A16)' , ADVANCE="no" ) TRIM(subname(ii))
+       write(lun,'(x,A20)' , ADVANCE="no" ) TRIM(subname(ii))
        write(lun,FMT=cmftf , ADVANCE="no" ) time(1:nblev,ii)
        write(lun,'(x)'     , ADVANCE="yes")
-       write(lun,'(t16)'   , ADVANCE="no" )
+       write(lun,'(t22)'   , ADVANCE="no" )
        write(lun,FMT=cmfti , ADVANCE="no" ) calls(1:nblev,ii)
        write(lun,'(x)'     , ADVANCE="yes")
     end do

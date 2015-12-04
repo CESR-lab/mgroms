@@ -1,6 +1,5 @@
 module mg_intergrids
   ! define the interface to grid restriction/interpolation
-  use mg_mpi 
 
   use mg_grids
   use mg_restrict

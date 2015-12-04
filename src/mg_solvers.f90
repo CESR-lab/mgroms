@@ -1,12 +1,12 @@
 module mg_solvers
 
-  implicit none
-
+  use mg_tictoc
   use mg_grids
-  use mg_mpi
   use mg_smoother
   use mg_interpolation     
   use mg_simpleop
+
+  implicit none
 
 contains
 
@@ -15,7 +15,7 @@ contains
     !     input: x=first guess / b=RHS
     !     output: x(overwritten) = solution
 
-  
+
     real(kind=8),dimension(:,:,:), intent(inout) :: x
     real(kind=8),dimension(:,:,:), intent(in)    :: b
     real(kind=8), intent(in):: tol
@@ -91,7 +91,5 @@ contains
     enddo
 
   end subroutine mg_Fcycle
-
-
 
 end module mg_solvers

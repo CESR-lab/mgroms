@@ -5,6 +5,8 @@ module mg_grids
 
   implicit none
 
+  integer(kind=4), parameter :: rl = 8, is = 4
+
   integer(kind=4), parameter:: maxlev=10
 
   type grid_type
@@ -12,17 +14,19 @@ module mg_grids
      ! why not regular arrays?
      real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
      real(kind=rl),dimension(:,:,:,:),pointer :: cA
-     !GR real(kind=rl),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
+!!TODO
+     real(kind=rl),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
+!!TODO
      integer(kind=is) :: nx,ny, nz
      integer(kind=is) :: npx, npy, incx, incy
      integer(kind=is) :: nh                 ! number of points in halo
      integer(kind=is) :: gather
-!!$=======
-!!$     integer(kind=is) :: Ng, ngx, ngy
-!!$     integer:: localcomm ! should be integer (output of MPI_SPLIT)
-!!$     integer(kind=is) :: coarsening_method, smoothing_method, gather
-!!$     integer(kind=is) :: color,family,key
-!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
+!!TODO
+     integer(kind=is) :: Ng, ngx, ngy
+     integer:: localcomm ! should be integer (output of MPI_SPLIT)
+     integer(kind=is) :: coarsening_method, smoothing_method
+     integer(kind=is) :: color,family,key
+!!TODO
      integer(kind=is),dimension(8)::neighb
      real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
      real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
@@ -48,11 +52,8 @@ contains
 
     integer(kind=is) :: nhalo        ! number of halo points
     integer(kind=is) :: nh, nd
-    integer(kind=is) :: npx, npy
-    integer(kind=is) :: incx, incy
 
     integer(kind=is) :: nx, ny, nz
-
 
     integer(kind=is) :: lev
 
@@ -62,8 +63,6 @@ contains
 !!$    integer(kind=is) :: ngx, ngy
 !!$    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
 !!$    
-!!$    ! 1rst loop about the grid dimensions at deifferent levels
-!!$    ! at the end of that loop we have the number of levels 
 !!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
     allocate(grid(nlevs))
@@ -133,9 +132,7 @@ contains
     integer(kind=is), intent(in) :: nx, ny, nz
 
     integer(kind=is) :: nxg, nyg, nzg
-    integer(kind=is) :: npx, npy
     integer(kind=is) :: nsmall
-
 
     nxg = npxg * nx
     nyg = npyg * ny
@@ -178,10 +175,9 @@ contains
   !----------------------------------------
   subroutine define_grid_dims()
 
-    integer(kind=is) :: nx, ny, nz, nd, nh
+    integer(kind=is) :: nx, ny, nz, nh
     integer(kind=is) :: npx, npy
-    integer(kind=is) :: lev, n2d, incx, incy, nsmall
-    integer(kind=is) :: coarsen, smooth
+    integer(kind=is) :: lev, incx, incy, nsmall
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -266,16 +262,17 @@ contains
 !!$    pi = mod(myrank,npx)
 !!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
-    ! Neighbours
-    do lev=1,nlevs       
 	   npx = grid(1)%npx
        npy = grid(1)%npy
-       ! incx is the distance to my neighbours in x (1, 2, 4, ...)
-       incx = grid(lev)%incx
-       incy = grid(lev)%incy
 
        pj = myrank/npx
        pi = mod(myrank,npx)
+
+    ! Neighbours
+    do lev=1,nlevs       
+       ! incx is the distance to my neighbours in x (1, 2, 4, ...)
+       incx = grid(lev)%incx
+       incy = grid(lev)%incy
 
        if (pj >= incy) then ! south
           grid(lev)%neighb(1) = (pj-incy)*npx+pi
@@ -339,12 +336,12 @@ contains
 !GR!    return ! not yet ready to go through
 !GR    
 !GR    ! prepare the informations for the gathering 
- !GR   do lev=1,nlevs-1
+!GR    do lev=1,nlevs-1
 !GR       if(grid(lev)%gather.eq.1)then
 !GR          
 !GR          nx = grid(lev)%nx
 !GR          ny = grid(lev)%ny
- !GR         nz = grid(lev)%nz
+!GR          nz = grid(lev)%nz
 !GR          nh = grid(lev)%nh
 !GR          incx=grid(lev)%incx / 2
 !GR          incy=grid(lev)%incy / 2          
@@ -352,12 +349,12 @@ contains
 !GR          ngy=grid(lev)%ngy
  
 
- !GR         !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
+!GR         !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
 !GR
 !GR         ! cores having the same family index share the same subdomain
 !GR          family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
 !GR
- !GR         nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
+!GR          nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
 !GR
 !GR          ! - assign a color to each core: make a cycling ramp index
 !GR          ! through 2 or 4 close families 

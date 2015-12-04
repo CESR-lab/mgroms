@@ -1,7 +1,7 @@
 program main_model
 
-  use nhydro
   use mpi
+  use nhydro
 
   implicit none
 
@@ -21,7 +21,7 @@ program main_model
   real(kind=8), dimension(:,:,:), allocatable :: u,v,w
 
   integer(kind=4) :: k
-  integer(kind=4) :: ierr
+  integer(kind=4) :: np, ierr, rank
 
   ! global domain dimensions
   nxg   = 128
@@ -32,10 +32,10 @@ program main_model
   npyg  = 2
 
   call mpi_init(ierr)
+  call mpi_comm_rank(mpi_comm_world, rank, ierr)
+  call mpi_comm_size(mpi_comm_world, np, ierr)
 
-  call mpi_comm_size(mpi_comm_world, nprocs, ierr)
-
-  if (nprocs /= (npxg*npyg)) then
+  if (np /= (npxg*npyg)) then
      write(*,*) "Error: in number of processes !"
      stop -1
   endif
@@ -45,7 +45,7 @@ program main_model
   nz = nzg
 
   ! fill the neighbours array
-  call define_heighbours(npxg, npyg, neighb)
+  call mm_define_heighbours(npxg, npyg, neighb)
 
   ! grid definition
   allocate(dx(ny,nx))
@@ -70,10 +70,10 @@ program main_model
      zr(k,:,:) = k - 0.5_8
      zw(k,:,:) = k - 1._8
   end do
-  
+
   zw(nz+1,:,:) = nz
-  
-  write(*,*)'Start main model!'
+
+  if (rank.eq.0)  write(*,*)'Start main model!'
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------
   call nhydro_init(npxg, npyg, neighb, dx, dy, zr, zw)
@@ -82,53 +82,57 @@ program main_model
   call nhydro_solve(u,v,w)
 
   call nhydro_clean()
-  write(*,*)'Start main model!'
+
+  call mpi_finalize(ierr)
+
+contains
+
+  !--------------------------------------------------------------
+  subroutine mm_define_heighbours(npxg, npyg, neighb)
+
+    use mpi
+    implicit none
+
+
+    integer(kind=4), intent(in) :: npxg, npyg
+    integer(kind=4),dimension(:), intent(out)::neighb
+
+    integer(kind=4):: myrank
+    integer(kind=4) :: ierr
+    integer(kind=4) :: pi, pj
+
+    call mpi_comm_rank(mpi_comm_world, myrank, ierr)
+
+    ! Neighbour
+
+    pj = myrank/npxg
+    pi = mod(myrank,npxg)
+
+    if (pj > 0) then ! south
+       neighb(1) = (pj-1)*npxg+pi
+    else
+       neighb(1) = MPI_PROC_NULL
+    endif
+
+    if (pi < npxg-1) then ! east
+       neighb(2) = pj*npxg+pi+1
+    else
+       neighb(2) = MPI_PROC_NULL
+    endif
+
+    if (pj < npyg-1) then ! north
+       neighb(3) = (pj+1)*npxg+pi
+    else
+       neighb(3) = MPI_PROC_NULL
+    endif
+
+    if (pi > 0) then ! west
+       neighb(4) = pj*npxg+pi-1
+    else
+       neighb(4) = MPI_PROC_NULL
+    endif
+
+  end subroutine mm_define_heighbours
 
 end program main_model
 
-!--------------------------------------------------------------
-subroutine define_heighbours(npxg, npyg, neighb)
-
-  use mpi
-  implicit none
-
-
-  integer(kind=4), intent(in) :: npxg, npyg
-  integer(kind=4),dimension(:), intent(out)::neighb
-
-  integer(kind=4):: myrank
-  integer(kind=4) :: ierr
-  integer(kind=4) :: pi, pj
-
-  call mpi_comm_rank(mpi_comm_world, myrank, ierr)
-
-  ! Neighbour
-
-  pj = myrank/npxg
-  pi = mod(myrank,npxg)
-
-  if (pj > 0) then ! south
-     neighb(1) = (pj-1)*npxg+pi
-  else
-     neighb(1) = MPI_PROC_NULL
-  endif
-
-  if (pi < npxg-1) then ! east
-     neighb(2) = pj*npxg+pi+1
-  else
-     neighb(2) = MPI_PROC_NULL
-  endif
-
-  if (pj < npyg-1) then ! north
-     neighb(3) = (pj+1)*npxg+pi
-  else
-     neighb(3) = MPI_PROC_NULL
-  endif
-
-  if (pi > 0) then ! west
-     neighb(4) = pj*npxg+pi-1
-  else
-     neighb(4) = MPI_PROC_NULL
-  endif
-
-end subroutine define_heighbours

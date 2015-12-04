@@ -1,7 +1,6 @@
 module mg_gather
 
-  use mg_mpi 
-
+  use mg_tictoc
   use mg_grids
 
   implicit none
@@ -20,14 +19,11 @@ module mg_gather
       real(kind=rl),dimension(:,:,:),intent(in) :: x
       real(kind=rl),dimension(:,:,:),intent(out) :: y
 
-      integer(kind=is):: nx,ny,nz,nh,N
+      integer(kind=is):: nx,ny,nz,nh
       integer(kind=is):: ngx,ngy,Ng
       integer(kind=is):: i,j,k,l,m,ii,jj
+      integer(kind=is):: ierr
       real(kind=rl),dimension(:,:,:,:,:),pointer :: buffer
-      integer(kind=is) ::ierr
-      
-      real(kind=rl):: z
-      real(kind=rl),dimension(2,2)::b
 
       buffer => grid(lev)%gatherbuffer
 

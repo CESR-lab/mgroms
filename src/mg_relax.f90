@@ -29,24 +29,23 @@ contains
     nh = grid(lev)%nh
 
     if (grid(lev)%nz == 1) then
-       call relax_2D(lev,p,b,cA,nsweeps,nx,ny,nh)
+       call relax_2D(lev,p,b,cA,nsweeps,nx,ny)
     else
        !- We can add additional 3D relax routines
        !- creteria: based on grid aspect ratio
-       call relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+       call relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz)
     end if
 
   end subroutine relax
 
   !----------------------------------------
-  subroutine relax_2D(lev,p,b,cA,nsweeps,nx,ny,nh)
+  subroutine relax_2D(lev,p,b,cA,nsweeps,nx,ny)
     integer(kind=is)                        , intent(in)   :: lev
     real(kind=8),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=8),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=is)                        , intent(in)   :: nsweeps
     integer(kind=is)                        , intent(in)   :: nx, ny
-    integer(kind=is)                        , intent(in)   :: nh
 
     integer(kind=is)           :: i,j,k, it
 
@@ -68,14 +67,13 @@ contains
   end subroutine relax_2D
   
   !----------------------------------------
-  subroutine relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+  subroutine relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz)
     integer(kind=is)                        , intent(in)   :: lev
     real(kind=8),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=8),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=is)                        , intent(in)   :: nsweeps
     integer(kind=is)                        , intent(in)   :: nx, ny, nz
-    integer(kind=is)                        , intent(in)   :: nh
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -102,11 +100,11 @@ contains
           do j = 1,ny
 
              k=1!lower level
-             rhs(k) = b(k,j,i) &
-                  - cA(3,k,j,i)*p(k+1,j-1,i) &
+             rhs(k) = b(k,j,i)                                              &
+                  - cA(3,k,j,i)*p(k+1,j-1,i)                                &
                   - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
                                              - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
-                  - cA(6,k,j,i)*p(k+1,j,i-1) &
+                  - cA(6,k,j,i)*p(k+1,j,i-1)                                &
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
                                              - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
              d(k)   = cA(1,k,j,i)
@@ -125,10 +123,10 @@ contains
              enddo
 
              k=nz!upper level
-             rhs(k) = b(k,j,i) &
+             rhs(k) = b(k,j,i)                                              &
                                              - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
                   - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                  - cA(5,k,j,i)*p(k-1,j-1,i) &
+                  - cA(5,k,j,i)*p(k-1,j-1,i)                                &
                                              - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
                   - cA(8,k,j,i)*p(k-1,j,i-1) 
@@ -271,20 +269,20 @@ contains
        do j = 1,ny
 
           k=1!lower level
-          r(k,j,i) = b(k,j,i) &
+          r(k,j,i) = b(k,j,i)                                           &
                - cA(1,k,j,i)*p(k,j,i)                                   &
-               - cA(2,k+1,j,i)*p(k+1,j,i)    &
-               - cA(3,k,j,i)*p(k+1,j-1,i) &
+               - cA(2,k+1,j,i)*p(k+1,j,i)                               &
+               - cA(3,k,j,i)*p(k+1,j-1,i)                               &
                - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-               - cA(6,k,j,i)*p(k+1,j,i-1) &
+               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)                           &
+               - cA(6,k,j,i)*p(k+1,j,i-1)                               &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
           res = max(res,abs(r(k,j,i)))
 
           do k = 2,nz-1!interior levels
-             r(k,j,i) = b(k,j,i)                                                &
+             r(k,j,i) = b(k,j,i)                                           &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
                   - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
                   - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
@@ -298,13 +296,13 @@ contains
           enddo
 
           k=nz!upper level
-          r(k,j,i) = b(k,j,i)                   &
+          r(k,j,i) = b(k,j,i)                                           &
                - cA(1,k,j,i)*p(k,j,i)                                   &
-               - cA(2,k,j,i)*p(k-1,j,i)     &
-               - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+               - cA(2,k,j,i)*p(k-1,j,i)                                 &
+               - cA(3,k-1,j+1,i)*p(k-1,j+1,i)                           &
                - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-               - cA(5,k,j,i)*p(k-1,j-1,i)      &
-               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)  &
+               - cA(5,k,j,i)*p(k-1,j-1,i)                               &
+               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)                           &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k,j,i)*p(k-1,j,i-1)
           

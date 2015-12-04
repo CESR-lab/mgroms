@@ -1,10 +1,11 @@
 module nhydro
 
+  use mg_mpi
   use mg_grids
   use mg_define_matrix
-  use mg_restrict
+  use mg_intergrids
   use mg_relax
-  use mg_solvers
+  !TODO use mg_solvers
 
 contains
 
@@ -22,6 +23,8 @@ contains
     ny = size(zr,dim=2)
     nx = size(zr,dim=3)
 
+    call mg_mpi_init()
+
     call define_grids(npxg, npyg, nz,ny,nx)
 
     call define_neighbours(neighb)
@@ -34,9 +37,7 @@ contains
   subroutine nhydro_solve(u,v,w)
     real(kind=8), dimension(:,:,:), intent(inout) :: u,v,w
 
-    real(kind=8) :: res
-
-    call mg_solve()
+    !TODO call mg_solve()
 
   end subroutine nhydro_solve
 

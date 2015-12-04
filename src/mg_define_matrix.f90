@@ -2,6 +2,7 @@ module mg_define_matrix
 
   use mg_tictoc
   use mg_grids
+  use mg_mpi_exchange
 
   implicit none
 
@@ -19,7 +20,6 @@ contains
     enddo
 
   end subroutine define_matrices
-
 
   !----------------------------------------
   subroutine define_matrix_simple(lev)
@@ -94,6 +94,10 @@ contains
   !-------------------------------------------------------------------------     
   subroutine coarsen_matrix_aggressive(lev)
     integer(kind=is),intent(in):: lev
+
+    integer(kind=is) :: idum
+    idum = lev
+
     write(*,*)'Error: coarsen matrix aggressive not available yet !'
     stop -1
   end subroutine coarsen_matrix_aggressive
@@ -102,6 +106,12 @@ contains
   !-------------------------------------------------------------------------     
   subroutine coarsen_matrix_2D(lev)
     integer(kind=is),intent(in):: lev
+
+    integer(kind=is) :: idum
+    idum = lev
+    
+    write(*,*)'Error: coarsen matrix_2D  not available yet !'
+    stop -1
 
   end subroutine coarsen_matrix_2D
 
@@ -112,7 +122,7 @@ contains
 
     real(kind=rl), dimension(:,:,:,:), pointer :: cA, cA2
      real(kind=rl), dimension(:,:,:) , pointer :: dummy3D
-    integer(kind=is):: l, k, j, i, kp, jp, ip, k2, j2, i2
+    integer(kind=is):: k, j, i, kp, jp, ip, k2, j2, i2
     integer(kind=is):: d
     integer(kind=is):: nx2, ny2, nz2, nh
     real(kind=rl):: diag,cff
@@ -131,7 +141,7 @@ contains
        ip = i+1
        do j2 = 1,ny2
           j = 2*j2-1
-          jp = j+1
+          jp = j+1     !TODO take into account GATHER case here (else=bug)
           do k2 = 1,nz2
              k = 2*k2-1
              kp = k+1
@@ -193,8 +203,6 @@ contains
     ! the coefficients should be rescaled with 1/4
     cff = 1._8/4._8
 
-   ! the coefficients should be rescaled with 1/4
-    cff = 1._8/4._8
     do d = 1,8       
        if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
        do i2 = 1,nx2

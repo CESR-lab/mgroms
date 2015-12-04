@@ -1,13 +1,13 @@
 program mg_testcoarsening
 
-  use mg_mpi ! everything will come from the outside !!!
-
+  use mpi
+  use mg_mpi
   use mg_tictoc
   use mg_grids
   use mg_define_rhs
   use mg_define_matrix
   use mg_relax
-  use mg_restrict
+  use mg_intergrids
 
   implicit none
 
@@ -22,8 +22,9 @@ program mg_testcoarsening
 
   integer(kind=is):: nsweeps
 
-  integer(kind=is):: lev, ierr
+  integer(kind=is):: lev, ierr, np
   real(kind=8)    :: res,res0,conv
+  integer(kind=4) :: nx, ny, nz  ! local dimensions
 
   !- timing
   call tic(1,'mg_testcoarsening')
@@ -39,9 +40,22 @@ program mg_testcoarsening
   nit     = 10
   nsweeps = 1
 
-  call init_mpi(nxg, nyg, nzg, npxg, npyg)
+  call mpi_init(ierr)
+  call mpi_comm_size(mpi_comm_world, np, ierr)
 
-  call define_grids(npxg, npyg, nxo, nyo, nzo)
+  if (np /= (npxg*npyg)) then
+     write(*,*) "Error: in number of processes !"
+     stop -1
+  endif
+
+  nx = nxg / npxg
+  ny = nyg / npyg
+  nz = nzg
+
+  !- Enter in nhydro -!
+  call mg_mpi_init()
+
+  call define_grids(npxg, npyg, nx, ny, nz)
 
   call define_neighbours()
 
@@ -82,6 +96,7 @@ program mg_testcoarsening
 
   ! coarsen RHS on all grids
   do lev=1,nlevs-1
+     grid(lev)%r = grid(lev)%b
      call restrict(lev)
   enddo
 
@@ -105,7 +120,7 @@ program mg_testcoarsening
 
 !  call check_solution(lev)
 
-  call mg_mpi_finalize()
+  call mpi_finalize(ierr)
 
   !- timing
   call toc(1,'mg_testcoarsening')

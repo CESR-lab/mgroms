@@ -1,10 +1,10 @@
-module mg_restrict
+module mg_intergrids
   !
   ! Collection of restriction subroutines
   !
   use mg_tictoc
   use mg_grids
-  !      use mg_mpi
+
   implicit none
 
 contains
@@ -80,6 +80,15 @@ contains
     real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=is), intent(in) :: nx, ny
+
+    !TODO
+    integer(kind=is) ::idum ! line to remove
+    idum = nx               ! line to remove
+    idum = ny               ! line to remove
+    y = x                   ! line to remove
+    write(*,*)'Error: prolong_2D  not available yet !'
+    stop -1
+    !TODO
 
   end subroutine restrict_2D
 
@@ -182,7 +191,15 @@ contains
     real(kind=8),dimension(:,:,:),intent(out) :: y
     integer(kind=is),intent(in) :: nx, ny, nz
 
-    y = x
+    !TODO
+    integer(kind=is) ::idum ! line to remove
+    idum = nx               ! line to remove
+    idum = ny               ! line to remove
+    idum = nz               ! line to remove
+    y = x                   ! line to remove
+    write(*,*)'Error:  prolong_aggressive not available yet !'
+    stop -1
+    !TODO
 
   end subroutine prolong_aggressive
 
@@ -192,7 +209,14 @@ contains
     real(kind=8),dimension(:,:,:),intent(out) :: y
     integer(kind=is),intent(in) :: nx, ny
 
-    y = x
+    !TODO
+    integer(kind=is) ::idum ! line to remove
+    idum = nx               ! line to remove
+    idum = ny               ! line to remove
+    y = x                   ! line to remove
+    write(*,*)'Error: prolong_2D  not available yet !'
+    stop -1
+    !TODO
 
   end subroutine prolong_2D
 
@@ -225,26 +249,25 @@ contains
 
   end subroutine prolong_3D
 
-  !----------------------------------------
-  subroutine interpolate_zzz(l2,l1,y,x)
+!!$  !----------------------------------------
+!!$  subroutine interpolate_zzz(l2,l1,y,x)
+!!$
+!!$    integer(kind = 4), intent(in):: l1,l2
+!!$    real*8,dimension(:,:,:), intent(out):: x
+!!$    real*8,dimension(:,:,:), intent(in) :: y
+!!$
+!!$    integer(kind = 4):: i, j, k, k2
+!!$    integer(kind = 4):: nx, ny, nz
+!!$
+!!$    do k=1,nz
+!!$       k2=(k-1)/8+1
+!!$       do j=1,ny
+!!$          do i=1,nx               
+!!$             x(i,j,k)=y(i,j,k2)
+!!$          enddo
+!!$       enddo
+!!$    enddo
+!!$
+!!$  end subroutine interpolate_zzz
 
-    integer(kind = 4), intent(in):: l1,l2
-    real*8,dimension(:,:,:), intent(out):: x
-    real*8,dimension(:,:,:), intent(in) :: y
-
-    integer(kind = 4):: i, j, k, k2
-    integer(kind = 4):: nx, ny, nz
-
-    do k=1,nz
-       k2=(k-1)/8+1
-       do j=1,ny
-          do i=1,nx               
-             x(i,j,k)=y(i,j,k2)
-          enddo
-       enddo
-    enddo
-
-  end subroutine interpolate_zzz
-
-
-end module mg_restrict
+end module mg_intergrids
