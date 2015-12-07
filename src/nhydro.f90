@@ -2,6 +2,7 @@ module nhydro
 
   use mg_mpi
   use mg_grids
+  use mg_namelist
   use mg_define_matrix
   use mg_intergrids
   use mg_relax
@@ -14,13 +15,13 @@ contains
   !--------------------------------------------------------------
   subroutine nhydro_init(npxg, npyg, neighb, dx, dy, zr, zw)
 
-    integer(kind=4), dimension(4) , intent(in) :: neighb ! S, E, N, W
-    integer(kind=4)               , intent(in) :: npxg, npyg
-    real(kind=8), dimension(:,:)  , intent(in) :: dx, dy
-    real(kind=8), dimension(:,:,:), intent(in) :: zr, zw
+    integer(kind=ip), dimension(4) , intent(in) :: neighb ! S, E, N, W
+    integer(kind=ip)               , intent(in) :: npxg, npyg
+    real(kind=rp), dimension(:,:)  , intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:,:), intent(in) :: zr, zw
 
-    integer(kind=4) :: nz, ny, nx
-    integer(kind=4) :: ierr, lev
+    integer(kind=ip) :: nz, ny, nx
+    integer(kind=ip) :: ierr, lev
 
     nz = size(zr,dim=1)
     ny = size(zr,dim=2)
@@ -54,13 +55,13 @@ contains
 
   !--------------------------------------------------------------
   subroutine nhydro_solve(u,v,w)
-    real(kind=8), dimension(:,:,:), allocatable, intent(inout) :: u,v,w
+    real(kind=rp), dimension(:,:,:), allocatable, intent(inout) :: u,v,w
 
-    real(kind=8) :: tol = 1.e-6
+    integer(kind=ip) :: nx, ny, nz
 
-    integer(kind=4) :: nx, ny, nz
 
-    integer(kind=4) :: maxite =2
+    real(kind=rp)    :: tol    = 1.e-6
+    integer(kind=ip) :: maxite = 2
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)
@@ -83,6 +84,8 @@ contains
 
   !--------------------------------------------------------------
   subroutine nhydro_clean()
+
+    call grids_dealloc()
     
   end subroutine nhydro_clean
 

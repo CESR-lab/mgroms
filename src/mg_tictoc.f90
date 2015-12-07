@@ -1,7 +1,6 @@
+module mg_tictoc
 ! intrinsec fortran funciton
 ! cpu_time(time)  time in second
-
-module mg_tictoc
 
   implicit none
 

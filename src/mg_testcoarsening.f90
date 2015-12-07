@@ -11,19 +11,19 @@ program mg_testcoarsening
 
   implicit none
 
-  integer(kind=is):: nxg    ! global x dimension
-  integer(kind=is):: nyg    ! global y dimension
-  integer(kind=is):: nzg    ! z dimension
-  integer(kind=is):: npxg   ! number of processes in x
-  integer(kind=is):: npyg   ! number of processes in y
-  integer(kind=is):: it     ! iteration loop number
-  integer(kind=is):: nit    ! number of iterations
+  integer(kind=ip):: nxg    ! global x dimension
+  integer(kind=ip):: nyg    ! global y dimension
+  integer(kind=ip):: nzg    ! z dimension
+  integer(kind=ip):: npxg   ! number of processes in x
+  integer(kind=ip):: npyg   ! number of processes in y
+  integer(kind=ip):: it     ! iteration loop number
+  integer(kind=ip):: nit    ! number of iterations
 
-  integer(kind=is):: nsweeps
+  integer(kind=ip):: nsweeps
 
-  integer(kind=is):: lev, ierr, np
-  real(kind=8)    :: res,res0,conv
-  integer(kind=4) :: nx, ny, nz  ! local dimensions
+  integer(kind=ip):: lev, ierr, np
+  real(kind=rp)    :: res,res0,conv
+  integer(kind=ip) :: nx, ny, nz  ! local dimensions
 
   !- timing
   call tic(1,'mg_testcoarsening')

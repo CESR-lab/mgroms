@@ -11,14 +11,14 @@ module mg_solvers
 
 contains
 
-  !----------------------------------------
+  !---------------------------------------------------------------------
   subroutine solve(tol,maxite)
-    real(kind=8)   , intent(in) :: tol
-    integer(kind=4), intent(in) :: maxite
+    real(kind=rp)   , intent(in) :: tol
+    integer(kind=ip), intent(in) :: maxite
  
     ! local
-    real(kind=8)    :: rnorm,bnorm,res0,conv
-    integer(kind=4) :: nite
+    real(kind=rp)    :: rnorm,bnorm,res0,conv
+    integer(kind=ip) :: nite
 
     bnorm = maxval(abs(grid(1)%b))
     call global_max(bnorm)
@@ -48,10 +48,10 @@ contains
 
   end subroutine solve
 
-  !----------------------------------------
+  !---------------------------------------------------------------------
   subroutine Fcycle()
 
-    integer(kind=4):: lev
+    integer(kind=ip):: lev
 
     do lev=1,nlevs-1
        call fine2coarse(lev)
@@ -72,10 +72,10 @@ contains
   !----------------------------------------
   subroutine Vcycle(lev1)
 
-    integer(kind=4),intent(in):: lev1
+    integer(kind=ip),intent(in):: lev1
 
-    integer(kind=4)::lev
-    real(kind=8)   :: rnorm
+    integer(kind=ip):: lev
+    real(kind=rp)   :: rnorm
 
     do lev=lev1,nlevs-1
        call relax(lev,ns_pre)

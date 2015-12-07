@@ -6,16 +6,16 @@ program mg_testgather
 
   implicit none
 
-  integer(kind=is):: nxg    ! global x dimension
-  integer(kind=is):: nyg    ! global y dimension
-  integer(kind=is):: nzg    ! z dimension
-  integer(kind=is):: npxg   ! number of processes in x
-  integer(kind=is):: npyg   ! number of processes in y
-  integer(kind=is):: nit    ! number of iterations
-  integer(kind=is):: ngx,ngy
-  integer(kind=is):: nsweeps
-  integer(kind=is):: nx,ny,nz,nh
-  integer(kind=is):: lev, ierr, np
+  integer(kind=ip):: nxg    ! global x dimension
+  integer(kind=ip):: nyg    ! global y dimension
+  integer(kind=ip):: nzg    ! z dimension
+  integer(kind=ip):: npxg   ! number of processes in x
+  integer(kind=ip):: npyg   ! number of processes in y
+  integer(kind=ip):: nit    ! number of iterations
+  integer(kind=ip):: ngx,ngy
+  integer(kind=ip):: nsweeps
+  integer(kind=ip):: nx,ny,nz,nh
+  integer(kind=ip):: lev, ierr, np
 
   !---------------!
   !- Ocean model -!

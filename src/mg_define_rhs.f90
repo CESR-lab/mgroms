@@ -5,30 +5,30 @@ module mg_define_rhs
 
   implicit none
 
-   real(kind=rl):: dx, dy, dz
+   real(kind=rp):: dx, dy, dz
 
 contains
 
   subroutine define_rhs(nxg, nyg, npxg)
 
-    integer(kind=is), intent(in) :: nxg,nyg
-    integer(kind=is), intent(in) :: npxg
+    integer(kind=ip), intent(in) :: nxg,nyg
+    integer(kind=ip), intent(in) :: npxg
 
-    real(kind=rl), dimension(:,:,:), pointer :: rhs
+    real(kind=rp), dimension(:,:,:), pointer :: rhs
 
-    integer(kind=is) :: nx, ny, nz
-    integer(kind=is) :: k, j, i
-    integer(kind=is) :: pi, pj
+    integer(kind=ip) :: nx, ny, nz
+    integer(kind=ip) :: k, j, i
+    integer(kind=ip) :: pi, pj
 
-    real(kind=rl):: sizex, sizey, sizez
-    real(kind=rl):: x0, y0, z0
-    real(kind=rl):: x1, y1, z1
+    real(kind=rp):: sizex, sizey, sizez
+    real(kind=rp):: x0, y0, z0
+    real(kind=rp):: x1, y1, z1
 
-    real(kind=rl):: x,z
+    real(kind=rp):: x,z
 
-    real(kind=rl):: bet,sumglo
+    real(kind=rp):: bet,sumglo
 
-    integer(kind=is) :: lev
+    integer(kind=ip) :: lev
 
     sizex=1.d4
     sizey=1.d4
@@ -61,13 +61,13 @@ contains
 
     do i = 1,nx
        ! nx is not necessarily the same for all processes
-       x =( real(i+(pi*nx),kind=rl)- 0.5_8) * dx  
+       x =( real(i+(pi*nx),kind=rp)- 0.5_8) * dx  
 
        do j = 1,ny
-          !y =real(j,kind=rl)
+          !y =real(j,kind=rp)
 
           do k = 1,nz
-             z = -(real(k,kind=rl)- 0.5_8) * dz
+             z = -(real(k,kind=rp)- 0.5_8) * dz
 
              rhs(k,j,i) = &
                   exp(-bet * ((x-x0)**2 + (z-z0)**2)) - &

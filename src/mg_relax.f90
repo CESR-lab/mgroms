@@ -1,6 +1,8 @@
 module mg_relax
 
+  use mg_mpi
   use mg_tictoc
+  use mg_namelist
   use mg_grids
   use mg_define_matrix
 
@@ -10,14 +12,14 @@ contains
 
   !----------------------------------------
   subroutine relax(lev,nsweeps)
-    integer(kind=is), intent(in):: lev
-    integer(kind=is), intent(in):: nsweeps
+    integer(kind=ip), intent(in):: lev
+    integer(kind=ip), intent(in):: nsweeps
 
-    real(kind=8),dimension(:,:,:), pointer:: p
-    real(kind=8),dimension(:,:,:), pointer:: b
-    real(kind=8),dimension(:,:,:,:), pointer:: cA
+    real(kind=rp),dimension(:,:,:), pointer:: p
+    real(kind=rp),dimension(:,:,:), pointer:: b
+    real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
-    integer(kind=is) :: nx, ny, nz, nh
+    integer(kind=ip) :: nx, ny, nz, nh
 
     p  => grid(lev)%p
     b  => grid(lev)%b
@@ -40,14 +42,14 @@ contains
 
   !----------------------------------------
   subroutine relax_2D(lev,p,b,cA,nsweeps,nx,ny)
-    integer(kind=is)                        , intent(in)   :: lev
-    real(kind=8),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=8),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=is)                        , intent(in)   :: nsweeps
-    integer(kind=is)                        , intent(in)   :: nx, ny
+    integer(kind=ip)                        , intent(in)   :: lev
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny
 
-    integer(kind=is)           :: i,j,k, it
+    integer(kind=ip)           :: i,j,k, it
 
     k=1
 
@@ -68,12 +70,12 @@ contains
   
   !----------------------------------------
   subroutine relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz)
-    integer(kind=is)                        , intent(in)   :: lev
-    real(kind=8),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=8),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=is)                        , intent(in)   :: nsweeps
-    integer(kind=is)                        , intent(in)   :: nx, ny, nz
+    integer(kind=ip)                        , intent(in)   :: lev
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -86,8 +88,8 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
     !     LOCAL 
-    integer(kind=is)           :: i,j,k,it
-    real(kind=8),dimension(nz) :: rhs,d,ud,p1d
+    integer(kind=ip)           :: i,j,k,it
+    real(kind=rp),dimension(nz) :: rhs,d,ud,p1d
 
     call tic(lev,'relax_line')
 
@@ -162,13 +164,13 @@ contains
     implicit none
     !     IMPORT/EXPORT
     integer                  ,intent(in)  :: l
-    real(kind=8),dimension(l),intent(in)  :: d,b
-    real(kind=8),dimension(l),intent(in)  :: dd
-    real(kind=8),dimension(l),intent(out) :: xc
+    real(kind=rp),dimension(l),intent(in)  :: d,b
+    real(kind=rp),dimension(l),intent(in)  :: dd
+    real(kind=rp),dimension(l),intent(out) :: xc
     !     LOCAL
     integer                  :: k
-    real(kind=8),dimension(l):: gam
-    real(kind=8)             :: bet
+    real(kind=rp),dimension(l):: gam
+    real(kind=rp)             :: bet
 
     bet   = 1._8/d(1)
     xc(1) = b(1)*bet
@@ -185,15 +187,15 @@ contains
 
   !----------------------------------------
   subroutine compute_residual(lev,res)
-    integer(kind=is), intent(in):: lev
-    real(kind=rl), intent(out):: res
+    integer(kind=ip), intent(in):: lev
+    real(kind=rp), intent(out):: res
 
-    real(kind=8),dimension(:,:,:), pointer:: p
-    real(kind=8),dimension(:,:,:), pointer:: b
-    real(kind=8),dimension(:,:,:), pointer:: r
-    real(kind=8),dimension(:,:,:,:), pointer:: cA
+    real(kind=rp),dimension(:,:,:), pointer:: p
+    real(kind=rp),dimension(:,:,:), pointer:: b
+    real(kind=rp),dimension(:,:,:), pointer:: r
+    real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
-    integer(kind=is) :: nx, ny, nz, nh
+    integer(kind=ip) :: nx, ny, nz, nh
 
     p  => grid(lev)%p
     b  => grid(lev)%b
@@ -225,14 +227,14 @@ contains
 
   !----------------------------------------
   subroutine compute_residual_2D(res,p,b,r,cA,nx,ny)
-    real(kind=8)                            , intent(out)  :: res
-    real(kind=8),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: r
-    real(kind=8),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=is)                        , intent(in)   :: nx, ny
+    real(kind=rp)                            , intent(out)  :: res
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: r
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nx, ny
 
-    integer(kind=is) :: i,j,k
+    integer(kind=ip) :: i,j,k
 
     res = 0._8
 
@@ -255,12 +257,12 @@ contains
   !----------------------------------------
   subroutine compute_residual_3D(res,p,b,r,cA,nx,ny,nz)
 
-    real(kind=8)                            , intent(out)  :: res
-    real(kind=8),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=8),dimension(:,:,:)  , pointer, intent(in)   :: r
-    real(kind=8),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=is)                        , intent(in)   :: nx, ny, nz
+    real(kind=rp)                            , intent(out)  :: res
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: r
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -272,7 +274,7 @@ contains
     ! cA(7,:,:,:)      -> p(k,j,i-1)
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
-    integer(kind=is)           :: i,j,k
+    integer(kind=ip)           :: i,j,k
 
     res = 0._8
 

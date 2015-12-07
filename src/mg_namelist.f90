@@ -1,18 +1,22 @@
 module mg_namelist
 
   use mg_mpi
+  use mg_tictoc
 
   implicit none
 
+  !- control integer and real precision (global vparameters)
+  integer(kind=4), parameter :: rp = 8, ip = 4
+
   !- Number of point in the halo of each subdomain
-  integer(kind=4) :: nhalo       =   2
+  integer(kind=ip) :: nhalo       =   2
 
   ! smallest dimension ever for the global domain
-  integer(kind=4) :: nsmall      =   8
+  integer(kind=ip) :: nsmall      =   8
 
-  integer(kind=4) :: ns_coarsest = 100
-  integer(kind=4) :: ns_pre      =   2
-  integer(kind=4) :: ns_post     =   2
+  integer(kind=ip) :: ns_coarsest = 100
+  integer(kind=ip) :: ns_pre      =   2
+  integer(kind=ip) :: ns_post     =   2
 
   logical         :: aggressive = .false.
 
@@ -23,6 +27,7 @@ module mg_namelist
 
  contains
 
+   !--------------------------------------------------------------------
    subroutine read_namelist(filename, verbose)
 
      character(len=*), optional, intent(in) :: filename
@@ -30,7 +35,7 @@ module mg_namelist
 
      character(len=64) :: fn_nml
      logical           :: vb
-     integer(kind=4)   :: lun_nml = 4
+     integer(kind=ip)  :: lun_nml = 4
 
      if (present(verbose)) then
         vb = verbose

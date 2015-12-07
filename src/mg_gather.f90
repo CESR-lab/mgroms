@@ -1,6 +1,8 @@
 module mg_gather
 
+  use mg_mpi
   use mg_tictoc
+  use mg_namelist
   use mg_grids
 
   implicit none
@@ -15,15 +17,15 @@ module mg_gather
       ! the grid information for x is not available because x does not belong to a grid
       ! x is a temporary array (see mg_intergrids.f90)
 
-      integer(kind=is),intent(in) :: lev
-      real(kind=rl),dimension(:,:,:),intent(in) :: x
-      real(kind=rl),dimension(:,:,:),intent(out) :: y
+      integer(kind=ip),intent(in) :: lev
+      real(kind=rp),dimension(:,:,:),intent(in) :: x
+      real(kind=rp),dimension(:,:,:),intent(out) :: y
 
-      integer(kind=is):: nx,ny,nz,nh
-      integer(kind=is):: ngx,ngy,Ng
-      integer(kind=is):: i,j,k,l,m,ii,jj
-      integer(kind=is):: ierr
-      real(kind=rl),dimension(:,:,:,:,:),pointer :: buffer
+      integer(kind=ip):: nx,ny,nz,nh
+      integer(kind=ip):: ngx,ngy,Ng
+      integer(kind=ip):: i,j,k,l,m,ii,jj
+      integer(kind=ip):: ierr
+      real(kind=rp),dimension(:,:,:,:,:),pointer :: buffer
 
       buffer => grid(lev)%gatherbuffer
 
@@ -75,24 +77,24 @@ module mg_gather
       ! lev is the level of x, where it has to be split
       ! y is the dummy 3D intermediate array, before interpolation
 
-      integer(kind=is),intent(in) :: lev
-      real(kind=rl),dimension(:,:,:),intent(in) :: x
-!    real(kind=rl),dimension( &
+      integer(kind=ip),intent(in) :: lev
+      real(kind=rp),dimension(:,:,:),intent(in) :: x
+!    real(kind=rp),dimension( &
 !         grid(lev)%nz,       &
 !         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh, &
 !         1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(in) :: x
 
-      real(kind=rl),dimension(:,:,:),intent(out) :: y
-!    real(kind=rl),dimension( &
+      real(kind=rp),dimension(:,:,:),intent(out) :: y
+!    real(kind=rp),dimension( &
 !         grid(lev)%nz,       &
 !         1-grid(lev)%nh:grid(lev)%ny/grid(lev)%ngy+grid(lev)%nh, &
 !         1-grid(lev)%nh:grid(lev)%nx/grid(lev)%ngx+grid(lev)%nh), intent(out) :: y
 
 
-      integer(kind=is):: nx,ny,nz,nh
-      integer(kind=is):: ngx,ngy
-      integer(kind=is):: i,j,k,l,m,ii,jj,key,ierr
-      real(kind=rl):: z
+      integer(kind=ip):: nx,ny,nz,nh
+      integer(kind=ip):: ngx,ngy
+      integer(kind=ip):: i,j,k,l,m,ii,jj,key
+      real(kind=rp):: z
 
       ! number of cores per direction involved in this gathering (1 or 2)
       ngx = grid(lev)%ngx

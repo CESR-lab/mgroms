@@ -2,6 +2,7 @@ module mg_mpi_exchange
 
   use mg_mpi
   use mg_tictoc
+  use mg_namelist
   use mg_grids
 
   interface fill_halo
@@ -15,25 +16,23 @@ contains
   !----------------------------------------
   subroutine fill_halo_3D(lev,p)
 
-    integer(kind=is), intent(in):: lev
-    real(kind=rl), dimension(:,:,:), pointer, intent(inout)::p
+    integer(kind=ip), intent(in):: lev
+    real(kind=rp), dimension(:,:,:), pointer, intent(inout)::p
 
-    integer(kind=is) :: nx, ny, nz
-    integer(kind=is) :: nh
-    integer(kind=is) :: south, east, north, west
-    integer(kind=is) :: southwest, southeast, northeast, northwest
+    integer(kind=ip) :: nx, ny, nz
+    integer(kind=ip) :: nh
+    integer(kind=ip) :: south, east, north, west
+    integer(kind=ip) :: southwest, southeast, northeast, northwest
 
-    integer(kind=is) :: etag, wtag, ntag, stag
-    integer(kind=is) :: swtag, setag, nwtag, netag
-    integer(kind=is) :: ierr,status1 
-    integer(kind=is) :: nprocs
+    integer(kind=ip) :: etag, wtag, ntag, stag
+    integer(kind=ip) :: swtag, setag, nwtag, netag
+    integer(kind=ip) :: ierr,status1 
+    integer(kind=ip) :: nprocs
 
-    real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
-    real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
-    real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
-    real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
-
-    real(kind=rl) :: dumt
+    real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+    real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+    real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+    real(kind=rp), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
 
     call tic(lev,'fill_halo')
 
@@ -258,24 +257,24 @@ contains
   !----------------------------------------
   subroutine fill_halo_4D(lev,p)
 
-    integer(kind=is), intent(in):: lev
-    real(kind=rl), dimension(:,:,:,:), pointer, intent(inout)::p
+    integer(kind=ip), intent(in):: lev
+    real(kind=rp), dimension(:,:,:,:), pointer, intent(inout)::p
 !!$
-!!$    integer(kind=is) :: nx, ny, nz
-!!$    integer(kind=is) :: nh
-!!$    integer(kind=is) :: south, east, north, west
-!!$    integer(kind=is) :: southwest, southeast, northeast, northwest
+!!$    integer(kind=ip) :: nx, ny, nz
+!!$    integer(kind=ip) :: nh
+!!$    integer(kind=ip) :: south, east, north, west
+!!$    integer(kind=ip) :: southwest, southeast, northeast, northwest
 !!$
-!!$    integer(kind=is) :: etag, wtag, ntag, stag
-!!$    integer(kind=is) :: swtag, setag, nwtag, netag
-!!$    integer(kind=is) :: ierr,status1 
+!!$    integer(kind=ip) :: etag, wtag, ntag, stag
+!!$    integer(kind=ip) :: swtag, setag, nwtag, netag
+!!$    integer(kind=ip) :: ierr,status1 
 !!$
-!!$    real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
-!!$    real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
-!!$    real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
-!!$    real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
+!!$    real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+!!$    real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+!!$    real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+!!$    real(kind=rp), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
 !!$
-!!$    real(kind=rl) :: dumt
+!!$    real(kind=rp) :: dumt
 !!$
 !!$    call tic(lev,'fill_halo_4D')
 !!$
@@ -472,10 +471,10 @@ contains
   subroutine global_max(maxloc)
     ! return the global max: maxglo
     ! using the local max on each subdomain
-    real(kind=rl),intent(inout) :: maxloc
+    real(kind=rp),intent(inout) :: maxloc
 
-    real(kind=rl)    :: maxglo
-    integer(kind=is) :: ierr
+    real(kind=rp)    :: maxglo
+    integer(kind=ip) :: ierr
 
     ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
     ! where subdomains are gathered
@@ -490,11 +489,11 @@ contains
   subroutine global_sum(lev,sumloc,sumglo)
     ! return the global sum: sumglo
     ! using the local sum on each subdomain
-    integer(kind=is),intent(in) :: lev
-    real(kind=rl),intent(in) :: sumloc
-    real(kind=rl),intent(out) :: sumglo
+    integer(kind=ip),intent(in) :: lev
+    real(kind=rp),intent(in) :: sumloc
+    real(kind=rp),intent(out) :: sumglo
 
-    integer(kind=is) :: ierr
+    integer(kind=ip) :: ierr
 
     ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
     ! where subdomains are gathered

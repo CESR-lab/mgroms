@@ -1,8 +1,8 @@
 module mg_intergrids
-  !
-  ! Collection of restriction subroutines
-  !
+
+  use mg_mpi
   use mg_tictoc
+  use mg_namelist
   use mg_grids
 
   implicit none
@@ -13,12 +13,12 @@ contains
   !------------------------------------------------------------
   subroutine fine2coarse(lev)
 
-    integer(kind=is), intent(in) :: lev
+    integer(kind=ip), intent(in) :: lev
 
-    real(kind=8),dimension(:,:,:),pointer :: r
-    real(kind=8),dimension(:,:,:),pointer :: b
+    real(kind=rp),dimension(:,:,:),pointer :: r
+    real(kind=rp),dimension(:,:,:),pointer :: b
 
-    integer(kind=is) :: nx, ny, nz
+    integer(kind=ip) :: nx, ny, nz
 
     nx = grid(lev+1)%nx
     ny = grid(lev+1)%ny
@@ -49,12 +49,12 @@ contains
   !----------------------------------------
   subroutine fine2coarse_aggressive(x,y,nx,ny,nz)
 
-    real(kind=rl),dimension(:,:,:), intent(in) :: x !fine
-    real(kind=rl),dimension(:,:,:), intent(inout) :: y ! coarse
-    integer(kind=is), intent(in) :: nx, ny, nz
+    real(kind=rp)   , dimension(:,:,:), intent(in)    :: x !fine
+    real(kind=rp)   , dimension(:,:,:), intent(inout) :: y ! coarse
+    integer(kind=ip)                  , intent(in)    :: nx, ny, nz
 
     ! local
-    integer(kind=is):: i,j,k,k2
+    integer(kind=ip):: i,j,k,k2
 
     do k=1,nz
        k2=(k-1)/8+1
@@ -77,12 +77,12 @@ contains
 
   !------------------------------------------------------------
   subroutine fine2coarse_2D(x,y,nx,ny)
-    real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
-    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
-    integer(kind=is), intent(in) :: nx, ny
+    real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=ip), intent(in) :: nx, ny
 
     !TODO
-    integer(kind=is) ::idum ! line to remove
+    integer(kind=ip) ::idum ! line to remove
     idum = nx               ! line to remove
     idum = ny               ! line to remove
     y = x                   ! line to remove
@@ -129,12 +129,12 @@ contains
   subroutine fine2coarse_3D(x,y,nx,ny,nz)
     !
     ! Fine2coarse 'x' from fine level l1 to 'y' on coarse level l2=l1+1
-    real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
-    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
-    integer(kind=is), intent(in) :: nx, ny, nz
+    real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=ip), intent(in) :: nx, ny, nz
     ! local
-    integer(kind=is) :: i,j,k,i2,j2,k2
-    real(kind=8):: z
+    integer(kind=ip) :: i,j,k,i2,j2,k2
+    real(kind=rp):: z
 
     ! 
     do i2=1,nx
@@ -158,12 +158,12 @@ contains
   subroutine coarse2fine(lev)
 
     !- coarse2fine from level lev+1 to level lev
-    integer(kind=is), intent(in) :: lev
+    integer(kind=ip), intent(in) :: lev
 
-    real(kind=8),dimension(:,:,:),pointer :: rf
-    real(kind=8),dimension(:,:,:),pointer :: pc
+    real(kind=rp),dimension(:,:,:),pointer :: rf
+    real(kind=rp),dimension(:,:,:),pointer :: pc
 
-    integer(kind=is) :: nxc, nyc, nzc
+    integer(kind=ip) :: nxc, nyc, nzc
 
     nxc = grid(lev+1)%nx
     nyc = grid(lev+1)%ny
@@ -188,12 +188,12 @@ contains
 
   !------------------------------------------------------------
   subroutine coarse2fine_aggressive(x,y,nx,ny,nz)
-    real(kind=8),dimension(:,:,:),intent(in)  :: x
-    real(kind=8),dimension(:,:,:),intent(out) :: y
-    integer(kind=is),intent(in) :: nx, ny, nz
+    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: x
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=ip),intent(in) :: nx, ny, nz
 
     !TODO
-    integer(kind=is) ::idum ! line to remove
+    integer(kind=ip) ::idum ! line to remove
     idum = nx               ! line to remove
     idum = ny               ! line to remove
     idum = nz               ! line to remove
@@ -206,12 +206,12 @@ contains
 
   !------------------------------------------------------------
   subroutine coarse2fine_2D(x,y,nx,ny)
-    real(kind=8),dimension(:,:,:),intent(in)  :: x
-    real(kind=8),dimension(:,:,:),intent(out) :: y
-    integer(kind=is),intent(in) :: nx, ny
+    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: x
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=ip),intent(in) :: nx, ny
 
     !TODO
-    integer(kind=is) ::idum ! line to remove
+    integer(kind=ip) ::idum ! line to remove
     idum = nx               ! line to remove
     idum = ny               ! line to remove
     y = x                   ! line to remove
@@ -223,12 +223,12 @@ contains
 
   !------------------------------------------------------------
   subroutine coarse2fine_3D(xf,xc,nx,ny,nz)
-    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: xf
-    real(kind=rl),dimension(:,:,:),pointer,intent(in)  :: xc
-    integer(kind=is),intent(in) :: nx, ny, nz
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
+    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
+    integer(kind=ip),intent(in) :: nx, ny, nz
 
     ! local
-    integer(kind=is) :: i,j,k,i2,j2,k2
+    integer(kind=ip) :: i,j,k,i2,j2,k2
     ! 
     do i2=1,nx
        i=2*i2-1

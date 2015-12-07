@@ -6,53 +6,51 @@ module mg_grids
 
   implicit none
 
-  integer(kind=4), parameter :: rl = 8, is = 4
-
   type grid_type
-     real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
-     real(kind=rl),dimension(:,:,:,:),pointer :: cA
+     real(kind=rp),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
+     real(kind=rp),dimension(:,:,:,:),pointer :: cA
 !!TODO
-     real(kind=rl),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
+     real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
 !!TODO
-     integer(kind=is) :: nx,ny, nz
-     integer(kind=is) :: npx, npy, incx, incy
-     integer(kind=is) :: nh                 ! number of points in halo
-     integer(kind=is) :: gather
+     integer(kind=ip) :: nx,ny, nz
+     integer(kind=ip) :: npx, npy, incx, incy
+     integer(kind=ip) :: nh                 ! number of points in halo
+     integer(kind=ip) :: gather
 !!TODO
-     integer(kind=is) :: Ng, ngx, ngy
-     integer(kind=is) :: localcomm ! should be integer (output of MPI_SPLIT)
-     integer(kind=is) :: coarsening_method, smoothing_method
-     integer(kind=is) :: color,family,key
+     integer(kind=ip) :: Ng, ngx, ngy
+     integer(kind=ip) :: localcomm ! should be integer (output of MPI_SPLIT)
+     integer(kind=ip) :: coarsening_method, smoothing_method
+     integer(kind=ip) :: color,family,key
 !!TODO
-     integer(kind=is),dimension(8)::neighb
-     real(kind=rl), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
-     real(kind=rl), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
-     real(kind=rl), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
-     real(kind=rl), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
+     integer(kind=ip),dimension(8)::neighb
+     real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+     real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+     real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+     real(kind=rp), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
   end type grid_type
 
   type(grid_type), dimension(:), pointer :: grid
 
-  integer(kind=is):: nlevs ! index of the coarsest level (1 is the finest)
+  integer(kind=ip):: nlevs ! index of the coarsest level (1 is the finest)
 
 contains
 
   !----------------------------------------
   subroutine define_grids(npxg, npyg, nxl, nyl, nzl)
 
-    integer(kind=is), intent(in) :: npxg,npyg  ! global CPU topology
-    integer(kind=is), intent(in) :: nxl, nyl, nzl ! local dims
+    integer(kind=ip), intent(in) :: npxg,npyg  ! global CPU topology
+    integer(kind=ip), intent(in) :: nxl, nyl, nzl ! local dims
 
-    integer(kind=is) :: nh, nd
+    integer(kind=ip) :: nh, nd
 
-    integer(kind=is) :: nx, ny, nz
+    integer(kind=ip) :: nx, ny, nz
 
-    integer(kind=is) :: lev
+    integer(kind=ip) :: lev
 
     call  find_grid_levels(npxg, npyg, nxl, nyl, nzl)
 !!$=======
 !!$    ! for the gathering
-!!$    integer(kind=is) :: ngx, ngy
+!!$    integer(kind=ip) :: ngx, ngy
 !!$    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
 !!$    
 !!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
@@ -120,10 +118,10 @@ contains
  !----------------------------------------
   subroutine find_grid_levels(npxg, npyg, nx,ny,nz)
 
-    integer(kind=4) , intent(in) :: npxg, npyg
-    integer(kind=is), intent(in) :: nx, ny, nz
+    integer(kind=ip) , intent(in) :: npxg, npyg
+    integer(kind=ip), intent(in) :: nx, ny, nz
 
-    integer(kind=is) :: nxg, nyg, nzg
+    integer(kind=ip) :: nxg, nyg, nzg
 
     nxg = npxg * nx
     nyg = npyg * ny
@@ -165,9 +163,9 @@ contains
   !----------------------------------------
   subroutine define_grid_dims()
 
-    integer(kind=is) :: nx, ny, nz, nh
-    integer(kind=is) :: npx, npy
-    integer(kind=is) :: lev, incx, incy
+    integer(kind=ip) :: nx, ny, nz, nh
+    integer(kind=ip) :: npx, npy
+    integer(kind=ip) :: lev, incx, incy
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -233,12 +231,12 @@ contains
 
   !----------------------------------------
   subroutine define_neighbours(neighb)
-    integer(kind=4), dimension(4), optional, intent(in) :: neighb ! S, E, N, W
+    integer(kind=ip), dimension(4), optional, intent(in) :: neighb ! S, E, N, W
 
-    integer(kind=4) :: lev
-    integer(kind=is) :: npx, npy
-    integer(kind=is) :: incx, incy
-    integer(kind=is) :: pi, pj
+    integer(kind=ip) :: lev
+    integer(kind=ip) :: npx, npy
+    integer(kind=ip) :: incx, incy
+    integer(kind=ip) :: pi, pj
 !!$=======
 !!$    ! Watch out, I continue to use the global indexing
 !!$    ! to locate each core
@@ -386,5 +384,39 @@ contains
 !GR  end subroutine define_grids
 
   end subroutine define_neighbours
+
+  !---------------------------------------------------------------------
+  subroutine grids_dealloc()
+
+    integer(kind=ip) :: lev
+
+    do lev=1,nlevs
+       deallocate(grid(lev)%p)
+       deallocate(grid(lev)%b)
+       deallocate(grid(lev)%r)
+       deallocate(grid(lev)%cA)
+
+       deallocate(grid(lev)%sendS)
+       deallocate(grid(lev)%recvS)
+       deallocate(grid(lev)%sendN)
+       deallocate(grid(lev)%recvN)
+
+       deallocate(grid(lev)%sendE)
+       deallocate(grid(lev)%recvE)
+       deallocate(grid(lev)%sendW)
+       deallocate(grid(lev)%recvW)
+
+       deallocate(grid(lev)%sendSW)
+       deallocate(grid(lev)%sendSE)
+       deallocate(grid(lev)%sendNW)
+       deallocate(grid(lev)%sendNE)
+
+       deallocate(grid(lev)%recvSW)
+       deallocate(grid(lev)%recvSE)
+       deallocate(grid(lev)%recvNW)
+       deallocate(grid(lev)%recvNE) 
+    end do
+
+  end subroutine grids_dealloc
 
 end module mg_grids
