@@ -14,7 +14,6 @@ program mg_testcoarsening
   integer(kind=is):: nxg    ! global x dimension
   integer(kind=is):: nyg    ! global y dimension
   integer(kind=is):: nzg    ! z dimension
-  !!integer(kind=is):: nhalo  ! number of halo points
   integer(kind=is):: npxg   ! number of processes in x
   integer(kind=is):: npyg   ! number of processes in y
   integer(kind=is):: it     ! iteration loop number
@@ -32,7 +31,6 @@ program mg_testcoarsening
   nxg   = 128
   nyg   = 128
   nzg   = 128
-  nhalo = 1
 
   npxg  = 2
   npyg  = 2
@@ -97,7 +95,7 @@ program mg_testcoarsening
   ! coarsen RHS on all grids
   do lev=1,nlevs-1
      grid(lev)%r = grid(lev)%b
-     call restrict(lev)
+     call coarse2fine(lev)
   enddo
 
   ! check smoothing on all grids

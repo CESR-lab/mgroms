@@ -94,31 +94,35 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_mainmodel_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
-	mg_intergrids.$(OBJEXT) nhydro.$(OBJEXT) main_model.$(OBJEXT)
+	mg_namelist.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
+	mg_relax.$(OBJEXT) mg_intergrids.$(OBJEXT) \
+	mg_solvers.$(OBJEXT) nhydro.$(OBJEXT) main_model.$(OBJEXT)
 mainmodel_OBJECTS = $(am_mainmodel_OBJECTS)
 mainmodel_LDADD = $(LDADD)
 am_testcoarsening_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_define_rhs.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
-	mg_relax.$(OBJEXT) mg_intergrids.$(OBJEXT) \
-	mg_testcoarsening.$(OBJEXT)
+	mg_namelist.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
+	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
+	mg_intergrids.$(OBJEXT) mg_testcoarsening.$(OBJEXT)
 testcoarsening_OBJECTS = $(am_testcoarsening_OBJECTS)
 testcoarsening_LDADD = $(LDADD)
 am_testgather_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_gather.$(OBJEXT) mg_testgather.$(OBJEXT)
+	mg_namelist.$(OBJEXT) mg_grids.$(OBJEXT) mg_gather.$(OBJEXT) \
+	mg_testgather.$(OBJEXT)
 testgather_OBJECTS = $(am_testgather_OBJECTS)
 testgather_LDADD = $(LDADD)
 am_testhalo_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_define_rhs.$(OBJEXT) mg_testhalo.$(OBJEXT)
+	mg_namelist.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
+	mg_testhalo.$(OBJEXT)
 testhalo_OBJECTS = $(am_testhalo_OBJECTS)
 testhalo_LDADD = $(LDADD)
 am_testrelax_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_define_rhs.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
-	mg_relax.$(OBJEXT) mg_testrelax.$(OBJEXT)
+	mg_namelist.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
+	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
+	mg_testrelax.$(OBJEXT)
 testrelax_OBJECTS = $(am_testrelax_OBJECTS)
 testrelax_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -523,17 +527,20 @@ TESTS = $(check_PROGRAMS)
 mainmodel_SOURCES = \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_matrix.f90 \
 	mg_relax.f90         \
 	mg_intergrids.f90    \
+	mg_solvers.f90       \
 	nhydro.f90           \
 	main_model.f90
 
 testhalo_SOURCES = \
-	mg_mpi.f90   \
+	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_rhs.f90    \
@@ -542,6 +549,7 @@ testhalo_SOURCES = \
 testrelax_SOURCES = \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_rhs.f90    \
@@ -552,6 +560,7 @@ testrelax_SOURCES = \
 testcoarsening_SOURCES = \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_rhs.f90    \
@@ -563,6 +572,7 @@ testcoarsening_SOURCES = \
 testgather_SOURCES = \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_gather.f90        \
 	mg_testgather.f90

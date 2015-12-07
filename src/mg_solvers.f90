@@ -1,95 +1,97 @@
 module mg_solvers
 
+  use mg_mpi
   use mg_tictoc
+  use mg_namelist
   use mg_grids
-  use mg_smoother
-  use mg_interpolation     
-  use mg_simpleop
+  use mg_relax
+  use mg_intergrids
 
   implicit none
 
 contains
 
   !----------------------------------------
-  subroutine mg_solve(x,b,tol,maxite,res,nite)
-    !     input: x=first guess / b=RHS
-    !     output: x(overwritten) = solution
-
-
-    real(kind=8),dimension(:,:,:), intent(inout) :: x
-    real(kind=8),dimension(:,:,:), intent(in)    :: b
-    real(kind=8), intent(in):: tol
-    real(kind=8), intent(out):: res   
-    integer(kind=4), intent(in):: maxite
-    integer(kind=4), intent(out)::nite
-
+  subroutine solve(tol,maxite)
+    real(kind=8)   , intent(in) :: tol
+    integer(kind=4), intent(in) :: maxite
+ 
     ! local
-    real*8:: rnorm,bnorm,res0,conv
+    real(kind=8)    :: rnorm,bnorm,res0,conv
+    integer(kind=4) :: nite
 
-    call norm(1,b,bnorm) ! norm of b on level=1
+    bnorm = maxval(abs(grid(1)%b))
+    call global_max(bnorm)
 
-    call residual(1,x,b,grid(1)%b,rnorm) ! residual returns both 'r' and its norm
+    call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
+
+    if (myrank == 0) write(*,*)' rnom:', rnorm,' bnorm:', bnorm
+
     res0 = rnorm/bnorm
 
     nite=0
 
-    do while ((nite.lt.maxite).and.(res0.gt.tol))
-       call mg_Fcycle(1)
-       call add_to(1,x,grid(1)%x)
-       call residual(1,x,b,grid(1)%b,rnorm)
-       res = rnorm/bnorm
-       conv=res0/res ! error reduction after this iteration
-       res0=res
+    do while ((nite < maxite).and.(res0 > tol))
+
+       call Fcycle()
+       call compute_residual(1,rnorm)
+       if (myrank == 0) write(*,*)' rnom:', rnorm,' bnorm:', bnorm
+       rnorm = rnorm/bnorm
+       conv=res0/rnorm ! error reduction after this iteration
+       res0=rnorm
        nite=nite+1
-       write(*,10) nite,res,conv
+       write(*,10) nite, rnorm, conv
+
     enddo
 
-10  format("ite = ",I," / res = ",G," / conv = ",G)
+10  format("ite = ",I4,": res = ",G," / conv = ",G)
 
-  end subroutine mg_solve
+  end subroutine solve
 
   !----------------------------------------
-  subroutine mg_Vcycle(lev1)
+  subroutine Fcycle()
 
-    integer:: lev1,lev
-    real*8:: rnorm
+    integer(kind=4):: lev
 
-    do lev=lev1,nlevs-1
-       call smooth(lev,grid(lev)%x,grid(lev)%b,npre)
-       call residual(lev,grid(lev)%x,grid(lev)%b,grid(lev)%r,rnorm)
-       call finetocoarse(lev,lev+1,grid(lev)%r,grid(lev+1)%b)
-       call set_to_zero(lev+1,grid(lev+1)%x)
+    do lev=1,nlevs-1
+       call fine2coarse(lev)
     enddo
 
-    lev=nlevs
-    call smooth(lev,grid(lev)%x,grid(lev)%b,ndeepest)
+    grid(nlevs)%p(:,:,:) = 0._8
 
-    do lev=nlevs-1,lev1,-1
-       call coarsetofine(lev+1,lev,grid(lev+1)%x,grid(lev)%r)
-       call add_to(lev,grid(lev)%x,grid(lev)%r) ! add x to r
-       call smooth(lev,grid(lev)%x,grid(lev)%b,npost)
+    call relax(nlevs, ns_coarsest)
+
+    do lev=nlevs-1,1,-1
+       grid(lev)%p(:,:,:) = 0._8
+       call coarse2fine(lev) !- fill_halo ?
+       call Vcycle(lev)
     enddo
 
-  end subroutine mg_Vcycle
+  end subroutine Fcycle
 
   !----------------------------------------
-  subroutine mg_Fcycle(lev1)
+  subroutine Vcycle(lev1)
 
-    integer:: lev1,lev
+    integer(kind=4),intent(in):: lev1
+
+    integer(kind=4)::lev
+    real(kind=8)   :: rnorm
 
     do lev=lev1,nlevs-1
-       call finetocoarse(lev,lev+1,grid(lev)%b,grid(lev+1)%b)
+       call relax(lev,ns_pre)
+       call compute_residual(lev,rnorm)
+       if (myrank == 0) write(*,*)' vcycle lev:', lev,' rnorm:', rnorm
+       call fine2coarse(lev)
+       grid(lev+1)%p(:,:,:) = 0._8
     enddo
 
-    lev=nlevs
-    call set_to_zero(lev,grid(lev)%x)
-    call smooth(lev,grid(lev)%x,grid(lev)%b,ndeepest)
+    call relax(nlevs, ns_coarsest)
 
     do lev=nlevs-1,lev1,-1
-       call coarsetofine(lev+1,lev,grid(lev+1)%x,grid(lev)%x)
-       call mg_Vcycle(lev)
+       call coarse2fine(lev)
+       call relax(lev,ns_post)
     enddo
 
-  end subroutine mg_Fcycle
+  end subroutine Vcycle
 
 end module mg_solvers

@@ -9,7 +9,6 @@ program mg_testgather
   integer(kind=is):: nxg    ! global x dimension
   integer(kind=is):: nyg    ! global y dimension
   integer(kind=is):: nzg    ! z dimension
-  !!integer(kind=is):: nhalo  ! number of halo points
   integer(kind=is):: npxg   ! number of processes in x
   integer(kind=is):: npyg   ! number of processes in y
   integer(kind=is):: nit    ! number of iterations
@@ -24,7 +23,6 @@ program mg_testgather
   nxg   = 128
   nyg   = 128
   nzg   = 128
-  nhalo = 1
 
   npxg  = 4
   npyg  = 4

@@ -28,8 +28,8 @@ program main_model
   nyg   = 128
   nzg   = 128
 
-  npxg  = 2
-  npyg  = 2
+  npxg  = 1
+  npyg  = 1
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
@@ -78,7 +78,6 @@ program main_model
   !-----------------------------------------------------------
   call nhydro_init(npxg, npyg, neighb, dx, dy, zr, zw)
 
-  !p(k,j,i) and rhs(k,j,i)
   call nhydro_solve(u,v,w)
 
   call nhydro_clean()
@@ -92,7 +91,6 @@ contains
 
     use mpi
     implicit none
-
 
     integer(kind=4), intent(in) :: npxg, npyg
     integer(kind=4),dimension(:), intent(out)::neighb

@@ -28,17 +28,20 @@ TESTS          = $(check_PROGRAMS)
 mainmodel_SOURCES=       \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_matrix.f90 \
 	mg_relax.f90         \
-	mg_intergrids.f90    \ 
+	mg_intergrids.f90    \
+	mg_solvers.f90       \
 	nhydro.f90           \
 	main_model.f90
 ##
 testhalo_SOURCES =       \
-	mg_mpi.f90   \
+	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_rhs.f90    \
@@ -47,6 +50,7 @@ testhalo_SOURCES =       \
 testrelax_SOURCES =      \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_rhs.f90    \
@@ -57,6 +61,7 @@ testrelax_SOURCES =      \
 testcoarsening_SOURCES = \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_define_rhs.f90    \
@@ -68,6 +73,7 @@ testcoarsening_SOURCES = \
 testgather_SOURCES =     \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_gather.f90        \
 	mg_testgather.f90

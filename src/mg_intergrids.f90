@@ -8,10 +8,10 @@ module mg_intergrids
   implicit none
 
 contains
-  !------------!
-  !- RESTRICT -!
+  !---------------!
+  !- FINE2COARSE -! fine to coarse grid
   !------------------------------------------------------------
-  subroutine restrict(lev)
+  subroutine fine2coarse(lev)
 
     integer(kind=is), intent(in) :: lev
 
@@ -30,24 +30,24 @@ contains
     grid(lev+1)%p = 0._8
 
     if ((aggressive).and.(lev==1)) then
-       call restrict_aggressive(r,b,nx,ny,nz)
+       call fine2coarse_aggressive(r,b,nx,ny,nz)
 
     elseif (grid(lev)%nz == 1) then
-       call restrict_2D(r,b,nx,ny)
+       call fine2coarse_2D(r,b,nx,ny)
 
     else
-       call tic(lev,'restrict_3D')
+       call tic(lev,'fine2coarse_3D')
 
-       call restrict_3D(r,b,nx,ny,nz)
+       call fine2coarse_3D(r,b,nx,ny,nz)
 
-      call toc(lev,'restrict_3D')
+      call toc(lev,'fine2coarse_3D')
 
     end if
 
-  end subroutine restrict
+  end subroutine fine2coarse
 
   !----------------------------------------
-  subroutine restrict_aggressive(x,y,nx,ny,nz)
+  subroutine fine2coarse_aggressive(x,y,nx,ny,nz)
 
     real(kind=rl),dimension(:,:,:), intent(in) :: x !fine
     real(kind=rl),dimension(:,:,:), intent(inout) :: y ! coarse
@@ -73,10 +73,10 @@ contains
        endif
     enddo
 
-  end subroutine restrict_aggressive
+  end subroutine fine2coarse_aggressive
 
   !------------------------------------------------------------
-  subroutine restrict_2D(x,y,nx,ny)
+  subroutine fine2coarse_2D(x,y,nx,ny)
     real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=is), intent(in) :: nx, ny
@@ -86,14 +86,14 @@ contains
     idum = nx               ! line to remove
     idum = ny               ! line to remove
     y = x                   ! line to remove
-    write(*,*)'Error: prolong_2D  not available yet !'
+    write(*,*)'Error: coarse2fine_2D  not available yet !'
     stop -1
     !TODO
 
-  end subroutine restrict_2D
+  end subroutine fine2coarse_2D
 
  !----------------------------------------
-  subroutine restrict_xy(l1,l2,x,y)
+  subroutine fine2coarse_xy(l1,l2,x,y)
 
     integer:: l1,l2
     real*8,dimension(grid(l1)%nz,grid(l1)%ny,grid(l1)%nx) :: x
@@ -123,12 +123,12 @@ contains
        enddo
     enddo
 
-  end subroutine restrict_xy
+  end subroutine fine2coarse_xy
 
   !------------------------------------------------------------
-  subroutine restrict_3D(x,y,nx,ny,nz)
+  subroutine fine2coarse_3D(x,y,nx,ny,nz)
     !
-    ! Restrict 'x' from fine level l1 to 'y' on coarse level l2=l1+1
+    ! Fine2coarse 'x' from fine level l1 to 'y' on coarse level l2=l1+1
     real(kind=rl),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rl),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=is), intent(in) :: nx, ny, nz
@@ -150,17 +150,17 @@ contains
        enddo
     enddo
 
-  end subroutine restrict_3D
+  end subroutine fine2coarse_3D
 
-  !-----------!
-  !- PROLONG -!
+  !---------------!
+  !- COARSE2FINE -! coarse to fine grid
   !------------------------------------------------------------
-  subroutine prolong(lev)
+  subroutine coarse2fine(lev)
 
-    !- prolong from level lev+1 to level lev
+    !- coarse2fine from level lev+1 to level lev
     integer(kind=is), intent(in) :: lev
 
-    real(kind=8),dimension(:,:,:),pointer :: pf
+    real(kind=8),dimension(:,:,:),pointer :: rf
     real(kind=8),dimension(:,:,:),pointer :: pc
 
     integer(kind=is) :: nxc, nyc, nzc
@@ -169,24 +169,25 @@ contains
     nyc = grid(lev+1)%ny
     nzc = grid(lev+1)%nz
 
-    pf => grid(lev)%p
+    rf => grid(lev)%r
     pc => grid(lev+1)%p
 
     if ((aggressive).and.(lev==1)) then
-       call prolong_aggressive(pf,pc,nxc,nyc,nzc)
+       call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
 
     elseif (grid(lev)%nz == 1) then
-       call prolong_2D(pf,pc,nxc,nyc)
+       call coarse2fine_2D(rf,pc,nxc,nyc)
 
     else
-       call prolong_3D(pf,pc,nxc,nyc,nzc)
-
+       call coarse2fine_3D(rf,pc,nxc,nyc,nzc)
     end if
 
-  end subroutine prolong
+    grid(lev)%p = grid(lev)%p + grid(lev)%r
+
+  end subroutine coarse2fine
 
   !------------------------------------------------------------
-  subroutine prolong_aggressive(x,y,nx,ny,nz)
+  subroutine coarse2fine_aggressive(x,y,nx,ny,nz)
     real(kind=8),dimension(:,:,:),intent(in)  :: x
     real(kind=8),dimension(:,:,:),intent(out) :: y
     integer(kind=is),intent(in) :: nx, ny, nz
@@ -197,14 +198,14 @@ contains
     idum = ny               ! line to remove
     idum = nz               ! line to remove
     y = x                   ! line to remove
-    write(*,*)'Error:  prolong_aggressive not available yet !'
+    write(*,*)'Error:  coarse2fine_aggressive not available yet !'
     stop -1
     !TODO
 
-  end subroutine prolong_aggressive
+  end subroutine coarse2fine_aggressive
 
   !------------------------------------------------------------
-  subroutine prolong_2D(x,y,nx,ny)
+  subroutine coarse2fine_2D(x,y,nx,ny)
     real(kind=8),dimension(:,:,:),intent(in)  :: x
     real(kind=8),dimension(:,:,:),intent(out) :: y
     integer(kind=is),intent(in) :: nx, ny
@@ -214,16 +215,16 @@ contains
     idum = nx               ! line to remove
     idum = ny               ! line to remove
     y = x                   ! line to remove
-    write(*,*)'Error: prolong_2D  not available yet !'
+    write(*,*)'Error: coarse2fine_2D  not available yet !'
     stop -1
     !TODO
 
-  end subroutine prolong_2D
+  end subroutine coarse2fine_2D
 
   !------------------------------------------------------------
-  subroutine prolong_3D(x,y,nx,ny,nz)
-    real(kind=8),dimension(:,:,:),intent(in)  :: x
-    real(kind=8),dimension(:,:,:),intent(out) :: y
+  subroutine coarse2fine_3D(xf,xc,nx,ny,nz)
+    real(kind=rl),dimension(:,:,:),pointer,intent(out) :: xf
+    real(kind=rl),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=is),intent(in) :: nx, ny, nz
 
     ! local
@@ -235,19 +236,19 @@ contains
           j=2*j2-1
           do k2=1,nz
              k=2*k2-1
-             y(k  ,j  ,i  ) = x(k2,j2,i2)
-             y(k+1,j  ,i  ) = x(k2,j2,i2)
-             y(k  ,j+1,i  ) = x(k2,j2,i2)
-             y(k+1,j+1,i  ) = x(k2,j2,i2)
-             y(k  ,j  ,i+1) = x(k2,j2,i2)
-             y(k+1,j  ,i+1) = x(k2,j2,i2)
-             y(k  ,j+1,i+1) = x(k2,j2,i2)
-             y(k+1,j+1,i+1) = x(k2,j2,i2)
+             xf(k  ,j  ,i  ) = xc(k2,j2,i2)
+             xf(k+1,j  ,i  ) = xc(k2,j2,i2)
+             xf(k  ,j+1,i  ) = xc(k2,j2,i2)
+             xf(k+1,j+1,i  ) = xc(k2,j2,i2)
+             xf(k  ,j  ,i+1) = xc(k2,j2,i2)
+             xf(k+1,j  ,i+1) = xc(k2,j2,i2)
+             xf(k  ,j+1,i+1) = xc(k2,j2,i2)
+             xf(k+1,j+1,i+1) = xc(k2,j2,i2)
           enddo
        enddo
     enddo
 
-  end subroutine prolong_3D
+  end subroutine coarse2fine_3D
 
 !!$  !----------------------------------------
 !!$  subroutine interpolate_zzz(l2,l1,y,x)

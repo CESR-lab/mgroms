@@ -204,7 +204,7 @@ contains
     cff = 1._8/4._8
 
     do d = 1,8       
-       if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
+       !!if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
        do i2 = 1,nx2
           do j2 = 1,ny2
              do k2 = 1,nz2

@@ -91,6 +91,10 @@ contains
 
     call tic(lev,'relax_line')
 
+    !--DEBUG !!!!
+    call fill_halo(lev,p)
+    !--DEBUG !!!!
+
     !
     ! add a loop on smoothing
     do it = 1,nsweeps
@@ -211,6 +215,12 @@ contains
        call toc(lev,'compute_residual_3D')
     end if
 
+    if (lev >-1) then
+       call global_max(res)
+    else
+       res = -999._8
+    endif
+
   end subroutine compute_residual
 
   !----------------------------------------
@@ -224,6 +234,8 @@ contains
 
     integer(kind=is) :: i,j,k
 
+    res = 0._8
+
     k=1
 
     do i = 1,nx
@@ -234,10 +246,10 @@ contains
                - cA(2,k,j,i)*p(k  ,j-1,i) - cA(2,k  ,j+1,i)*p(k  ,j+1,i)&
                - cA(3,k,j,i)*p(k  ,j,i-1) - cA(3,k  ,j,i+1)*p(k  ,j,i+1)
 
+          res = max(res,abs(r(k,j,i)))
+
        enddo
     enddo
-
-    res = maxval(abs(r(:,:,:)))
 
   end subroutine compute_residual_2D
   !----------------------------------------
@@ -261,7 +273,6 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
     integer(kind=is)           :: i,j,k
-    real(kind=8)               :: norm
 
     res = 0._8
 
@@ -310,10 +321,6 @@ contains
    
        enddo
     enddo
-
-    call global_max(res,norm)
-
-    res = norm
 
   end subroutine compute_residual_3D
 

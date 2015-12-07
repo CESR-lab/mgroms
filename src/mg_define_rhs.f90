@@ -80,6 +80,13 @@ contains
     z = sum(rhs(:,1:ny,1:nx))
     call global_sum(1,z,sumglo)
 
+    sumglo = sumglo / (nxg*nyg*nz)
+
+    rhs(:,1:ny,1:nx) = rhs(:,1:ny,1:nx) - sumglo
+
+    z = sum(rhs(:,1:ny,1:nx))
+    call global_sum(1,z,sumglo)
+
     !write(*,*)'myrank - sum(rhs):', myrank, sum(rhs(:,1:ny,1:nx))
     if (myrank.eq.0)then
        write(*,*)'- sum(rhs):',sumglo

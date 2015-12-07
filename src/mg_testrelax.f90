@@ -12,7 +12,6 @@ program mg_testrelax
   integer(kind=is):: nxg    ! global x dimension
   integer(kind=is):: nyg    ! global y dimension
   integer(kind=is):: nzg    ! z dimension
-  !!integer(kind=is):: nhalo  ! number of halo points
   integer(kind=is):: npxg   ! number of processes in x
   integer(kind=is):: npyg   ! number of processes in y
   integer(kind=is):: it     ! iteration loop number
@@ -32,7 +31,6 @@ program mg_testrelax
   nxg   = 128
   nyg   = 128
   nzg   = 128
-  nhalo = 1
 
   npxg  = 2
   npyg  = 2
@@ -59,13 +57,18 @@ program mg_testrelax
   call mg_mpi_init()
   call define_grids(npxg, npyg, nx, ny, nz)
   call define_neighbours()
-  call define_rhs(nxg, nyg, npxg)
+  !!call define_rhs(nxg, nyg, npxg)
+  
+  grid(1)%b = 0._8
+
+  call random_number(grid(1)%p)
 
   lev = 1
 
   call define_matrix_simple(lev)
 
   call compute_residual(lev,res)
+    if (myrank.eq.0) write(*,*)"ite=0 - res=",res
 
   do it=1, nit
      call relax(lev,nsweeps)

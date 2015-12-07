@@ -2,16 +2,13 @@ module mg_grids
 
   use mg_mpi
   use mg_tictoc
+  use mg_namelist
 
   implicit none
 
   integer(kind=4), parameter :: rl = 8, is = 4
 
-  integer(kind=4), parameter:: maxlev=10
-
   type grid_type
-     ! GR: why are those arrays declared as 'pointer'???
-     ! why not regular arrays?
      real(kind=rl),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
      real(kind=rl),dimension(:,:,:,:),pointer :: cA
 !!TODO
@@ -23,7 +20,7 @@ module mg_grids
      integer(kind=is) :: gather
 !!TODO
      integer(kind=is) :: Ng, ngx, ngy
-     integer:: localcomm ! should be integer (output of MPI_SPLIT)
+     integer(kind=is) :: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=is) :: coarsening_method, smoothing_method
      integer(kind=is) :: color,family,key
 !!TODO
@@ -37,10 +34,6 @@ module mg_grids
   type(grid_type), dimension(:), pointer :: grid
 
   integer(kind=is):: nlevs ! index of the coarsest level (1 is the finest)
-  integer(kind=is):: nhalo
-
-  !- put it in namelist file !
-  logical :: aggressive = .false.
 
 contains
 
@@ -50,14 +43,13 @@ contains
     integer(kind=is), intent(in) :: npxg,npyg  ! global CPU topology
     integer(kind=is), intent(in) :: nxl, nyl, nzl ! local dims
 
-    integer(kind=is) :: nhalo        ! number of halo points
     integer(kind=is) :: nh, nd
 
     integer(kind=is) :: nx, ny, nz
 
     integer(kind=is) :: lev
 
-    call  find_grid_levels(npxg, npyg, nzl, nyl, nxl)
+    call  find_grid_levels(npxg, npyg, nxl, nyl, nzl)
 !!$=======
 !!$    ! for the gathering
 !!$    integer(kind=is) :: ngx, ngy
@@ -66,8 +58,6 @@ contains
 !!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
     allocate(grid(nlevs))
-
-    nhalo = 2
 
     grid(1)%nx = nxl 
     grid(1)%ny = nyl
@@ -123,27 +113,27 @@ contains
        allocate(grid(lev)%recvNE(nz,nh,nh))
     enddo
 
+    grid(1)%p(:,:,:) = 0._8
+
   end subroutine define_grids
 
  !----------------------------------------
-  subroutine find_grid_levels(npxg, npyg, nz,ny,nx)
+  subroutine find_grid_levels(npxg, npyg, nx,ny,nz)
 
     integer(kind=4) , intent(in) :: npxg, npyg
     integer(kind=is), intent(in) :: nx, ny, nz
 
     integer(kind=is) :: nxg, nyg, nzg
-    integer(kind=is) :: nsmall
 
     nxg = npxg * nx
     nyg = npyg * ny
     nzg = nz
 
     nlevs = 1
-    nsmall=8 ! smallest dimension ever for the global domain 
 
     do 
        ! stop criterion
-       if (min(nxg,nyg).lt.nsmall) exit
+       if (min(nxg,nyg).le.nsmall*2) exit
 
        nlevs = nlevs+1
 
@@ -177,7 +167,7 @@ contains
 
     integer(kind=is) :: nx, ny, nz, nh
     integer(kind=is) :: npx, npy
-    integer(kind=is) :: lev, incx, incy, nsmall
+    integer(kind=is) :: lev, incx, incy
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -188,7 +178,6 @@ contains
 
     incx = 1
     incy = 1
-    nsmall=8 ! smallest dimension ever for the global domain 
 
     do lev = 2, nlevs
 
