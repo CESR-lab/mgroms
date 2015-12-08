@@ -21,9 +21,12 @@ module mg_namelist
   logical         :: aggressive = .false.
 
   namelist/nhparam/ &
+       nhalo      , &
+       nsmall     , &
        ns_coarsest, &
        ns_pre     , &
-       ns_post
+       ns_post    , &
+       aggressive
 
  contains
 
