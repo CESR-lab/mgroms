@@ -17,6 +17,7 @@ contains
     lev = 1
     call define_matrix_simple(lev)
 
+
     do lev=1, nlevs-1
        call coarsen_matrix(lev)
     enddo
@@ -52,9 +53,9 @@ contains
 
     cA => grid(1)%cA ! check the syntax / lighten the writing
 
-    dxi=1._8!/dx
-    dyi=1._8!/dy
-    dzi=1._8!/dz
+    dxi=1._8   !/dx
+    dyi=1._8   !/dy
+    dzi=1._8   !/dz
 
     !extended loops will be a pain for the real matrix
     do i = 1-nh,nx+nh
@@ -126,7 +127,7 @@ contains
     real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
 
     integer(kind=ip):: k, j, i
-    integer(kind=ip):: kf, jf, if
+    integer(kind=ip):: km, jm, im
     integer(kind=ip):: k2, j2, i2
     integer(kind=ip):: d
     integer(kind=ip):: nx2, ny2, nz2, nh
@@ -143,27 +144,27 @@ contains
 
     do i2 = 1,nx2
        i = 2*i2-1
-       if = i+1
+       im = i+1
        do j2 = 1,ny2
           j = 2*j2-1
-          jf = j+1     !TODO take into account GATHER case here (else=bug)
+          jm = j+1     !TODO take into account GATHER case here (else=bug)
           do k2 = 1,nz2
              k = 2*k2-1
-             kf = k+1
+             km = k+1
              ! cA(2,:,:,:)      -> p(k-1,j,i)
-             cA2(2,k2,j2,i2) = cA(2,k,j,i)+cA(2,k,jf,i)+cA(2,k,j,if)+cA(2,k,jf,if)
+             cA2(2,k2,j2,i2) = cA(2,k,j,i)+cA(2,k,jm,i)+cA(2,k,j,im)+cA(2,k,jm,im)
              ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-             cA2(3,k2,j2,i2) = cA(3,k,j,i)+cA(3,k,j,if)
+             cA2(3,k2,j2,i2) = cA(3,k,j,i)+cA(3,k,j,im)
              ! cA(4,:,:,:)      -> p(k,j-1,i)
-             cA2(4,k2,j2,i2) = cA(4,k,j,i)+cA(4,kf,j,i)+cA(4,k,j,if)+cA(4,kf,j,if)
+             cA2(4,k2,j2,i2) = cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im)
              ! cA(5,:,:,:)      -> p(k-1,j-1,i)
-             cA2(5,k2,j2,i2) = cA(5,k,j,i)+cA(5,k,j,if)
+             cA2(5,k2,j2,i2) = cA(5,k,j,i)+cA(5,k,j,im)
              ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-             cA2(6,k2,j2,i2) = cA(6,k,j,i)+cA(6,k,jf,i)
+             cA2(6,k2,j2,i2) = cA(6,k,j,i)+cA(6,k,jm,i)
              ! cA(7,:,:,:)      -> p(k,j,i-1)
-             cA2(7,k2,j2,i2) = cA(7,k,j,i)+cA(7,kf,j,i)+cA(7,k,jf,i)+cA(7,kf,jf,i)
+             cA2(7,k2,j2,i2) = cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i)
              ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-             cA2(8,k2,j2,i2) = cA(8,k,j,i)+cA(8,k,jf,i)
+             cA2(8,k2,j2,i2) = cA(8,k,j,i)+cA(8,k,jm,i)
 
              ! the diagonal term is the sum of 48 terms ...             
              ! why?
@@ -174,20 +175,20 @@ contains
              ! multifly that by the number of fine cells
 
              ! here is the first 20
-             diag = cA(2,kf,j,i)+cA(2,kf,jf,i)+cA(2,kf,j,if)+cA(2,kf,jf,if)
-             diag = cA(3,k,jf,i)+cA(3,k,jf,if)                              + diag
-             diag = cA(4,k,jf,i)+cA(4,kf,jf,i)+cA(4,k,jf,if)+cA(4,kf,jf,if) + diag
-             diag = cA(5,kf,j,if)+cA(5,kf,jf,if)                            + diag
-             diag = cA(6,k,j,if)+cA(6,k,jf,if)                              + diag
-             diag = cA(7,k,j,if)+cA(7,kf,j,if)+cA(7,k,jf,if)+cA(7,kf,jf,if) + diag
-             diag = cA(8,kf,j,if)+cA(8,kf,jf,if)                            + diag
+             diag = cA(2,km,j,i)+cA(2,km,jm,i)+cA(2,km,j,im)+cA(2,km,jm,im)
+             diag = cA(3,k,jm,i)+cA(3,k,jm,im)                              + diag
+             diag = cA(4,k,jm,i)+cA(4,km,jm,i)+cA(4,k,jm,im)+cA(4,km,jm,im) + diag
+             diag = cA(5,km,j,im)+cA(5,km,jm,im)                            + diag
+             diag = cA(6,k,j,im)+cA(6,k,jm,im)                              + diag
+             diag = cA(7,k,j,im)+cA(7,km,j,im)+cA(7,k,jm,im)+cA(7,km,jm,im) + diag
+             diag = cA(8,km,j,im)+cA(8,km,jm,im)                            + diag
 
              ! double that to account for symmetry of connections, we've now 40 terms
              diag = diag+diag
 
              ! add the 8 self-interacting terms
-             diag = cA(1,k,j,i) +cA(1,kf,j,i) +cA(1,k,jf,i) +cA(1,kf,jf,i) &
-                  +cA(1,k,j,if)+cA(1,kf,j,if)+cA(1,k,jf,if)+cA(1,kf,jf,if) + diag
+             diag = cA(1,k,j,i) +cA(1,km,j,i) +cA(1,k,jm,i) +cA(1,km,jm,i) &
+                  +cA(1,k,j,im)+cA(1,km,j,im)+cA(1,k,jm,im)+cA(1,km,jm,im) + diag
 
              ! here we go!
              cA2(1,k2,j2,i2) = diag
