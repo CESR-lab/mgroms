@@ -62,9 +62,13 @@ contains
              p(k,j,i) = p(k,j,i) / cA(1,k,j,i)
           enddo
        enddo
-    enddo
 
-    call fill_halo(lev,p)
+        ! don't call mpi at every pass if nh>1
+       if (mod(it,nhalo) == 0) then
+          call fill_halo(lev,p)
+       endif
+
+    enddo
 
   end subroutine relax_2D
   
@@ -148,10 +152,13 @@ contains
 
           enddo
        enddo
-    enddo
 
-    ! don't call mpi at every pass if nh>1
-    call fill_halo(lev,p)
+        ! don't call mpi at every pass if nh>1
+       if (mod(it,nhalo) == 0) then
+          call fill_halo(lev,p)
+       endif
+
+    enddo
 
     call toc(lev,'relax_line')
 
