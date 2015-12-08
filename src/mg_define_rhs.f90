@@ -67,7 +67,8 @@ contains
           !y =real(j,kind=rp)
 
           do k = 1,nz
-             z = -(real(k,kind=rp)- 0.5_8) * dz
+
+             z = -(real(nz-k+1,kind=rp)-0.5_8) * dz
 
              rhs(k,j,i) = &
                   exp(-bet * ((x-x0)**2 + (z-z0)**2)) - &
