@@ -207,7 +207,7 @@ contains
     !- we should consider a specific fill_halo(4D) -!
 
     ! the coefficients should be rescaled with 1/4
-    cff = 1._8/4._8
+    cff = 1._8/16._8
 
     do d = 1,8       
        !!if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"

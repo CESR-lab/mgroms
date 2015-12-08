@@ -95,7 +95,7 @@ program mg_testcoarsening
   ! coarsen RHS on all grids
   do lev=1,nlevs-1
      grid(lev)%r = grid(lev)%b
-     call coarse2fine(lev)
+     call fine2coarse(lev)
   enddo
 
   ! check smoothing on all grids
