@@ -7,6 +7,7 @@ module nhydro
   use mg_intergrids
   use mg_relax
   use mg_solvers
+  use mg_mpi_exchange
 
   implicit none
 
@@ -60,8 +61,8 @@ contains
     integer(kind=ip) :: nx, ny, nz
 
 
-    real(kind=rp)    :: tol    = 1.e-6
-    integer(kind=ip) :: maxite = 2
+    real(kind=rp)    :: tol    = 1.e-12
+    integer(kind=ip) :: maxite = 6
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)
@@ -70,8 +71,14 @@ contains
     !- we need a MPI update 
     !grid(1)%b = rhs(u,v,w) ! div of u,v,w
 
-    grid(1)%b(1:nz,1:ny,1:nx) = 0._8
+!    grid(1)%b(1:nz,1:ny,1:nx) = 0._8
+    grid(1)%b=0.
     call random_number(grid(1)%p)
+    call fill_halo(1,grid(1)%p)
+    call relax(1,4)
+    grid(1)%b=grid(1)%p
+!    grid(1)%p=0._8
+    
     
 !!        &
 !!         u(:,:,2:nx+1) - u(:,:,1:nx) + &

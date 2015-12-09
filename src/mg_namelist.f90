@@ -12,9 +12,9 @@ module mg_namelist
   integer(kind=ip) :: nhalo       =   2
 
   ! smallest dimension ever for the global domain
-  integer(kind=ip) :: nsmall      =   8
+  integer(kind=ip) :: nsmall      =   2
 
-  integer(kind=ip) :: ns_coarsest = 100
+  integer(kind=ip) :: ns_coarsest = 40
   integer(kind=ip) :: ns_pre      =   2
   integer(kind=ip) :: ns_post     =   2
 

@@ -20,8 +20,10 @@ program mg_testrelax
 
   integer(kind=ip):: nsweeps
 
-  integer(kind=ip):: lev,ierr, np
+  integer(kind=ip):: lev,ierr, np, nh
   real(kind=rp)    :: res
+
+  real(kind=rp),dimension(:,:,:),allocatable  :: p0
 
   call tic(1,'mg_testrelax')
 
@@ -35,7 +37,7 @@ program mg_testrelax
   npxg  = 2
   npyg  = 2
 
-  nit     = 10
+  nit     = 100
   nsweeps = 1
 
   call mpi_init(ierr)
@@ -59,25 +61,36 @@ program mg_testrelax
   call define_neighbours()
   !!call define_rhs(nxg, nyg, npxg)
   
+  
+  nh = grid(1)%nh
+  allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
+  p0 = 0._8
+
   grid(1)%b = 0._8
 
   call random_number(grid(1)%p)
+
+  call random_number(grid(1)%b)
+  call fill_halo(1,grid(1)%b)
 
   lev = 1
 
   call define_matrix_simple(lev)
 
   call compute_residual(lev,res)
-    if (myrank.eq.0) write(*,*)"ite=0 - res=",res
+    if (myrank.eq.0) write(*,1000)"ite=",0," - res=",res
 
   do it=1, nit
+!     grid(1)%p=0._8
      call relax(lev,nsweeps)
+!     p0 = p0 + grid(1)%p
+!     grid(1)%p = p0
      call compute_residual(lev,res)
      if (myrank.eq.0)then
         write(*,1000)"ite=",it," - res=",res
      endif
   enddo
-1000 format(A,I5,A,F6.3)
+1000 format(A,I5,A,F8.3)
 
 !  call check_solution(lev)
 

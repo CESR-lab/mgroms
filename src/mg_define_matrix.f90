@@ -55,20 +55,31 @@ contains
 
     dxi=1._8   !/dx
     dyi=1._8   !/dy
-    dzi=1._8   !/dz
+    dzi=1._8*16   !/dz
 
     !extended loops will be a pain for the real matrix
     do i = 1-nh,nx+nh
        do j = 1-nh,ny+nh
           do k = 1,nz
-             cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)
+! --- regular 7 points Laplacian ---
+!!$             cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)
+!!$             cA(2,k,j,i) = dzi*dzi
+!!$             cA(3,k,j,i) = 0.0_8
+!!$             cA(4,k,j,i) = dyi*dyi
+!!$             cA(5,k,j,i) = 0.0_8
+!!$             cA(6,k,j,i) = 0.0_8
+!!$             cA(7,k,j,i) = dxi*dxi
+!!$             cA(8,k,j,i) = 0.0_8
+
+! --- extended stencil with diagonal coupling: better convergence rate ---
+             cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)-4*(dxi*dzi+dyi*dzi)
              cA(2,k,j,i) = dzi*dzi
-             cA(3,k,j,i) = 0.0_8
+             cA(3,k,j,i) = 0.5*dyi*dzi
              cA(4,k,j,i) = dyi*dyi
-             cA(5,k,j,i) = 0.0_8
-             cA(6,k,j,i) = 0.0_8
+             cA(5,k,j,i) = 0.5*dyi*dzi
+             cA(6,k,j,i) = 0.5*dxi*dzi
              cA(7,k,j,i) = dxi*dxi
-             cA(8,k,j,i) = 0.0_8
+             cA(8,k,j,i) = 0.5*dxi*dzi
           enddo
           cA(1,nz,j,i) = cA(1,nz,j,i) - dzi*dzi 
           cA(1,1,j,i)  = cA(1,1,j,i)  + dzi*dzi 
@@ -208,6 +219,7 @@ contains
 
     ! the coefficients should be rescaled with 1/4
     cff = 1._8/16._8
+
 
     do d = 1,8       
        !!if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"

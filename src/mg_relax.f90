@@ -98,7 +98,7 @@ contains
     call tic(lev,'relax_line')
 
     !--DEBUG !!!!
-    call fill_halo(lev,p)
+!    call fill_halo(lev,p)
     !--DEBUG !!!!
 
     !
@@ -142,13 +142,13 @@ contains
                   - cA(8,k,j,i)*p(k-1,j,i-1) 
              d(k)   = cA(1,k,j,i)
 
-             call tic(lev,'tridiag')
-             call tridiag(nz,d,ud,rhs,p1d) !solve for vertical_coeff_matrix.p1d=rhs
-             call toc(lev,'tridiag')
+!             call tic(lev,'tridiag')
+             call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
+!             call toc(lev,'tridiag')
 
-             do k = 1,nz
-                p(k,j,i) = p1d(k)
-             enddo
+             !do k = 1,nz
+             !   p(k,j,i) = p1d(k)
+             !enddo
 
           enddo
        enddo
@@ -160,6 +160,9 @@ contains
 
     enddo
 
+    if (( mod(nsweeps,nhalo)) .ne. 0) then
+       call fill_halo(lev,p)
+    endif
     call toc(lev,'relax_line')
 
   end subroutine relax_3D_line
@@ -223,6 +226,9 @@ contains
 
        call toc(lev,'compute_residual_3D')
     end if
+    
+    call fill_halo(lev,r)
+!    b(:,:,:) = r(:,:,:)
 
     if (lev >-1) then
        call global_max(res)
@@ -237,7 +243,7 @@ contains
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: r
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout)   :: r
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nx, ny
 
@@ -263,11 +269,10 @@ contains
   end subroutine compute_residual_2D
   !----------------------------------------
   subroutine compute_residual_3D(res,p,b,r,cA,nx,ny,nz)
-
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: r
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout)   :: r
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 

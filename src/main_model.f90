@@ -80,6 +80,8 @@ program main_model
 
   call nhydro_solve(u,v,w)
 
+  if(myrank == 0) call print_tictoc(myrank)
+
   call nhydro_clean()
 
   call mpi_finalize(ierr)

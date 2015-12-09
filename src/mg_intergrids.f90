@@ -4,6 +4,7 @@ module mg_intergrids
   use mg_tictoc
   use mg_namelist
   use mg_grids
+  use mg_mpi_exchange
 
   implicit none
 
@@ -43,6 +44,8 @@ contains
       call toc(lev,'fine2coarse_3D')
 
     end if
+
+    call fill_halo(lev+1,b)
 
   end subroutine fine2coarse
 
@@ -106,20 +109,11 @@ contains
     nx2 = grid(l2)%nx
     ny2 = grid(l2)%ny
 
-!!$<<<<<<< HEAD
-!!$    ! indices (nh+1,nh+2) on fine grid are glued to (nh+1) on coarse grid
-!!$    do j2=2,ny2-1
-!!$       j=2*(j2-nhalo)+1       ! take into account the halo!!!
-!!$       do i2=2,nx2-1
-!!$          i=2*(i2-nhalo)+1
-!!$          y(i2,j2,1) = (x(i,j,1)+x(i+1,j,1)+x(i,j+1,1)+x(i+1,j+1,1))*0.25
-!!$=======
     do j2=1,ny2
        j=2*j2-1       
        do i2=1,nx2
           i=2*i2-1
           y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*0.25
-!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
        enddo
     enddo
 
@@ -183,6 +177,8 @@ contains
     end if
 
     grid(lev)%p = grid(lev)%p + grid(lev)%r
+
+    call fill_halo(lev,grid(lev)%p)
 
   end subroutine coarse2fine
 
