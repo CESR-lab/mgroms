@@ -31,23 +31,23 @@ contains
     nh = grid(lev)%nh
 
     if (grid(lev)%nz == 1) then
-       call relax_2D(lev,p,b,cA,nsweeps,nx,ny)
+       call relax_2D(lev,p,b,cA,nsweeps,nx,ny,nh)
     else
        !- We can add additional 3D relax routines
        !- creteria: based on grid aspect ratio
-       call relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz)
+       call relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
     end if
 
   end subroutine relax
 
   !----------------------------------------
-  subroutine relax_2D(lev,p,b,cA,nsweeps,nx,ny)
+  subroutine relax_2D(lev,p,b,cA,nsweeps,nx,ny,nh)
     integer(kind=ip)                        , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nh
 
     integer(kind=ip)           :: i,j,k, it
 
@@ -64,7 +64,7 @@ contains
        enddo
 
         ! don't call mpi at every pass if nh>1
-       if (mod(it,nhalo) == 0) then
+       if (mod(it,nh) == 0) then
           call fill_halo(lev,p)
        endif
 
@@ -73,13 +73,13 @@ contains
   end subroutine relax_2D
   
   !----------------------------------------
-  subroutine relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz)
+  subroutine relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
     integer(kind=ip)                        , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny, nz
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz, nh
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -93,7 +93,7 @@ contains
     !
     !     LOCAL 
     integer(kind=ip)           :: i,j,k,it
-    real(kind=rp),dimension(nz) :: rhs,d,ud,p1d
+    real(kind=rp),dimension(nz) :: rhs,d,ud
 
     call tic(lev,'relax_line')
 
@@ -146,23 +146,23 @@ contains
              call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
 !             call toc(lev,'tridiag')
 
-             !do k = 1,nz
-             !   p(k,j,i) = p1d(k)
-             !enddo
-
           enddo
        enddo
 
-        ! don't call mpi at every pass if nh>1
-       if (mod(it,nhalo) == 0) then
-          call fill_halo(lev,p)
-       endif
+!        ! don't call mpi at every pass if nh>1
+!       if (mod(it,nh) == 0) then
+!          call fill_halo(lev,p)
+!       endif
+!
+!    enddo
+!
+!    if (( mod(nsweeps,nh)) .ne. 0) then
+!       call fill_halo(lev,p)
+!    endif
 
+       call fill_halo(lev,p)
     enddo
 
-    if (( mod(nsweeps,nhalo)) .ne. 0) then
-       call fill_halo(lev,p)
-    endif
     call toc(lev,'relax_line')
 
   end subroutine relax_3D_line

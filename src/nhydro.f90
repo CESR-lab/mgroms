@@ -73,13 +73,12 @@ contains
 
 !    grid(1)%b(1:nz,1:ny,1:nx) = 0._8
     grid(1)%b=0.
-    call random_number(grid(1)%p)
+    call random_number(grid(1)%p(1:nz,1:ny,1:nx))
     call fill_halo(1,grid(1)%p)
     call relax(1,4)
     grid(1)%b=grid(1)%p
 !    grid(1)%p=0._8
-    
-    
+        
 !!        &
 !!         u(:,:,2:nx+1) - u(:,:,1:nx) + &
 !!         v(:,2:ny+1,:) - v(:,1:ny,:) + &
