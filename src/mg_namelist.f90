@@ -9,7 +9,7 @@ module mg_namelist
   integer(kind=4), parameter :: rp = 8, ip = 4
 
   !- Number of point in the halo of each subdomain
-  integer(kind=ip) :: nhalo       =   2
+  integer(kind=ip) :: nhalo       =   1
 
   ! smallest dimension ever for the global domain
   integer(kind=ip) :: nsmall      =   2
