@@ -207,7 +207,7 @@ contains
        enddo
     enddo
 
-    if (myrank.eq.0)write(*,*)"coefficients computed"
+!    if (myrank.eq.0)write(*,*)"coefficients computed"
 
     ! fill the halo
     ! the data should be contiguous in memory to use fill_halo 
@@ -259,7 +259,7 @@ contains
 !!$       ! copy from dummy to cA2 only the halo
 !!$    enddo
 
-    if (myrank.eq.0) write(*,*)"coarsening done"
+!    if (myrank.eq.0) write(*,*)"coarsening done"
 
     call toc(lev,'coarsen_matrix_3D')
 

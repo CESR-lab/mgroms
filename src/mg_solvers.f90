@@ -24,6 +24,9 @@ contains
     real(kind=rp),dimension(:,:,:),allocatable  :: p0,b0
     real(kind=rp),dimension(:,:,:), pointer:: p,b,r
 
+    real(kind = lg)  :: tstart,tend,perf
+    integer(kind=ip) :: npxg,npyg,nxg,nyg,nzg
+
     p  => grid(1)%p
     b  => grid(1)%b
     r  => grid(1)%r
@@ -38,6 +41,9 @@ contains
     p0=p
     b0=b
 
+    call tic(1,'solve')
+    call cpu_time(tstart)
+    
     bnorm = maxval(abs(grid(1)%b))
     call global_max(bnorm)
 
@@ -65,8 +71,23 @@ contains
        if (myrank == 0) write(*,10) nite, rnorm, conv
 
     enddo
+    call cpu_time(tend)
+    call toc(1,'solve')
 
-10  format("ite = ",I4,": res = ",G," / conv = ",G)
+    if (myrank == 0) then
+       npxg=grid(1)%npx
+       npyg=grid(1)%npy
+       nxg=grid(1)%nx*npxg
+       nyg=grid(1)%ny*npyg
+       nzg=grid(1)%nz
+       perf = (tend-tstart)*(npxg*npyg)/(-log(rnorm)/log(10._8))/(nxg*nyg*nzg)
+       write(*,*)'--- summary ---'
+       write(*,'(A,F6.3,A)')"time spent to solve :",tend-tstart," s"
+       write(*,'(A,E10.3)')"rescaled performance:",perf
+       write(*,*)'---------------'
+    end if
+
+10  format("ite = ",I2,": res = ",E10.3," / conv = ",F6.1)
 
   end subroutine solve
 
