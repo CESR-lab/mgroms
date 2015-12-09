@@ -56,12 +56,12 @@ contains
     nite=0
 
     do while ((nite < maxite).and.(res0 > tol))
-       b(:,:,:)=r(:,:,:)
+!      b(:,:,:)=r(:,:,:)
 !       p(:,:,:)=0.
-       call Fcycle()
-       p0=p0+p
-       p(:,:,:)=p0
-       b(:,:,:)=b0
+       call Vcycle(1)
+!      p0=p0+p
+!      p(:,:,:)=p0
+!      b(:,:,:)=b0
        call compute_residual(1,rnorm)
 !       if (myrank == 0) write(*,*)' rnom:', rnorm,' bnorm:', bnorm
        rnorm = rnorm/bnorm

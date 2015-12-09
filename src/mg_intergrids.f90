@@ -5,6 +5,7 @@ module mg_intergrids
   use mg_namelist
   use mg_grids
   use mg_mpi_exchange
+  use mg_gather
 
   implicit none
 
@@ -13,6 +14,8 @@ contains
   !- FINE2COARSE -! fine to coarse grid
   !------------------------------------------------------------
   subroutine fine2coarse(lev)
+
+    ! coarsen grid(lev)%r to grid(lev+1)%b
 
     integer(kind=ip), intent(in) :: lev
 
@@ -26,7 +29,16 @@ contains
     nz = grid(lev+1)%nz
 
     r => grid(lev)%r
-    b => grid(lev+1)%b
+
+    if (grid(lev+1)%gather == 1) then
+       b => grid(lev+1)%dummy3
+       nx = grid(lev+1)%nx / grid(lev+1)%ngx
+       ny = grid(lev+1)%ny / grid(lev+1)%ngy
+!       if(myrank == 0) write(*,*)"gather lev=",lev+1,"nx,ny,nz=",nx,ny,nz
+    else
+       b => grid(lev+1)%b
+!       if(myrank == 0) write(*,*)"F2C   lev=",lev+1,"nx,ny,nz=",nx,ny,nz
+    endif
 
     grid(lev+1)%p = 0._8
 
@@ -45,10 +57,17 @@ contains
 
     end if
 
-    call fill_halo(lev+1,b)
+    if (grid(lev+1)%gather == 1) then
+!       if(myrank == 0) write(*,*)" *** dummy3(1,1,1)=",b(1,1:ny,1:nx)
+       r => grid(lev+1)%dummy3
+       b => grid(lev+1)%b
+       call gather(lev+1,r,b)
+!       if(myrank == 0) write(*,*)" *** after gather **** b(1,1,1)=",grid(lev+1)%b(1,1,1)
+    endif
+
+    call fill_halo(lev+1,grid(lev+1)%b)
 
   end subroutine fine2coarse
-
   !----------------------------------------
   subroutine fine2coarse_aggressive(x,y,nx,ny,nz)
 
@@ -163,10 +182,22 @@ contains
     nyc = grid(lev+1)%ny
     nzc = grid(lev+1)%nz
 
-    rf => grid(lev)%r
+
     pc => grid(lev+1)%p
 
-    if ((aggressive).and.(lev==1)) then
+    if (grid(lev+1)%gather == 1) then
+!       if(myrank==0)write(*,*)"SPLIT!!!"
+       rf => grid(lev+1)%dummy3
+       call split(lev+1,pc,rf)
+       pc => grid(lev+1)%dummy3
+       nxc = grid(lev+1)%nx / grid(lev+1)%ngx
+       nyc = grid(lev+1)%ny / grid(lev+1)%ngy
+       nzc = grid(lev+1)%nz       
+    endif
+    rf => grid(lev)%r
+
+
+   if ((aggressive).and.(lev==1)) then
        call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
 
     elseif (grid(lev)%nz == 1) then
@@ -176,9 +207,10 @@ contains
        call coarse2fine_3D(rf,pc,nxc,nyc,nzc)
     end if
 
+    call fill_halo(lev,grid(lev)%r)
+
     grid(lev)%p = grid(lev)%p + grid(lev)%r
 
-    call fill_halo(lev,grid(lev)%p)
 
   end subroutine coarse2fine
 
