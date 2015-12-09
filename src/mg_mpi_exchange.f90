@@ -378,13 +378,13 @@ contains
        if (west.ne.MPI_PROC_NULL) then
           cA(:,:,1:ny,1-nh:0) = recvW
        else !!Homogenous Neumann  
-          cA(:,:,1:ny,1-nh:0) = cA(:,1:ny,nh:1:-1)
+          cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
        endif
 
        if (east.ne.MPI_PROC_NULL) then
           cA(:,:,1:ny,nx+1:nx+nh) = recvE
        else !!Homogenous Neumann  
-          cA(:,:,1:ny,nx+1:nx+nh) = cA(:,1:ny,nx:nx-nh+1:-1)
+          cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
        end if
        !
 
