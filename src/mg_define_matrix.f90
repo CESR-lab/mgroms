@@ -121,7 +121,13 @@ contains
 !       call coarsen_matrix_aggressive(lev)
 
     elseif (grid(lev+1)%nz == 1) then
-!       call coarsen_matrix_2D(lev)
+       call coarsen_matrix_2D(Af,Ac,nx,ny,nz)
+       ! fill the halo
+       do l=1,3
+          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
+          call fill_halo(lev+1,grid(lev+1)%r)
+          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
+       enddo
 
     else
        call tic(lev,'coarsen_matrix_3D')
@@ -177,15 +183,16 @@ contains
 
 
     k = 1
-
+    km= 2
+    k2= 1
     ! how many diagonal in the fine matrix? 3 or 8 ?
     d = size(cA,1) 
 
-    cff = 1._8/4._8 ! check this value!!!
     ! I'm pretty sure it depends on whether d==3 or d==8
 
     if (d ==8) then
-       ! fine matrix was 3D
+       cff = 1._8/16._8 ! check this value!!!
+        ! fine matrix was 3D
        do i2 = 1,nx2
           i = 2*i2-1
           im = i+1
@@ -197,17 +204,22 @@ contains
 
              ! TODO: CHECK THESE FORMULA, I'm not completely sure
 
-             cA2(2,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,k,j,im))
-             cA2(3,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,k,jm,i))
+             cA2(2,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im))
+             cA2(3,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i))
              ! 
-             diag = cA(4,k,jm,i)+cA(4,k,jm,im)
-             diag = cA(7,k,jm,i)+cA(7,k,jm,im) + diag
+             diag = cA(4,k,jm,i)+cA(4,km,jm,i)+cA(4,k,jm,im)+cA(4,km,jm,im)
+             diag = cA(7,k,j,im)+cA(7,km,j,im)+cA(7,k,jm,im)+cA(7,km,jm,im) + diag
+
              diag = diag + diag
-             diag = cA(1,k,j,i) + cA(1,k,jm,i) + cA(1,k,j,im) + cA(1,k,jm,im) + diag
+             !
+             diag = cA(1,k,j,i) +cA(1,km,j,i) +cA(1,k,jm,i) +cA(1,km,jm,i) &
+                  +cA(1,k,j,im)+cA(1,km,j,im)+cA(1,k,jm,im)+cA(1,km,jm,im) + diag
+
              cA2(1,k2,j2,i2) = cff*diag
           enddo
        enddo
     else
+       cff = 1._8/4._8 ! check this value!!!
        ! fine matrix was already 2D
        do i2 = 1,nx2
           i = 2*i2-1

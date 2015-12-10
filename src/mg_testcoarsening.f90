@@ -30,7 +30,7 @@ program mg_testcoarsening
 
   nxg   = 128
   nyg   = 128
-  nzg   = 128
+  nzg   = 128/8
 
   npxg  = 2
   npyg  = 2

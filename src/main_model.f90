@@ -26,7 +26,7 @@ program main_model
   ! global domain dimensions
   nxg   = 128
   nyg   = 128
-  nzg   = 128
+  nzg   = 128/8
 
   npxg  = 2
   npyg  = 2
@@ -81,8 +81,8 @@ program main_model
   call nhydro_solve(u,v,w)
 
   if(myrank == 0) call print_tictoc(myrank)
-
-  call nhydro_clean()
+  
+!  call nhydro_clean()
 
   call mpi_finalize(ierr)
 
