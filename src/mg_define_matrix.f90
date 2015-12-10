@@ -163,14 +163,70 @@ contains
 
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_2D(lev)
-    integer(kind=ip),intent(in):: lev
+  subroutine coarsen_matrix_2D(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
-    integer(kind=ip) :: idum
-    idum = lev
-    
-    write(*,*)'Error: coarsen matrix_2D  not available yet !'
-    stop -1
+    integer(kind=ip):: nx2, ny2, nz2! on lev+1
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
+
+    integer(kind=ip):: k, j, i
+    integer(kind=ip):: km, jm, im
+    integer(kind=ip):: k2, j2, i2
+    integer(kind=ip):: d
+
+    real(kind=rp)   :: diag,cff
+
+
+    k = 1
+
+    ! how many diagonal in the fine matrix? 3 or 8 ?
+    d = size(cA,1) 
+
+    cff = 1._8/4._8 ! check this value!!!
+    ! I'm pretty sure it depends on whether d==3 or d==8
+
+    if (d ==8) then
+       ! fine matrix was 3D
+       do i2 = 1,nx2
+          i = 2*i2-1
+          im = i+1
+          do j2 = 1,ny2
+             j = 2*j2-1
+             jm = j+1     
+             ! cA2(2,:,:,:) plays the role of cA(4,:,:,:)
+             ! cA2(3,:,:,:) plays the role of cA(7,:,:,:)
+
+             ! TODO: CHECK THESE FORMULA, I'm not completely sure
+
+             cA2(2,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,k,j,im))
+             cA2(3,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,k,jm,i))
+             ! 
+             diag = cA(4,k,jm,i)+cA(4,k,jm,im)
+             diag = cA(7,k,jm,i)+cA(7,k,jm,im) + diag
+             diag = diag + diag
+             diag = cA(1,k,j,i) + cA(1,k,jm,i) + cA(1,k,j,im) + cA(1,k,jm,im) + diag
+             cA2(1,k2,j2,i2) = cff*diag
+          enddo
+       enddo
+    else
+       ! fine matrix was already 2D
+       do i2 = 1,nx2
+          i = 2*i2-1
+          im = i+1
+          do j2 = 1,ny2
+             j = 2*j2-1
+             jm = j+1     
+             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,j,im))
+             cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,jm,i))
+             ! 
+             diag = cA(2,k,jm,i)+cA(2,k,jm,im)
+             diag = cA(3,k,jm,i)+cA(3,k,jm,im) + diag
+             diag = diag + diag
+             diag = cA(1,k,j,i) + cA(1,k,jm,i) + cA(1,k,j,im) + cA(1,k,jm,im) + diag
+             cA2(1,k2,j2,i2) = cff*diag
+          enddo
+       enddo
+    endif
+
 
   end subroutine coarsen_matrix_2D
 
@@ -205,7 +261,7 @@ contains
        im = i+1
        do j2 = 1,ny2
           j = 2*j2-1
-          jm = j+1     !TODO take into account GATHER case here (else=bug)
+          jm = j+1     
           do k2 = 1,nz2
              k = 2*k2-1
              km = k+1

@@ -103,40 +103,33 @@ contains
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip), intent(in) :: nx, ny
 
-    !TODO
-    integer(kind=ip) ::idum ! line to remove
-    idum = nx               ! line to remove
-    idum = ny               ! line to remove
-    y = x                   ! line to remove
-    write(*,*)'Error: coarse2fine_2D  not available yet !'
-    stop -1
-    !TODO
+    integer(kind=ip) :: i,j,i2,j2
+    integer(kind=ip) :: d
+
+    d = size(x,1) ! vertical dimension of the fine level, can 2 or 1
+
+    if(d==1)then
+       ! x was already 2D
+       do i2=1,nx
+          i=2*i2-1
+          do j2=1,ny
+             j=2*j2-1       
+             y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*0.25_8
+          enddo
+       enddo
+    else
+       ! x was 3D
+       do i2=1,nx
+          i=2*i2-1
+          do j2=1,ny
+             j=2*j2-1       
+             y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1)&
+                          +x(2,j,i)+x(2,j,i+1)+x(2,j+1,i)+x(2,j+1,i+1))*0.125_8
+          enddo
+       enddo
+    endif
 
   end subroutine fine2coarse_2D
-
- !----------------------------------------
-  subroutine fine2coarse_xy(l1,l2,x,y)
-
-    integer:: l1,l2
-    real*8,dimension(grid(l1)%nz,grid(l1)%ny,grid(l1)%nx) :: x
-    real*8,dimension(grid(l2)%nz,grid(l2)%ny,grid(l2)%nx) :: y
-
-    ! local
-    integer:: i,j,i2,j2
-    integer:: nx2,ny2
-
-    nx2 = grid(l2)%nx
-    ny2 = grid(l2)%ny
-
-    do j2=1,ny2
-       j=2*j2-1       
-       do i2=1,nx2
-          i=2*i2-1
-          y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*0.25
-       enddo
-    enddo
-
-  end subroutine fine2coarse_xy
 
   !------------------------------------------------------------
   subroutine fine2coarse_3D(x,y,nx,ny,nz)
@@ -233,19 +226,46 @@ contains
   end subroutine coarse2fine_aggressive
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D(x,y,nx,ny)
-    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: x
-    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
+  subroutine coarse2fine_2D(xf,xc,nx,ny)
+    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xf
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xc
     integer(kind=ip),intent(in) :: nx, ny
 
-    !TODO
-    integer(kind=ip) ::idum ! line to remove
-    idum = nx               ! line to remove
-    idum = ny               ! line to remove
-    y = x                   ! line to remove
-    write(*,*)'Error: coarse2fine_2D  not available yet !'
-    stop -1
-    !TODO
+    ! local
+    integer(kind=ip) :: i,j,i2,j2
+    integer(kind=ip) :: d
+
+    d = size(xf,1) ! vertical dimension of the fine level, can 2 or 1
+
+    if(d==1)then
+       ! xf is also 2D
+       do i2=1,nx
+          i=2*i2-1
+          do j2=1,ny
+             j=2*j2-1
+             xf(1,j  ,i  ) = xc(1,j2,i2)
+             xf(1,j+1,i  ) = xc(1,j2,i2)
+             xf(1,j  ,i+1) = xc(1,j2,i2)
+             xf(1,j+1,i+1) = xc(1,j2,i2)
+          enddo
+       enddo
+    else
+       ! xf is 3D
+       do i2=1,nx
+          i=2*i2-1
+          do j2=1,ny
+             j=2*j2-1
+             xf(1,j  ,i  ) = xc(1,j2,i2)
+             xf(1,j+1,i  ) = xc(1,j2,i2)
+             xf(1,j  ,i+1) = xc(1,j2,i2)
+             xf(1,j+1,i+1) = xc(1,j2,i2)
+             xf(2,j  ,i  ) = xc(1,j2,i2)
+             xf(2,j+1,i  ) = xc(1,j2,i2)
+             xf(2,j  ,i+1) = xc(1,j2,i2)
+             xf(2,j+1,i+1) = xc(1,j2,i2)
+          enddo
+       enddo
+    endif
 
   end subroutine coarse2fine_2D
 
