@@ -31,9 +31,9 @@ mainmodel_SOURCES=       \
 	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
+	mg_gather.f90        \
 	mg_define_matrix.f90 \
 	mg_relax.f90         \
-	mg_gather.f90        \
 	mg_intergrids.f90    \
 	mg_solvers.f90       \
 	nhydro.f90           \
@@ -54,6 +54,7 @@ testrelax_SOURCES =      \
 	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
+	mg_gather.f90        \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
 	mg_relax.f90         \
@@ -65,10 +66,10 @@ testcoarsening_SOURCES = \
 	mg_namelist.f90      \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
+	mg_gather.f90        \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
 	mg_relax.f90         \
-	mg_gather.f90        \
 	mg_intergrids.f90    \
 	mg_testcoarsening.f90
 ##

@@ -5,6 +5,7 @@ module mg_define_matrix
   use mg_namelist
   use mg_grids
   use mg_mpi_exchange
+  use mg_gather
 
   implicit none
 
@@ -92,16 +93,60 @@ contains
   subroutine coarsen_matrix(lev)
     integer(kind=ip),intent(in):: lev
 
+    real(kind=rp),dimension(:,:,:,:),pointer :: Ac
+    real(kind=rp),dimension(:,:,:,:),pointer :: Af
+
+    integer(kind=ip) :: nx, ny, nz
+    integer(kind=ip) :: l
+
+    nx = grid(lev+1)%nx
+    ny = grid(lev+1)%ny
+    nz = grid(lev+1)%nz
+
+    ! the matrix on the fine grid
+    Af => grid(lev)%cA
+
+    if (grid(lev+1)%gather == 1) then
+       Ac => grid(lev+1)%cAdummy
+       nx = grid(lev+1)%nx / grid(lev+1)%ngx
+       ny = grid(lev+1)%ny / grid(lev+1)%ngy
+!       if(myrank == 0) write(*,*)"gather lev=",lev+1,"nx,ny,nz=",nx,ny,nz
+    else
+       Ac => grid(lev+1)%cA
+!       if(myrank == 0) write(*,*)"F2C   lev=",lev+1,"nx,ny,nz=",nx,ny,nz
+    endif
+
+
     if ((aggressive).and.(lev==1)) then
-       call coarsen_matrix_aggressive(lev)
+!       call coarsen_matrix_aggressive(lev)
 
     elseif (grid(lev+1)%nz == 1) then
-       call coarsen_matrix_2D(lev)
+!       call coarsen_matrix_2D(lev)
 
     else
-       call coarsen_matrix_3D(lev)
-
+       call tic(lev,'coarsen_matrix_3D')
+       call coarsen_matrix_3D(Af,Ac,nx,ny,nz)
+       call toc(lev,'coarsen_matrix_3D')
     end if
+
+    if (grid(lev+1)%gather == 1) then
+       
+       do l=1,8
+          grid(lev+1)%dummy3 = Ac(l,:,:,:)
+          call gather(lev+1,grid(lev+1)%dummy3,grid(lev+1)%r)
+          ! fill the halo
+          call fill_halo(lev+1,grid(lev+1)%r)
+          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
+       enddo
+    else
+       ! fill the halo
+       do l=1,8
+          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
+          call fill_halo(lev+1,grid(lev+1)%r)
+          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
+       enddo
+    endif
+
 
   end subroutine coarsen_matrix
 
@@ -130,28 +175,30 @@ contains
   end subroutine coarsen_matrix_2D
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_3D(lev) ! from lev to lev+1
+  subroutine coarsen_matrix_3D(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
-    integer(kind=ip),intent(in):: lev
-
-    real(kind=rp), dimension(:,:,:,:), pointer :: cA, cA2
-    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
+!    integer(kind=ip),intent(in):: lev
+    integer(kind=ip):: nx2, ny2, nz2! on lev+1
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
+!    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
 
     integer(kind=ip):: k, j, i
     integer(kind=ip):: km, jm, im
     integer(kind=ip):: k2, j2, i2
     integer(kind=ip):: d
-    integer(kind=ip):: nx2, ny2, nz2, nh
+
     real(kind=rp)   :: diag,cff
 
-    call tic(lev,'coarsen_matrix_3D')
 
-    cA  => grid(lev)%cA
-    cA2 => grid(lev+1)%cA
-    nx2 = grid(lev+1)%nx
-    ny2 = grid(lev+1)%ny
-    nz2 = grid(lev+1)%nz
-    nh  = grid(lev+1)%nh
+!    cA  => grid(lev)%cA
+!    cA2 => grid(lev+1)%cA
+!    nx2 = grid(lev+1)%nx
+!    ny2 = grid(lev+1)%ny
+!    nz2 = grid(lev+1)%nz
+!    nh  = grid(lev+1)%nh
+
+    ! the coefficients should be rescaled with 1/16
+    cff = 1._8/16._8
 
     do i2 = 1,nx2
        i = 2*i2-1
@@ -163,19 +210,19 @@ contains
              k = 2*k2-1
              km = k+1
              ! cA(2,:,:,:)      -> p(k-1,j,i)
-             cA2(2,k2,j2,i2) = cA(2,k,j,i)+cA(2,k,jm,i)+cA(2,k,j,im)+cA(2,k,jm,im)
+             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,jm,i)+cA(2,k,j,im)+cA(2,k,jm,im))
              ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-             cA2(3,k2,j2,i2) = cA(3,k,j,i)+cA(3,k,j,im)
+             cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,j,im))
              ! cA(4,:,:,:)      -> p(k,j-1,i)
-             cA2(4,k2,j2,i2) = cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im)
+             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im))
              ! cA(5,:,:,:)      -> p(k-1,j-1,i)
-             cA2(5,k2,j2,i2) = cA(5,k,j,i)+cA(5,k,j,im)
+             cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im))
              ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-             cA2(6,k2,j2,i2) = cA(6,k,j,i)+cA(6,k,jm,i)
+             cA2(6,k2,j2,i2) = cff*(cA(6,k,j,i)+cA(6,k,jm,i))
              ! cA(7,:,:,:)      -> p(k,j,i-1)
-             cA2(7,k2,j2,i2) = cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i)
+             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i))
              ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-             cA2(8,k2,j2,i2) = cA(8,k,j,i)+cA(8,k,jm,i)
+             cA2(8,k2,j2,i2) =cff*( cA(8,k,j,i)+cA(8,k,jm,i))
 
              ! the diagonal term is the sum of 48 terms ...             
              ! why?
@@ -202,48 +249,48 @@ contains
                   +cA(1,k,j,im)+cA(1,km,j,im)+cA(1,k,jm,im)+cA(1,km,jm,im) + diag
 
              ! here we go!
-             cA2(1,k2,j2,i2) = diag
+             cA2(1,k2,j2,i2) = cff*diag
           enddo
        enddo
     enddo
 
-!    if (myrank.eq.0)write(*,*)"coefficients computed"
+    return
 
-    ! fill the halo
-    ! the data should be contiguous in memory to use fill_halo 
-    ! no need to allocate an extra buffer
-    ! use the residual as a dummy variable
-    dummy3D => grid(lev+1)%r 
-
-    !- we should consider a specific fill_halo(4D) -!
-
-    ! the coefficients should be rescaled with 1/4
-    cff = 1._8/16._8
-
-
-    do d = 1,8       
-       !!if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
-       do i2 = 1,nx2
-          do j2 = 1,ny2
-             do k2 = 1,nz2
-                dummy3D(k2,j2,i2) = cA2(d,k2,j2,i2)
-             enddo
-          enddo
-       enddo
-
-       call fill_halo(lev+1,dummy3D)
-
-       do i2 = 1-nh,nx2+nh
-          do j2 = 1-nh,ny2+nh
-             do k2 = 1,nz2
-                cA2(d,k2,j2,i2) = dummy3D(k2,j2,i2) * cff
-             enddo
-          enddo
-       enddo
-       ! a way of improvement (only if it impacts perfs):
-       ! copy from cA2 to dummy3 only the interior ring used to fill the halo
-       ! copy from dummy to cA2 only the halo
-    enddo
+!!$!    if (myrank.eq.0)write(*,*)"coefficients computed"
+!!$
+!!$    ! fill the halo
+!!$    ! the data should be contiguous in memory to use fill_halo 
+!!$    ! no need to allocate an extra buffer
+!!$    ! use the residual as a dummy variable
+!!$    dummy3D => grid(lev+1)%r 
+!!$
+!!$    !- we should consider a specific fill_halo(4D) -!
+!!$
+!!$
+!!$
+!!$    do d = 1,8       
+!!$       !!if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
+!!$       do i2 = 1,nx2
+!!$          do j2 = 1,ny2
+!!$             do k2 = 1,nz2
+!!$                dummy3D(k2,j2,i2) = cA2(d,k2,j2,i2)
+!!$             enddo
+!!$          enddo
+!!$       enddo
+!!$
+!!$       call fill_halo(lev+1,dummy3D)
+!!$
+!!$       do i2 = 1-nh,nx2+nh
+!!$          do j2 = 1-nh,ny2+nh
+!!$             do k2 = 1,nz2
+!!$                cA2(d,k2,j2,i2) = dummy3D(k2,j2,i2) * cff
+!!$             enddo
+!!$          enddo
+!!$       enddo
+!!$       ! a way of improvement (only if it impacts perfs):
+!!$       ! copy from cA2 to dummy3 only the interior ring used to fill the halo
+!!$       ! copy from dummy to cA2 only the halo
+!!$    enddo
 
 !!$    do d = 1,8       
 !!$       if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
@@ -261,7 +308,7 @@ contains
 
 !    if (myrank.eq.0) write(*,*)"coarsening done"
 
-    call toc(lev,'coarsen_matrix_3D')
+
 
   end subroutine coarsen_matrix_3D
 

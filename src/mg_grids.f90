@@ -8,7 +8,7 @@ module mg_grids
 
   type grid_type
      real(kind=rp),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
-     real(kind=rp),dimension(:,:,:,:),pointer :: cA
+     real(kind=rp),dimension(:,:,:,:),pointer :: cA,cAdummy
 !!TODO
      real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
 !!TODO
@@ -48,12 +48,6 @@ contains
     integer(kind=ip) :: lev
 
     call  find_grid_levels(npxg, npyg, nxl, nyl, nzl)
-!!$=======
-!!$    ! for the gathering
-!!$    integer(kind=ip) :: ngx, ngy
-!!$    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
-!!$    
-!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
     allocate(grid(nlevs))
 
@@ -489,7 +483,8 @@ contains
           
           nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
-          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
+          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
+          allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           ! number of elements of dummy3
           grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
