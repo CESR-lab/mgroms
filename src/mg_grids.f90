@@ -411,11 +411,9 @@ contains
 
   !---------------------------------------------------------------------
   subroutine define_gather_informations()
-    integer(kind=ip):: nhalo         ! number of halo points
-    integer(kind=ip):: npxg,npyg  ! global CPU topology
 
     integer(kind=ip) :: nx, ny, nz
-    integer(kind=ip) :: nh, nd
+    integer(kind=ip) :: nh
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy
 
@@ -424,7 +422,7 @@ contains
 
     ! for the gathering
     integer(kind=ip) :: ngx, ngy
-    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
+    integer(kind=ip) :: N, family, nextfamily, color, key, localcomm, ierr
 
     ! Watch out, I continue to use the global indexing
     ! to locate each core
@@ -446,7 +444,6 @@ contains
           incy=grid(lev)%incy / 2          
           ngx=grid(lev)%ngx
           ngy=grid(lev)%ngy
- 
 
           !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
 
@@ -476,7 +473,6 @@ contains
 
           call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
           grid(lev)%localcomm = localcomm
-
 
           ! this dummy 3D array is to store the restriction from lev-1, before the gathering
           ! its size can be deduced from the size after the gathering
