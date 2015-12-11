@@ -219,26 +219,44 @@ contains
        grid(lev)%gather=0
        grid(lev)%ngx = 1
        grid(lev)%ngy = 1
-       if((nx < nsmall).and.(npx > 1))then
-          npx  = npx/2
-          nx   = nx*2
-!          incx = incx*2
-          grid(lev)%gather = 1
-          grid(lev)%ngx = 2
-       endif
 
-       if((ny < nsmall).and.(npy > 1))then
-          npy  = npy/2
-          ny   = ny*2
-!          incy = incy*2
+       if((min(nx,ny)<nsmall).and.(npx*npy>1))then
           grid(lev)%gather = 1
-          grid(lev)%ngy = 2
-       endif
-
-       if(grid(lev)%gather == 1)then
+          if (npx > 1)then
+             npx  = npx/2
+             nx   = nx*2             
+             grid(lev)%ngx = 2
+          endif
+          if (npy > 1)then
+             npy  = npy/2
+             ny   = ny*2             
+             grid(lev)%ngy = 2
+          endif
           incx=incx*2
           incy=incy*2
+
        endif
+
+!!$       if((nx < nsmall).and.(npx > 1))then
+!!$          npx  = npx/2
+!!$          nx   = nx*2
+!!$!          incx = incx*2
+!!$          grid(lev)%gather = 1
+!!$          grid(lev)%ngx = 2
+!!$       endif
+!!$
+!!$       if((ny < nsmall).and.(npy > 1))then
+!!$          npy  = npy/2
+!!$          ny   = ny*2
+!!$!          incy = incy*2
+!!$          grid(lev)%gather = 1
+!!$          grid(lev)%ngy = 2
+!!$       endif
+!!$
+!!$       if(grid(lev)%gather == 1)then
+!!$          incx=incx*2
+!!$          incy=incy*2
+!!$       endif
 
        grid(lev)%nx   = nx
        grid(lev)%ny   = ny
@@ -249,6 +267,8 @@ contains
        grid(lev)%incy = incy
        grid(lev)%nh   = nh
 
+
+       if(myrank==0)write(*,*)'11/12/15: lev,npx,npy=',lev,npx,npy
     enddo
 
   end subroutine define_grid_dims
