@@ -28,3 +28,13 @@ Submission:
 set you PATH environment variable !!
 
 mpirun -np 4 test*
+
+Profiling:
+---------
+./configure --prefix=/home/grima/NH_MultiGrid --enable-mpich --enable-profiling
+make clean
+make install
+mpirun -np 4 mainmodel
+gprof ./mainmodel gmon.out > mainmodel_prof.txt
+python /home/grima/PYTHON/GPROF2DOT/gprof2dot.py -n0.5 -s mainmodel_prof.txt > mainmodel_prof.dot
+dot -Tpng mainmodel_prof.dot -o mainmodel_prof.png

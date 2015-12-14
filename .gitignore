@@ -26,4 +26,11 @@ config.status
 test*
 # Ignore files starting with fort.*
 fort.*
+# Ignore profiling files
+gmon.out
+*.dot
+# Ignore all files *.png
+*.png
+# Ignore all files *.txt
+*.txt
 # script end #
