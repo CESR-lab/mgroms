@@ -219,26 +219,44 @@ contains
        grid(lev)%gather=0
        grid(lev)%ngx = 1
        grid(lev)%ngy = 1
-       if((nx < nsmall).and.(npx > 1))then
-          npx  = npx/2
-          nx   = nx*2
-!          incx = incx*2
-          grid(lev)%gather = 1
-          grid(lev)%ngx = 2
-       endif
 
-       if((ny < nsmall).and.(npy > 1))then
-          npy  = npy/2
-          ny   = ny*2
-!          incy = incy*2
+       if((min(nx,ny)<nsmall).and.(npx*npy>1))then
           grid(lev)%gather = 1
-          grid(lev)%ngy = 2
-       endif
-
-       if(grid(lev)%gather == 1)then
+          if (npx > 1)then
+             npx  = npx/2
+             nx   = nx*2             
+             grid(lev)%ngx = 2
+          endif
+          if (npy > 1)then
+             npy  = npy/2
+             ny   = ny*2             
+             grid(lev)%ngy = 2
+          endif
           incx=incx*2
           incy=incy*2
+
        endif
+
+!!$       if((nx < nsmall).and.(npx > 1))then
+!!$          npx  = npx/2
+!!$          nx   = nx*2
+!!$!          incx = incx*2
+!!$          grid(lev)%gather = 1
+!!$          grid(lev)%ngx = 2
+!!$       endif
+!!$
+!!$       if((ny < nsmall).and.(npy > 1))then
+!!$          npy  = npy/2
+!!$          ny   = ny*2
+!!$!          incy = incy*2
+!!$          grid(lev)%gather = 1
+!!$          grid(lev)%ngy = 2
+!!$       endif
+!!$
+!!$       if(grid(lev)%gather == 1)then
+!!$          incx=incx*2
+!!$          incy=incy*2
+!!$       endif
 
        grid(lev)%nx   = nx
        grid(lev)%ny   = ny
@@ -249,6 +267,8 @@ contains
        grid(lev)%incy = incy
        grid(lev)%nh   = nh
 
+
+       if(myrank==0)write(*,*)'11/12/15: lev,npx,npy=',lev,npx,npy
     enddo
 
   end subroutine define_grid_dims
@@ -411,11 +431,9 @@ contains
 
   !---------------------------------------------------------------------
   subroutine define_gather_informations()
-    integer(kind=ip):: nhalo         ! number of halo points
-    integer(kind=ip):: npxg,npyg  ! global CPU topology
 
     integer(kind=ip) :: nx, ny, nz
-    integer(kind=ip) :: nh, nd
+    integer(kind=ip) :: nh
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy
 
@@ -424,7 +442,7 @@ contains
 
     ! for the gathering
     integer(kind=ip) :: ngx, ngy
-    integer::     N, ff, family, prevfamily, nextfamily, color, key, localcomm, ierr
+    integer(kind=ip) :: N, family, nextfamily, color, key, localcomm, ierr
 
     ! Watch out, I continue to use the global indexing
     ! to locate each core
@@ -446,7 +464,6 @@ contains
           incy=grid(lev)%incy / 2          
           ngx=grid(lev)%ngx
           ngy=grid(lev)%ngy
- 
 
           !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
 
@@ -476,7 +493,6 @@ contains
 
           call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
           grid(lev)%localcomm = localcomm
-
 
           ! this dummy 3D array is to store the restriction from lev-1, before the gathering
           ! its size can be deduced from the size after the gathering

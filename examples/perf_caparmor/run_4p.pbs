@@ -1,0 +1,60 @@
+#!/bin/csh
+#PBS -N NHperf
+#PBS -q parallel8
+#PBS -l select=1:ncpus=4:mpiprocs=4
+#PBS -l walltime=00:10:00
+
+set echo
+
+##################################################
+##        NHydro  in MPI mode on CapArmor       ##
+##################################################
+## Nicolas.Grima@univ-brest.fr ##
+pwd
+uname -n
+
+############################
+# get the path for mpirun ##
+############################
+source /usr/share/modules/init/csh
+#module load netcdf-intel/3.6.3-11.1.073
+module load intel-comp
+module load intel-mpi
+
+#################################
+# get the path for library MKL ##
+#################################
+setenv MKL_SERIAL YES
+
+#####################################################
+###########            ON CAPARMOR        ###########
+#####################################################
+
+set nbpx=2
+set nbpy=2
+set nbp=4
+
+
+set res=INIT
+set resf=FINAL
+
+@ resf=($resf * 2)
+
+while ($res != $resf)
+
+    cd $PBS_O_WORKDIR
+
+    cd "${nbpx}x${nbpy}_${res}"
+
+    ls -rtl
+    date
+    time mpirun -np $nbp NHTEST
+    date
+    ls -rtl
+
+    @ res=($res * 2)
+end
+
+#####################################################
+#####################################################
+#####################################################

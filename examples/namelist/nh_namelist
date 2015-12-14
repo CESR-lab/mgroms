@@ -1,0 +1,8 @@
+&nhparam
+       nhalo       =  1,       ! number of halo points
+       nsmall      =  2, 
+       ns_coarsest = 40, 
+       ns_pre      =  2, 
+       ns_post     =  2, 
+       aggressive  = .false.,
+/

@@ -1,0 +1,7 @@
+&param
+   nxg  = RES,
+   nyg  = RES,
+   nzg  = 128,
+   npxg = NBP,
+   npyg = NBP,
+/

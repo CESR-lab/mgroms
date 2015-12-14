@@ -31,7 +31,11 @@ contains
     r => grid(lev)%r
 
     if (grid(lev+1)%gather == 1) then
+       !- b here is sub level rhs, we will gather at the end
+       !- in the level+1 rhs
        b => grid(lev+1)%dummy3
+       !- ngx and ngy are the number of processes being gathered in x and y
+       !- values are 1 or 2
        nx = grid(lev+1)%nx / grid(lev+1)%ngx
        ny = grid(lev+1)%ny / grid(lev+1)%ngy
 !       if(myrank == 0) write(*,*)"gather lev=",lev+1,"nx,ny,nz=",nx,ny,nz
@@ -175,7 +179,6 @@ contains
     nyc = grid(lev+1)%ny
     nzc = grid(lev+1)%nz
 
-
     pc => grid(lev+1)%p
 
     if (grid(lev+1)%gather == 1) then
@@ -187,8 +190,8 @@ contains
        nyc = grid(lev+1)%ny / grid(lev+1)%ngy
        nzc = grid(lev+1)%nz       
     endif
-    rf => grid(lev)%r
 
+    rf => grid(lev)%r
 
    if ((aggressive).and.(lev==1)) then
        call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
