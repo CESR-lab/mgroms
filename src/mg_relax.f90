@@ -36,6 +36,7 @@ contains
        !- We can add additional 3D relax routines
        !- creteria: based on grid aspect ratio
        call relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+!       call relax_3D_alternate(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
     end if
 
   end subroutine relax
@@ -69,6 +70,9 @@ contains
        endif
 
     enddo
+    if (mod(it-1,nh) /= 0) then
+       call fill_halo(lev,p)
+    endif
 
   end subroutine relax_2D
   
@@ -92,7 +96,7 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
     !     LOCAL 
-    integer(kind=ip)           :: i,j,k,it
+    integer(kind=ip)           :: i,j,k,it,i0,i1,i2,j0,j1,j2
     real(kind=rp),dimension(nz) :: rhs,d,ud
 
     call tic(lev,'relax_line')
@@ -104,10 +108,26 @@ contains
     !
     ! add a loop on smoothing
     do it = 1,nsweeps
-
-       do i = 1,nx
+       if(mod(it,2)>=0)then
+          i0=1
+          i1=nx
+          i2=1
+          j0=1
+          j1=ny
+          j2=1
+       else
+          ! try to loop in the opposite sense, once every two seeps
+          ! =>worsen the convergence rate!!!
+          i0=nx
+          i1=1
+          i2=-1
+          j0=ny
+          j1=1
+          j2=-1
+       endif
+       do i = i0,i1,i2
           !           do i = 1 + mod(j+red_black,2),nx, 2
-          do j = 1,ny
+          do j = j0,j1,j2
 
              k=1!lower level
              rhs(k) = b(k,j,i)                                              &
@@ -116,7 +136,7 @@ contains
                                              - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
                   - cA(6,k,j,i)*p(k+1,j,i-1)                                &
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                                             - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                                             - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
              d(k)   = cA(1,k,j,i)
              ud(k)  = cA(2,k+1,j,i)
 
@@ -127,7 +147,7 @@ contains
                      - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
                      - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
                      - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                     - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                     - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
                 d(k)   = cA(1,k,j,i)
                 ud(k)  = cA(2,k+1,j,i)
              enddo
@@ -142,17 +162,35 @@ contains
                   - cA(8,k,j,i)*p(k-1,j,i-1) 
              d(k)   = cA(1,k,j,i)
 
+ 
 !             call tic(lev,'tridiag')
              call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
 !             call toc(lev,'tridiag')
 
+             ! December 10th, dev below is to try to by-pass the computation of the residual
+             ! in the dedicated subroutine and to use instead the rhs(k) to compute the
+             ! residual on the fly.
+             ! it seems that what we gain on the one hand, less computation, we lose it on 
+             ! the other hand, worse convergence rate. Overall the rescaled convergence time
+             ! seems to be the same
+             ! obviously, this residual is only an estimate, it is not the correct one
+!!$             k=1
+!!$             grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
+!!$                   - cA(2,k+1,j,i)*p(k+1,j,i)
+!!$             do k = 2,nz-1!interior levels
+!!$                grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
+!!$                     - cA(2,k,j,i)*p(k-1,j,i) - cA(2,k+1,j,i)*p(k+1,j,i)
+!!$             enddo
+!!$             k=nz
+!!$             grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
+!!$                  - cA(2,k,j,i)*p(k-1,j,i) 
           enddo
        enddo
 
 !        ! don't call mpi at every pass if nh>1
-!       if (mod(it,nh) == 0) then
-!          call fill_halo(lev,p)
-!       endif
+       if ((mod(it,nh) == 0).or.(it==nsweeps)) then
+          call fill_halo(lev,p)
+       endif
 !
 !    enddo
 !
@@ -160,7 +198,7 @@ contains
 !       call fill_halo(lev,p)
 !    endif
 
-       call fill_halo(lev,p)
+!       call fill_halo(lev,p)
     enddo
 
     call toc(lev,'relax_line')
@@ -196,6 +234,128 @@ contains
   end subroutine tridiag
 
   !----------------------------------------
+  subroutine relax_3D_alternate(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+    integer(kind=ip)                        , intent(in)   :: lev
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:)  , pointer              :: r
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz, nh
+
+    ! Coefficients are stored in order of diagonals
+    ! cA(1,:,:,:)      -> p(k,j,i)
+    ! cA(2,:,:,:)      -> p(k-1,j,i)
+    ! cA(3,:,:,:)      -> p(k+1,j-1,i)
+    ! cA(4,:,:,:)      -> p(k,j-1,i)
+    ! cA(5,:,:,:)      -> p(k-1,j-1,i)
+    ! cA(6,:,:,:)      -> p(k+1,j,i-1)
+    ! cA(7,:,:,:)      -> p(k,j,i-1)
+    ! cA(8,:,:,:)      -> p(k-1,j,i-1)
+    !
+    !     LOCAL 
+    integer(kind=ip)           :: i,j,k,it,nh2
+    real(kind=rp),dimension(nz) :: rhs,d,ud
+
+    real(kind=rp) :: c1,c2,c3,z
+
+    call tic(lev,'relax_alternate')
+
+    !--DEBUG !!!!
+!    call fill_halo(lev,p)
+    !--DEBUG !!!!
+
+    ! under/over relaxation parameter (c1==1 is the regular Jacobi)
+    c1 = 0.8_8
+    c2 = 1. - c1
+
+!    r=>grid(lev)%p
+
+    !
+    ! add a loop on smoothing
+
+    nh2 = nh-1
+    do it = 1,nsweeps
+
+       do i = 1-nh2,nx+nh2
+          !           do i = 1 + mod(j+red_black,2),nx, 2
+          do j = 1-nh2,ny+nh2
+
+          k=1!lower level
+  !        if(cA(1,k,j,i)/=0.)then
+             c3 = c1/cA(1,k,j,i)
+  !        else
+  !           c3 = 0.
+  !        endif
+                
+
+          p(k,j,i) = p(k,j,i)*c2 + c3*( b(k,j,i)                        &
+               - cA(2,k+1,j,i)*p(k+1,j,i)                               &
+               - cA(3,k,j,i)*p(k+1,j-1,i)                               &
+               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)                           &
+               - cA(6,k,j,i)*p(k+1,j,i-1)                               &
+               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+               - cA(8,k+1,j,i+1)*p(k+1,j,i+1) )
+
+
+          do k = 2,nz-1!interior levels
+ !            if(cA(1,k,j,i)/=0.)then
+                c3 = c1/cA(1,k,j,i)
+ !            else
+ !               c3 = 0.
+ !            endif
+             
+             p(k,j,i) = p(k,j,i)*c2 + c3*( b(k,j,i)                        &
+                  - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
+                  - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+                  - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                  - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                  - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1))
+
+          enddo
+
+          k=nz!upper level
+!          if(cA(1,k,j,i)/=0.)then
+             c3 = c1/cA(1,k,j,i)
+!          else
+!             c3 = 0.
+!          endif
+
+          p(k,j,i) = p(k,j,i)*c2 + c3*( b(k,j,i)                        &
+               - cA(2,k,j,i)*p(k-1,j,i)                                 &
+               - cA(3,k-1,j+1,i)*p(k-1,j+1,i)                           &
+               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+               - cA(5,k,j,i)*p(k-1,j-1,i)                               &
+               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)                           &
+               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+               - cA(8,k,j,i)*p(k-1,j,i-1) )
+          
+          enddo
+       enddo
+       
+       if((mod(it,nh)==0).or.(it==nsweeps)) call fill_halo(lev,r)
+
+!!$       do i = 1-nh,nx+nh
+!!$          do j = 1-nh,ny+nh
+!!$             do k=1,nz
+!!$!                c3 = cA(1,k,j,i)/c1
+!!$                z  = r(k,j,i)
+!!$!                r(k,j,i)=(r(k,j,i)-p(k,j,i)*c2)*c3-cA(1,k,j,i)*p(k,j,i)
+!!$                p(k,j,i)=z
+!!$             enddo
+!!$          enddo
+!!$       enddo
+    enddo
+
+
+    call toc(lev,'relax_alternate')
+
+  end subroutine relax_3D_alternate
+
+  !----------------------------------------
   subroutine compute_residual(lev,res)
     integer(kind=ip), intent(in):: lev
     real(kind=rp), intent(out):: res
@@ -206,6 +366,7 @@ contains
     real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
     integer(kind=ip) :: nx, ny, nz, nh
+    real(kind=rp)::resloc
 
     p  => grid(lev)%p
     b  => grid(lev)%b
@@ -231,7 +392,9 @@ contains
 !    b(:,:,:) = r(:,:,:)
 
     if (lev >-1) then
-       call global_max(res)
+!       call global_max(res)
+       resloc=res
+       call global_sum(lev,resloc,res)
     else
        res = -999._8
     endif
@@ -261,8 +424,9 @@ contains
                - cA(2,k,j,i)*p(k  ,j-1,i) - cA(2,k  ,j+1,i)*p(k  ,j+1,i)&
                - cA(3,k,j,i)*p(k  ,j,i-1) - cA(3,k  ,j,i+1)*p(k  ,j,i+1)
 
-          res = max(res,abs(r(k,j,i)))
-
+!          res = max(res,abs(r(k,j,i)))
+          res = res+r(k,j,i)*r(k,j,i)
+          
        enddo
     enddo
 
@@ -304,7 +468,8 @@ contains
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
-          res = max(res,abs(r(k,j,i)))
+          res = res+r(k,j,i)*r(k,j,i)
+!          res = max(res,abs(r(k,j,i)))
 
           do k = 2,nz-1!interior levels
              r(k,j,i) = b(k,j,i)                                           &
@@ -317,7 +482,8 @@ contains
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                   - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
-             res = max(res,abs(r(k,j,i)))
+!             res = max(res,abs(r(k,j,i)))
+          res = res+r(k,j,i)*r(k,j,i)
           enddo
 
           k=nz!upper level
@@ -331,7 +497,8 @@ contains
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k,j,i)*p(k-1,j,i-1)
           
-          res = max(res,abs(r(k,j,i)))
+!          res = max(res,abs(r(k,j,i)))
+          res = res+r(k,j,i)*r(k,j,i)
    
        enddo
     enddo

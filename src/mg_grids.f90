@@ -268,7 +268,7 @@ contains
        grid(lev)%nh   = nh
 
 
-       if(myrank==0)write(*,*)'11/12/15: lev,npx,npy=',lev,npx,npy
+!       if(myrank==0)write(*,*)'11/12/15: lev,npx,npy=',lev,npx,npy
     enddo
 
   end subroutine define_grid_dims
@@ -470,7 +470,7 @@ contains
          ! cores having the same family index share the same subdomain
           family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
 
-          if(myrank==0)write(*,*)lev,family
+!          if(myrank==0)write(*,*)lev,family
 
           nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
 
@@ -514,6 +514,28 @@ contains
     enddo
     
   end subroutine define_gather_informations
+
+  !---------------------------------------------------------------------
+  subroutine print_grids()
+    integer(kind=ip) :: lev,ierr
+
+    call MPI_Barrier( MPI_COMM_WORLD ,ierr)
+    if (myrank.eq.0)then
+       do lev=1,nlevs
+          if (grid(lev)%gather.eq.0)then
+             write(*,100)"lev=",lev,": ", &
+                  grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
+                  " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
+          else
+             write(*,100)"lev=",lev,": ", &
+                  grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
+                  " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
+          endif
+       enddo
+    endif
+100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
+
+    end subroutine print_grids
 
   !---------------------------------------------------------------------
   subroutine grids_dealloc()

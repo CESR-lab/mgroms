@@ -24,9 +24,9 @@ program main_model
   integer(kind=4) :: np, ierr, rank
 
   ! global domain dimensions
-  nxg   = 128
-  nyg   = 128
-  nzg   = 128/8
+  nxg   = 128*2
+  nyg   = 128*2
+  nzg   = 64!128/8
 
   npxg  = 2
   npyg  = 2

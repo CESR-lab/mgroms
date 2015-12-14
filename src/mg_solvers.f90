@@ -17,7 +17,7 @@ contains
     integer(kind=ip), intent(in) :: maxite
  
     ! local
-    real(kind=rp)    :: rnorm,bnorm,res0,conv
+    real(kind=rp)    :: rnorm,bnorm,res0,conv,rnorm0
     integer(kind=ip) :: nite
 
     integer(kind=ip) :: nx,ny,nz,nh
@@ -45,14 +45,20 @@ contains
     call tic(1,'solve')
     call cpu_time(tstart)
     
-    bnorm = maxval(abs(grid(1)%b))
-    call global_max(bnorm)
+!    bnorm = maxval(abs(grid(1)%b))
+!    call global_max(bnorm)
+
+    res0 = sum( grid(1)%b(1:nz,1:ny,1:nx)**2)
+    call global_sum(1,res0,bnorm)
+
+
 
     call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
     
     if (myrank == 0) write(*,*)' rnom:', rnorm,' bnorm:', bnorm
 
     res0 = rnorm/bnorm
+    rnorm0 = res0
 
     nite=0
 
@@ -78,17 +84,26 @@ contains
     if (myrank == 0) then
        npxg=grid(1)%npx
        npyg=grid(1)%npy
+<<<<<<< Updated upstream
        rnxg=real(grid(1)%nx*npxg,kind=rp)
        rnyg=real(grid(1)%ny*npyg,kind=rp)
        rnzg=real(grid(1)%nz,kind=rp)
        perf = (tend-tstart)*real(npxg*npyg,kind=rp)/(-log(rnorm)/log(10._8))/(rnxg*rnyg*rnzg)
+=======
+       nxg=grid(1)%nx*npxg
+       nyg=grid(1)%ny*npyg
+       nzg=grid(1)%nz
+       ! the rescaled time should be expressed in terms of error reduction,
+       ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
+       perf = (tend-tstart)*(npxg*npyg)/(-log(rnorm/rnorm0)/log(10._8))/(nxg*nyg*nzg)
+>>>>>>> Stashed changes
        write(*,*)'--- summary ---'
        write(*,'(A,F6.3,A)')"time spent to solve :",tend-tstart," s"
        write(*,'(A,E10.3)')"rescaled performance:",perf
        write(*,*)'---------------'
     end if
 
-10  format("ite = ",I2,": res = ",E10.3," / conv = ",F6.1)
+10  format("ite = ",I2,": res = ",E10.3," / conv = ",F7.1)
 
   end subroutine solve
 

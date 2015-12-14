@@ -34,21 +34,7 @@ contains
 
     call define_neighbours(neighb)
 
-    call MPI_Barrier( MPI_COMM_WORLD ,ierr)
-    if (myrank.eq.0)then
-       do lev=1,nlevs
-          if (grid(lev)%gather.eq.0)then
-             write(*,100)"lev=",lev,": ", &
-                  grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                  " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
-          else
-             write(*,100)"lev=",lev,": ", &
-                  grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                  " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
-          endif
-       enddo
-    endif
-100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
+    call print_grids()
 
     call define_matrices()
 

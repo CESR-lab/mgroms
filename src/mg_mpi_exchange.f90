@@ -592,14 +592,15 @@ contains
     real(kind=rp),intent(in) :: sumloc
     real(kind=rp),intent(out) :: sumglo
 
-    integer(kind=ip) :: ierr
+    integer(kind=ip) :: ierr,N
 
     ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
     ! where subdomains are gathered
     call MPI_ALLREDUCE(sumloc,sumglo,1,MPI_DOUBLE_PRECISION,MPI_sum,MPI_COMM_WORLD,ierr)   
     ! therefore we need to rescale the global sum
     sumglo = sumglo * (grid(lev)%npx*grid(lev)%npy)/(grid(1)%npx*grid(1)%npy)
-
+    N = grid(lev)%npx*grid(lev)%npy*grid(lev)%nx*grid(lev)%ny*grid(lev)%nz
+    sumglo=sqrt(sumglo/N)
   end subroutine global_sum
 
 

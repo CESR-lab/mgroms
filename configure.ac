@@ -321,8 +321,8 @@ if test -n "$FC" ; then
           ;;
           normal|*)
             AC_MSG_NOTICE([ifort -> NORMAL MODE])
-	        CFLAGS="-g -O2"
-	        FCFLAGS="-g -O2"
+	        CFLAGS="-g -O2"#"-O3 -axSSE4.1"#"-g -O2"
+	        FCFLAGS="-g -O2"#"-O3 -axSSE4.1"#"-g -O2"
 	      ;;
 	    esac
 	    if test "$enable_prof" = "yes" ; then

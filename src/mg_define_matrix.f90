@@ -30,6 +30,8 @@ contains
 
     integer(kind=ip),intent(in):: lev
 
+    character(len=15) :: matrixname
+
     ! Define matrix coefficients cA
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -58,29 +60,35 @@ contains
     dyi=1._8   !/dy
     dzi=1._8*16   !/dz
 
+    matrixname='7points' ! or '15points'
+
     !extended loops will be a pain for the real matrix
     do i = 1-nh,nx+nh
        do j = 1-nh,ny+nh
           do k = 1,nz
+             if(trim(matrixname)=='7points')then
 ! --- regular 7 points Laplacian ---
-!!$             cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)
-!!$             cA(2,k,j,i) = dzi*dzi
-!!$             cA(3,k,j,i) = 0.0_8
-!!$             cA(4,k,j,i) = dyi*dyi
-!!$             cA(5,k,j,i) = 0.0_8
-!!$             cA(6,k,j,i) = 0.0_8
-!!$             cA(7,k,j,i) = dxi*dxi
-!!$             cA(8,k,j,i) = 0.0_8
+                cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)
+                cA(2,k,j,i) = dzi*dzi
+                cA(3,k,j,i) = 0.0_8
+                cA(4,k,j,i) = dyi*dyi
+                cA(5,k,j,i) = 0.0_8
+                cA(6,k,j,i) = 0.0_8
+                cA(7,k,j,i) = dxi*dxi
+                cA(8,k,j,i) = 0.0_8
+             endif
 
 ! --- extended stencil with diagonal coupling: better convergence rate ---
-             cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)-4*(dxi*dzi+dyi*dzi)
-             cA(2,k,j,i) = dzi*dzi
-             cA(3,k,j,i) = 0.5*dyi*dzi
-             cA(4,k,j,i) = dyi*dyi
-             cA(5,k,j,i) = 0.5*dyi*dzi
-             cA(6,k,j,i) = 0.5*dxi*dzi
-             cA(7,k,j,i) = dxi*dxi
-             cA(8,k,j,i) = 0.5*dxi*dzi
+             if(trim(matrixname)=='15points')then
+                cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)-4*(dxi*dzi+dyi*dzi)
+                cA(2,k,j,i) = dzi*dzi
+                cA(3,k,j,i) = 0.5*dyi*dzi
+                cA(4,k,j,i) = dyi*dyi
+                cA(5,k,j,i) = 0.5*dyi*dzi
+                cA(6,k,j,i) = 0.5*dxi*dzi
+                cA(7,k,j,i) = dxi*dxi
+                cA(8,k,j,i) = 0.5*dxi*dzi
+             endif
           enddo
           cA(1,nz,j,i) = cA(1,nz,j,i) - dzi*dzi 
           cA(1,1,j,i)  = cA(1,1,j,i)  + dzi*dzi 

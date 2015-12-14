@@ -3258,8 +3258,8 @@ $as_echo "$as_me: ifort -> AGGRESSIVE COMPILER OPTIONS are SELECTED" >&6;}
           normal|*)
             { $as_echo "$as_me:${as_lineno-$LINENO}: ifort -> NORMAL MODE" >&5
 $as_echo "$as_me: ifort -> NORMAL MODE" >&6;}
-	        CFLAGS="-g -O2"
-	        FCFLAGS="-g -O2"
+	        CFLAGS="-g -O2"#"-O3 -axSSE4.1"#"-g -O2"
+	        FCFLAGS="-g -O2"#"-O3 -axSSE4.1"#"-g -O2"
 	      ;;
 	    esac
 	    if test "$enable_prof" = "yes" ; then
