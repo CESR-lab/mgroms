@@ -118,7 +118,7 @@ contains
     WRITE(cmftf , 1000) nblev
     WRITE(cmfti , 1001) nblev
 
-1000 FORMAT('(', I3, '(x,f9.2))')
+1000 FORMAT('(', I3, '(x,E9.3))')
 1001 FORMAT('(', I3, '(x,I9))')
 
     write(lun,'(t22)', ADVANCE="no")
@@ -138,36 +138,5 @@ contains
     end do
 
   end subroutine print_tictoc
-
-  !------------------------------------------------
-  subroutine print_tictoc_old(myrank)
-    integer(kind=st), optional, intent(in)::myrank
-
-    integer(kind=st) :: lev
-
-    integer(kind=st) :: ii
-
-    integer(kind=st) ::lun
-
-    if (present(myrank)) then
-       lun = myrank + 10
-    else
-       lun = 10
-    endif
-
-    write(lun,'(A)',ADVANCE="no")'   '
-    do ii=1, nbsub
-       write(lun,'(x,A10)',ADVANCE="no") TRIM(subname(ii))
-    end do
-
-    do lev=1, nblev
-       write(lun,'(I2,x,7f10.2)', ADVANCE="yes")lev, time(lev,1:nbsub)
-    enddo
-    write(lun,'(I2,x,I10)', ADVANCE="yes")''
-    do lev=1, nblev
-       write(lun,'(I2,x,I10)', ADVANCE="yes")lev, calls(lev,1:nbsub)
-    enddo
-
-  end subroutine print_tictoc_old
 
 end module mg_tictoc

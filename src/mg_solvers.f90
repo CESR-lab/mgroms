@@ -26,6 +26,7 @@ contains
 
     real(kind = lg)  :: tstart,tend,perf
     integer(kind=ip) :: npxg,npyg,nxg,nyg,nzg
+    real(kind=rp) :: rnxg,rnyg,rnzg
 
     p  => grid(1)%p
     b  => grid(1)%b
@@ -77,10 +78,10 @@ contains
     if (myrank == 0) then
        npxg=grid(1)%npx
        npyg=grid(1)%npy
-       nxg=grid(1)%nx*npxg
-       nyg=grid(1)%ny*npyg
-       nzg=grid(1)%nz
-       perf = (tend-tstart)*(npxg*npyg)/(-log(rnorm)/log(10._8))/(nxg*nyg*nzg)
+       rnxg=real(grid(1)%nx*npxg,kind=rp)
+       rnyg=real(grid(1)%ny*npyg,kind=rp)
+       rnzg=real(grid(1)%nz,kind=rp)
+       perf = (tend-tstart)*real(npxg*npyg,kind=rp)/(-log(rnorm)/log(10._8))/(rnxg*rnyg*rnzg)
        write(*,*)'--- summary ---'
        write(*,'(A,F6.3,A)')"time spent to solve :",tend-tstart," s"
        write(*,'(A,E10.3)')"rescaled performance:",perf
