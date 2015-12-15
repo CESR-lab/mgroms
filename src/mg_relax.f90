@@ -235,6 +235,7 @@ contains
 
   !----------------------------------------
   subroutine relax_3D_alternate(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+
     integer(kind=ip)                        , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
