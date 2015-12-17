@@ -122,6 +122,7 @@ contains
 1001 FORMAT('(', I3, '(x,I9))')
 
     write(lun,'(t22)', ADVANCE="no")
+    write(lun,'(A10)', ADVANCE="no") 'Total'
     do lev=1, nblev
        write(lun,'(x,I9)', ADVANCE="no") lev
     enddo
@@ -130,13 +131,46 @@ contains
 
     do ii=1, nbsub
        write(lun,'(x,A20)' , ADVANCE="no" ) TRIM(subname(ii))
+       write(lun,'(x,E9.3)', ADVANCE="no" ) sum(time(1:nblev,ii))
        write(lun,FMT=cmftf , ADVANCE="no" ) time(1:nblev,ii)
        write(lun,'(x)'     , ADVANCE="yes")
        write(lun,'(t22)'   , ADVANCE="no" )
+       write(lun,'(x,I9)'  , ADVANCE="no" ) sum(calls(1:nblev,ii))
        write(lun,FMT=cmfti , ADVANCE="no" ) calls(1:nblev,ii)
        write(lun,'(x)'     , ADVANCE="yes")
     end do
 
   end subroutine print_tictoc
+
+  !------------------------------------------------
+  subroutine print_tictoc_old(myrank)
+    integer(kind=st), optional, intent(in)::myrank
+
+    integer(kind=st) :: lev
+
+    integer(kind=st) :: ii
+
+    integer(kind=st) ::lun
+
+    if (present(myrank)) then
+       lun = myrank + 10
+    else
+       lun = 10
+    endif
+
+    write(lun,'(A)',ADVANCE="no")'   '
+    do ii=1, nbsub
+       write(lun,'(x,A10)',ADVANCE="no") TRIM(subname(ii))
+    end do
+
+    do lev=1, nblev
+       write(lun,'(I2,x,7f10.2)', ADVANCE="yes")lev, time(lev,1:nbsub)
+    enddo
+    write(lun,'(I2,x,I10)', ADVANCE="yes")''
+    do lev=1, nblev
+       write(lun,'(I2,x,I10)', ADVANCE="yes")lev, calls(lev,1:nbsub)
+    enddo
+
+  end subroutine print_tictoc_old
 
 end module mg_tictoc
