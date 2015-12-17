@@ -27,6 +27,7 @@ contains
     real(kind = lg)  :: tstart,tend,perf
     integer(kind=ip) :: npxg,npyg,nxg,nyg,nzg
     real(kind=rp) :: rnxg,rnyg,rnzg
+    real(kind=rp) :: rnpxg,rnpyg
 
     p  => grid(1)%p
     b  => grid(1)%b
@@ -82,10 +83,10 @@ contains
     call toc(1,'solve')
 
     if (myrank == 0) then
-       npxg=grid(1)%npx
-       npyg=grid(1)%npy
-       rnxg=real(grid(1)%nx*npxg,kind=rp)
-       rnyg=real(grid(1)%ny*npyg,kind=rp)
+       rnpxg=real(grid(1)%npx,kind=rp)
+       rnpyg=real(grid(1)%npy,kind=rp)
+       rnxg=real(grid(1)%nx,kind=rp)*rnpxg
+       rnyg=real(grid(1)%ny,kind=rp)*rnpyg
        rnzg=real(grid(1)%nz,kind=rp)
        ! the rescaled time should be expressed in terms of error reduction,
        ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
