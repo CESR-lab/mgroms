@@ -1,4 +1,4 @@
-module mg_define_matrix
+module mg_operators
 
   use mg_mpi
   use mg_tictoc
@@ -11,19 +11,56 @@ module mg_define_matrix
 
 contains
   !-------------------------------------------------------------------------     
-  subroutine define_matrices()
+  subroutine Kinetic_energy(u,v,w,uf,vf,wf);
 
-    integer(kind=ip)::  lev
+    real(kind=rp)   :: dimension(:,:,:),intent(in):: u,v,w
+    real(kind=rp)   :: dimension(:,:,:),intent(in):: uf,vf,wf
 
-    lev = 1
-    call define_matrix_simple(lev)
+    real(kind=rp)    :: Ek = 0.0_8
+    integer(kind=ip) :: i,j,k
 
-
-    do lev=1, nlevs-1
-       call coarsen_matrix(lev)
+ 
+    do i = 1,nx
+       do j = 1,ny
+          do k = 1,nz
+              Ek = Ek + 
+   &            0.5*( u(k,j,i  )*uf(k,j,i  )*dxu(j,i  )*dyu(j,i  )*dzu(k,j,i  ) + 
+   &                  u(k,j,i+1)*uf(k,j,i+1)*dxu(j,i+1)*dyu(j,i+1)*dzu(k,j,i+1) ) + 
+   &            0.5*( v(k,j  ,i)*vf(k,j  ,i)*dxv(j  ,i)*dyv(j  ,i)*dzv(k,j  ,i) + 
+   &                  v(k,j+1,i)*vf(k,j+1,i)*dxv(j+1,i)*dyv(j+1,i)*dzv(k,j+1,i) ) + 
+   &            0.5*( w(k  ,j,i)*wf(k  ,j,i)*dx(j,i)*dy(j,i)*dzw(k  ,j,i) + 
+   &                  w(k+1,j,i)*wf(k+1,j,i)*dx(j,i)*dy(j,i)*dzw(k+1,j,i) ) + 
+          enddo
+       enddo
     enddo
 
-  end subroutine define_matrices
+  end subroutine Kinetic Energy
+!----------------------------------------
+  subroutine Momentum2flux(u,v,w,uf,vf,wf,zx)
+    !!
+    !!  uf =  um - wm*zx
+    !!  vf =  vm - wm*zy
+    !!  wf = -zx*um - zx*vm + (1+zx^2+ zy^2)*wm
+    !!
+    real(kind=rp)   :: dimension(:,:,:),intent(in) :: u,v,w
+    real(kind=rp)   :: dimension(:,:,:),intent(out):: uf,vf,wf
+    real(kind=rp)   :: dimension(:,:,:),intent(in) :: zx
+
+    !! Slopes are defined at rho-points
+    do i = 1,nx+1
+       do j = 1,ny
+          do k = 1,nz
+            uf(k,j,i) = um(k,j,i) - 0.25*(zx(k,j,i  )*wm(k,j,i  ) + zx(k,j,i  )*wm(k+1,j,i  )
+                                          zx(k,j,i-1)*wm(k,j,i-1) + zx(k,j,i-1)*wm(k+1,j,i-1) )
+            vf(k,j,i) = vm(k,j,i) - 0.25*(zy(k,j  ,i)*wm(k,j  ,i) + zx(k,j  ,i)*wm(k+1,j  ,i)
+                                          zy(k,j-1,i)*wm(k,j-1,i) + zx(k,j  ,i)*wm(k+1,j  ,i) )
+            wf(k,j,i) = vm(k,j,i) - 0.25*(zy(k,j  ,i)*wm(k,j  ,i) + zx(k,j  ,i)*wm(k+1,j  ,i)
+                                          zy(k,j-1,i)*wm(k,j-1,i) + zx(k,j  ,i)*wm(k+1,j  ,i) )
+       enddo
+       zw(nz+1,j,i) = 0.0
+    enddo
+
+  end subroutine Momentum2flux
 !----------------------------------------
   subroutine define_matrix(lev)
 
@@ -49,6 +86,7 @@ contains
     real(kind=rp):: dimension(:,:,:),allocatable :: dz
     real(kind=rp):: dimension(:,:,:),allocatable :: dzw
     real(kind=rp):: dimension(:,:,:),allocatable :: zydx,zxdy
+
 
     !!! I'm assuming that I'm getting zw,zr,dx,dy from outside this routine
 
@@ -162,6 +200,18 @@ contains
           cA(7,k,j,i) = cA(7,k,j,i) - 0.25*zxdy(k,j,i-1) + 0.25*zxdy(k,j,i)
        enddo
     enddo
+    !! Bottom level. 
+    k = 1
+    do i = 1,nx
+       do j = 1,ny
+          cA(1,k,j,i) = -0.5*Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
+          cA(2,k,j,i) =  0.5*Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
+          cA(3,k,j,i) =  0.25*zydx(k,j,i)
+          cA(5,k,j,i) = -0.25*zydx(k,j,i)
+          cA(6,k,j,i) =  0.25*zxdy(k,j,i)
+          cA(8,k,j,i) = -0.25*zxdy(k,j,i)
+       enddo
+    enddo
     do i = 1,nx
        do j = 1,ny
           do k = 2,nz-1
@@ -169,23 +219,6 @@ contains
           enddo
           k = nz
           cA(1,k,j,i) = -cA(2,k,j,i)- 2*cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
-       enddo
-    enddo
-    !! Bottom level.
-    k = 1
-    do i = 1,nx
-       do j = 1,ny
-          cA(3,k,j,i) = 0.25*zydx(k+1,j,i)+0.25*zydx(k,j-1,i)                              !! couples with k+1 j-1
-          cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)*(1 - 0.5*zy*zy/(1+zx*zx+zy*zy))                !! couples with j-1
-          cA(6,k,j,i) = 0.25*zxdy(k+1,j,i)+0.25*zxdy(k,j,i-1)                              !! Couples with k+1 i-1
-          cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)*(1 - 0.5*zx*zx/(1+zx*zx+zy*zy))                !! Couples with i-1
-          cA(5,k,j,i) = 0.125*zx(k,j+1,i)*zy(k,j+1,i) + 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j+1,i-1
-          cA(8,k,j,i) =-0.125*zx(k,j-1,i)*zy(k,j-1,i) - 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j-1,i-1
-       enddo
-    enddo
-    do i = 1,nx
-       do j = 1,ny
-          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
        enddo
     enddo
     !!
