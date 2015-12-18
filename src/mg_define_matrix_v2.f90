@@ -10,57 +10,7 @@ module mg_operators
   implicit none
 
 contains
-  !-------------------------------------------------------------------------     
-  subroutine Kinetic_energy(u,v,w,uf,vf,wf);
 
-    real(kind=rp)   :: dimension(:,:,:),intent(in):: u,v,w
-    real(kind=rp)   :: dimension(:,:,:),intent(in):: uf,vf,wf
-
-    real(kind=rp)    :: Ek = 0.0_8
-    integer(kind=ip) :: i,j,k
-
- 
-    do i = 1,nx
-       do j = 1,ny
-          do k = 1,nz
-              Ek = Ek + 
-   &            0.5*( u(k,j,i  )*uf(k,j,i  )*dxu(j,i  )*dyu(j,i  )*dzu(k,j,i  ) + 
-   &                  u(k,j,i+1)*uf(k,j,i+1)*dxu(j,i+1)*dyu(j,i+1)*dzu(k,j,i+1) ) + 
-   &            0.5*( v(k,j  ,i)*vf(k,j  ,i)*dxv(j  ,i)*dyv(j  ,i)*dzv(k,j  ,i) + 
-   &                  v(k,j+1,i)*vf(k,j+1,i)*dxv(j+1,i)*dyv(j+1,i)*dzv(k,j+1,i) ) + 
-   &            0.5*( w(k  ,j,i)*wf(k  ,j,i)*dx(j,i)*dy(j,i)*dzw(k  ,j,i) + 
-   &                  w(k+1,j,i)*wf(k+1,j,i)*dx(j,i)*dy(j,i)*dzw(k+1,j,i) ) + 
-          enddo
-       enddo
-    enddo
-
-  end subroutine Kinetic Energy
-!----------------------------------------
-  subroutine Momentum2flux(u,v,w,uf,vf,wf,zx)
-    !!
-    !!  uf =  um - wm*zx
-    !!  vf =  vm - wm*zy
-    !!  wf = -zx*um - zx*vm + (1+zx^2+ zy^2)*wm
-    !!
-    real(kind=rp)   :: dimension(:,:,:),intent(in) :: u,v,w
-    real(kind=rp)   :: dimension(:,:,:),intent(out):: uf,vf,wf
-    real(kind=rp)   :: dimension(:,:,:),intent(in) :: zx
-
-    !! Slopes are defined at rho-points
-    do i = 1,nx+1
-       do j = 1,ny
-          do k = 1,nz
-            uf(k,j,i) = um(k,j,i) - 0.25*(zx(k,j,i  )*wm(k,j,i  ) + zx(k,j,i  )*wm(k+1,j,i  )
-                                          zx(k,j,i-1)*wm(k,j,i-1) + zx(k,j,i-1)*wm(k+1,j,i-1) )
-            vf(k,j,i) = vm(k,j,i) - 0.25*(zy(k,j  ,i)*wm(k,j  ,i) + zx(k,j  ,i)*wm(k+1,j  ,i)
-                                          zy(k,j-1,i)*wm(k,j-1,i) + zx(k,j  ,i)*wm(k+1,j  ,i) )
-            wf(k,j,i) = vm(k,j,i) - 0.25*(zy(k,j  ,i)*wm(k,j  ,i) + zx(k,j  ,i)*wm(k+1,j  ,i)
-                                          zy(k,j-1,i)*wm(k,j-1,i) + zx(k,j  ,i)*wm(k+1,j  ,i) )
-       enddo
-       zw(nz+1,j,i) = 0.0
-    enddo
-
-  end subroutine Momentum2flux
 !----------------------------------------
   subroutine define_matrix(lev)
 

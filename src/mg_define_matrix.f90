@@ -11,12 +11,21 @@ module mg_define_matrix
 
 contains
   !-------------------------------------------------------------------------     
-  subroutine define_matrices()
+  subroutine define_matrices(dx, dy, zr, zw)
+
+    real(kind=rp), dimension(:,:)  , allocatable, optional, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:,:), allocatable, optional, intent(in) :: zr, zw
 
     integer(kind=ip)::  lev
 
     lev = 1
-    call define_matrix_simple(lev)
+    if (cmatrix == 'simple') then
+       call define_matrix_simple(lev)
+    elseif (cmatrix == 'real') then
+       call define_matrix_real(lev, dx, dy, zr, zw)
+    else
+       stop
+    endif
 
 
     do lev=1, nlevs-1
@@ -97,6 +106,267 @@ contains
 
   end subroutine define_matrix_simple
 
+!----------------------------------------
+  subroutine define_matrix_real(lev, dx, dy, zr, zw)
+
+    integer(kind=ip),intent(in):: lev
+    real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
+
+    ! Define matrix coefficients cA
+    ! Coefficients are stored in order of diagonals
+    ! cA(1,:,:,:)      -> p(k,j,i)
+    ! cA(2,:,:,:)      -> p(k-1,j,i)
+    ! cA(3,:,:,:)      -> p(k+1,j-1,i)
+    ! cA(4,:,:,:)      -> p(k,j-1,i)
+    ! cA(5,:,:,:)      -> p(k-1,j-1,i)
+    ! cA(6,:,:,:)      -> p(k+1,j,i-1)
+    ! cA(7,:,:,:)      -> p(k,j,i-1)xd
+    ! cA(8,:,:,:)      -> p(k-1,j,i-1)
+
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA
+    integer(kind=ip):: k, j, i
+    integer(kind=ip):: nx, ny, nz
+    integer(kind=ip):: nh
+
+    real(kind=rp) ::  zxu, zyu, zxv, zyv
+
+    real(kind=rp), dimension(:,:)  , allocatable :: dxu, dyv
+    real(kind=rp), dimension(:,:,:), allocatable :: Arx, Ary
+    real(kind=rp), dimension(:,:)  , allocatable :: Arz
+    real(kind=rp), dimension(:,:,:), allocatable :: dz
+    real(kind=rp), dimension(:,:,:), allocatable :: dzw
+    real(kind=rp), dimension(:,:,:), allocatable :: zy,zx
+    real(kind=rp), dimension(:,:,:), allocatable :: zydx,zxdy
+    real(kind=rp), dimension(:,:,:), allocatable :: zxw, zyw
+
+    ! TODO NG
+    ! zw,zr can change in time
+    ! dx,dy constant in time
+!!! I'm assuming that I'm getting zw,zr,dx,dy from outside this routine
+
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
+    cA => grid(1)%cA 
+
+    allocate(dz(nz,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz
+             dz(k,j,i) = zw(k+1,j,i)-zw(k,j,i) !!  cell height at rho-points
+          enddo
+       enddo
+    enddo
+
+    allocate(dzw(nz,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz-1
+             dzw(k,j,i) = zr(k+1,j,i)-zr(k,j,i) !!  cell height at w-points
+          enddo
+           dzw(nz,j,i) = zw(nz+1,j,i) - zr(nz,j,i)
+       enddo
+    enddo
+
+    allocate(dxu(ny,nx+1))
+    do i = 1,nx+1
+       do j = 1,ny
+          dxu(j,i) = 0.5*(dx(j,i) + dx(j,i-1))
+       enddo
+    enddo
+    allocate(dyv(ny+1,nx))
+    do i = 1,nx
+       do j = 1,ny+1
+          dyv(j,i) = 0.5*(dy(j,i) + dy(j-1,i))
+       enddo
+    enddo
+
+    allocate(Arx(nz,ny,nx+1))
+    do i = 1,nx+1
+       do j = 1,ny
+          do k = 1,nz
+             Arx(k,j,i) = 0.25*(dz(k,j,i)+dz(k,j,i-1))*(dy(j,i)+dy(j,i-1)) 
+          enddo
+       enddo
+    enddo
+    allocate(Ary(nz,ny+1,nx))
+    do i = 1,nx
+       do j = 1,ny+1
+          do k = 1,nz
+             Ary(k,j,i) = 0.25*(dz(k,j,i)+dz(k,j-1,i))*(dx(j,i)+dx(j-1,i)) 
+          enddo
+       enddo
+    enddo
+    allocate(Arz(ny,nx))
+    do i = 1,nx
+       do j = 1,ny
+          Arz(j,i) =  dx(j,i)*dy(j,i)
+       enddo
+    enddo
+
+    !!  Slope in y-direction multiplied by dx defined at rho-points
+    !!  Slope in x-direction multiplied by dy defined at rho-points
+    allocate(zxdy(nz+1,0:ny+1,0:nx+1))
+    allocate(zydx(nz+1,0:ny+1,0:nx+1))
+    do i = 1,nx
+       do j = 1,ny
+          do k = 1,nz
+             zydx(k,j,i) = 0.5*(zr(k,j+1,i)-zw(k,j-1,i))*dx(j,i)/dy(j,i)
+             zxdy(k,j,i) = 0.5*(zr(k,j,i+1)-zw(k,j,i-1))*dy(j,i)/dx(j,i)
+          enddo
+       enddo
+    enddo
+    zydx(nz+1,:,:) = 0._8
+    zydx(:,0,:)    = 0._8
+    zydx(:,ny+1,:) = 0._8
+    zydx(:,:,0)    = 0._8
+    zydx(:,:,nx+1) = 0._8
+
+    zxdy(nz+1,:,:) = 0._8
+    zxdy(:,0,:)    = 0._8
+    zxdy(:,ny+1,:) = 0._8
+    zxdy(:,:,0)    = 0._8
+    zxdy(:,:,nx+1) = 0._8
+
+
+    !NG
+    allocate(zx(nz+1,0:ny+1,0:nx+1))
+    allocate(zy(nz+1,0:ny+1,0:nx+1))
+    do i = 1,nx
+       do j = 1,ny
+          do k = 1,nz
+             zy(k,j,i) = 0.5*(zr(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
+             zx(k,j,i) = 0.5*(zr(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
+          enddo
+       enddo
+    enddo
+    zy(nz+1,:,:) = 0._8
+    zy(:,0,:)    = 0._8
+    zy(:,ny+1,:) = 0._8
+    zy(:,:,0)    = 0._8
+    zy(:,:,nx+1) = 0._8
+
+    zx(nz+1,:,:) = 0._8
+    zx(:,0,:)    = 0._8
+    zx(:,ny+1,:) = 0._8
+    zx(:,:,0)    = 0._8
+    zx(:,:,nx+1) = 0._8
+    !NG
+
+
+    allocate(zyw(nz+1,ny,nx))
+    allocate(zxw(nz+1,ny,nx))
+    do i = 1,nx
+       do j = 1,ny
+          do k = 1,nz+1
+             zyw(k,j,i) = 0.5*(zw(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
+             zxw(k,j,i) = 0.5*(zw(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
+          enddo
+       enddo
+    enddo
+
+    !!  ----------------------------------------------------------------------------------------------------------------
+    do i = 1,nx
+       do j = 1,ny
+          do k = 2,nz
+             cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
+             cA(3,k,j,i) = 0.25*zydx(k+1,j,i)+0.25*zydx(k,j-1,i)                               !! couples with k+1 j-1
+             cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)                                                 !! couples with j-1
+             cA(5,k,j,i) =-0.25*zydx(k-1,j,i)-0.25*zydx(k,j-1,i)                               !! couples with k-1 j-1
+             cA(6,k,j,i) = 0.25*zxdy(k+1,j,i)+0.25*zxdy(k,j,i-1)                               !! Couples with k+1 i-1
+             cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)                                                 !! Couples with i-1
+             cA(8,k,j,i) =-0.25*zxdy(k-1,j,i)-0.25*zxdy(k,j,i-1)                               !! Couples with k-1 i-1
+          enddo
+          k = nz
+          cA(4,k,j,i) = cA(4,k,j,i) - 0.25*zydx(k,j-1,i) + 0.25*zydx(k,j,i)
+          cA(7,k,j,i) = cA(7,k,j,i) - 0.25*zxdy(k,j,i-1) + 0.25*zxdy(k,j,i)
+       enddo
+    enddo
+    do i = 1,nx
+       do j = 1,ny
+          do k = 2,nz-1
+             cA(1,k,j,i) = -cA(2,k,j,i)- cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+          enddo
+          k = nz
+          !NG cA(1,k,j,i) = -cA(2,k,j,i)- 2*cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+          cA(1,k,j,i) = -2*cA(2,k,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+       enddo
+    enddo
+
+    !! Bottom level.
+    k = 1
+    do i = 1,nx
+       do j = 1,ny
+          zxv = 0.5_8 * (zx(k,j,i) + zx(k,j-1,i))
+          zyv = 0.5_8 * (zy(k,j,i) + zy(k,j-1,i))
+          zxu = 0.5_8 * (zx(k,j,i) + zx(k,j,i-1))
+          zyu = 0.5_8 * (zy(k,j,i) + zy(k,j,i-1))
+          cA(3,k,j,i) = 0.25*zydx(k+1,j,i)+0.25*zydx(k,j-1,i)                              !! couples with k+1 j-1
+          cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)*(1 - 0.5*zyv*zyv/(1+zxv*zxv+zyv*zyv))          !! couples with j-1
+          cA(6,k,j,i) = 0.25*zxdy(k+1,j,i)+0.25*zxdy(k,j,i-1)                              !! Couples with k+1 i-1
+          cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)*(1 - 0.5*zxu*zxu/(1+zxu*zxu+zyu*zyu))          !! Couples with i-1
+          cA(5,k,j,i) = 0.125*zx(k,j+1,i)*zy(k,j+1,i) + 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j+1,i-1
+          cA(8,k,j,i) =-0.125*zx(k,j-1,i)*zy(k,j-1,i) - 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j-1,i-1
+       enddo
+    enddo
+    do i = 1,nx
+       do j = 1,ny
+          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+       enddo
+    enddo
+    !!
+!!! For the moment, we will implement side bc by means of a buffer. The next phase will include a mask, whereupon we must
+    !! implement horizontal condition in the matrix coefficients
+
+    !! West Boundary 
+    i = 1
+    do j = 1,ny
+       do k = 1,nz
+          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+0.5*zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
+       enddo
+    enddo
+    do j = 1,ny
+       do k = 1,nz
+          !         cA(1,k,j,i) = -cA(2,k,j,i)- cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i+1)
+          !         cA(2,k,j,i) = cA(2,k,j,i) - 0.25*zxdy(k-1,j,i) + 0.25*zxdy(k,j,i)
+       enddo
+    enddo
+    !! East Boundary 
+    i = nx
+    do j = 1,ny
+       do k = 1,nz
+          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+0.5*zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
+          ! &                   + 0.25*zxdy(k-1,j,i) - 0.25*zxdy(k,j,i)
+       enddo
+    enddo
+    !! South Boundary 
+    j = 1
+    do i = 1,nx
+       do k = 1,nz
+          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+0.5*zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
+          ! &                   - 0.25*zydx(k-1,j,i) + 0.25*zydx(k,j,i)
+       enddo
+    enddo
+    !! North Boundary 
+    j = ny
+    do i = 1,nx
+       do k = 1,nz
+          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+0.5*zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
+          ! &                   + 0.25*zydx(k-1,j,i) - 0.25*zydx(k,j,i)
+       enddo
+    enddo
+
+    deallocate(Arx)
+    deallocate(Ary)
+    deallocate(Arz)
+    deallocate(zxdy)
+    deallocate(zydx)
+
+
+  end subroutine define_matrix_real
+
   !-------------------------------------------------------------------------     
   subroutine coarsen_matrix(lev)
     integer(kind=ip),intent(in):: lev
@@ -128,7 +398,7 @@ contains
     if ((aggressive).and.(lev==1)) then
 !       call coarsen_matrix_aggressive(lev)
 
-    elseif (grid(lev+1)%nz == 1) then
+    elseif (grid(lev)%nz == 1) then
        call coarsen_matrix_2D(Af,Ac,nx,ny,nz)
        ! fill the halo
        do l=1,3
@@ -261,7 +531,6 @@ contains
     integer(kind=ip):: k, j, i
     integer(kind=ip):: km, jm, im
     integer(kind=ip):: k2, j2, i2
-    integer(kind=ip):: d
 
     real(kind=rp)   :: diag,cff
 

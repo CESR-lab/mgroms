@@ -37,7 +37,7 @@ program mg_testrelax
   npxg  = 2
   npyg  = 2
 
-  nit     = 100
+  nit     = 10
   nsweeps = 1
 
   call mpi_init(ierr)
@@ -97,6 +97,6 @@ program mg_testrelax
   call mpi_finalize(ierr)
 
   call toc(1,'mg_testrelax')
-  call print_tictoc(myrank)
+  if(myrank == 0) call print_tictoc(myrank)
 
 end program mg_testrelax

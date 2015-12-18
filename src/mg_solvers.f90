@@ -25,7 +25,6 @@ contains
     real(kind=rp),dimension(:,:,:), pointer:: p,b,r
 
     real(kind = lg)  :: tstart,tend,perf
-    integer(kind=ip) :: npxg,npyg,nxg,nyg,nzg
     real(kind=rp) :: rnxg,rnyg,rnzg
     real(kind=rp) :: rnpxg,rnpyg
 

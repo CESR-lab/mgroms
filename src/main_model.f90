@@ -2,6 +2,7 @@ program main_model
 
   use mpi
   use nhydro
+  use mg_netcdf_out
 
   implicit none
 
@@ -19,9 +20,14 @@ program main_model
   real(kind=8), dimension(:,:,:), allocatable :: zr, zw
 
   real(kind=8), dimension(:,:,:), allocatable :: u,v,w
+  real(kind=8), dimension(:,:), allocatable :: h
 
   integer(kind=4) :: k
   integer(kind=4) :: np, ierr, rank
+  integer(kind=4) :: nh
+  integer(kind=4) :: pi, pj
+  integer(kind=4) :: i, j 
+  real(kind=8)    :: x, y, x0, y0
 
   ! global domain dimensions
   nxg   = 128*2
@@ -47,12 +53,6 @@ program main_model
   ! fill the neighbours array
   call mm_define_heighbours(npxg, npyg, neighb)
 
-  ! grid definition
-  allocate(dx(ny,nx))
-  allocate(dy(ny,nx))
-  allocate(zr(  nz,ny,nx))
-  allocate(zw(nz+1,ny,nx))
-
   allocate(u(nz,ny,1:nx+1))
   allocate(v(nz,1:ny+1,nx))
   allocate(w(1:nz+1,ny,nx))
@@ -63,26 +63,82 @@ program main_model
   w(1,:,:)    =  0._8
   w(nz+1,:,:) =  0._8
 
-  dx(:,:) = 1._8
-  dy(:,:) = 1._8
+  if (cmatrix == 'simple') then
+     ! grid definition
+     allocate(dx(ny,nx))
+     allocate(dy(ny,nx))
+     allocate(zr(  nz,ny,nx))
+     allocate(zw(nz+1,ny,nx))
 
-  do k=1, nz
-     zr(k,:,:) = k - 0.5_8
-     zw(k,:,:) = k - 1._8
-  end do
+     dx(:,:) = 1._8
+     dy(:,:) = 1._8
 
-  zw(nz+1,:,:) = nz
+     do k=1, nz
+        zr(k,:,:) = k - 0.5_8
+        zw(k,:,:) = k - 1._8
+     end do
+
+     zw(nz+1,:,:) = nz
+
+  elseif (cmatrix == 'real') then
+
+     ! grid definition
+     allocate(h(0:ny+1,0:nx+1))
+     allocate(dx(0:ny+1,0:nx+1))
+     allocate(dy(0:ny+1,0:nx+1))
+     allocate(zr(nz,0:ny+1,0:nx+1))
+     allocate(zw(nz+1,0:ny+1,0:nx+1))
+
+     dx(:,:) = 1._8
+     dy(:,:) = 1._8
+
+     nh = nhalo
+
+     pj = rank/npxg   
+     pi = rank-pj*npxg
+
+     x0 = real(nx,kind=rp)
+     y0 = real(ny,kind=rp)
+
+!!!  I need to know my global index range
+     do i = 0,nx+1
+        do j = 0,ny+1
+           x = ( real(i+(pi*nx),kind=rp)- 0.5_rp) * dx(i,j)
+           y = ( real(j+(pj*ny),kind=rp)- 0.5_rp) * dy(i,j)
+
+           h(j,i) = 4000._rp - 2000._rp * &
+                exp(-0.001_rp*((x-x0)**2._rp+(y-y0)**2._rp))
+        enddo
+     enddo
+
+     call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=rank)
+
+     do i = 0,nx+1
+        do j = 0,ny+1
+           do k = 1,nz
+              zr(k,j,i) = (k-0.5_rp)*h(j,i)/nz - h(j,i)
+              zw(k,j,i) = (k-1.0_rp)*h(j,i)/nz - h(j,i)
+           enddo
+           zw(nz+1,j,i) = 0.0_rp
+        enddo
+     enddo
+
+  else
+     stop
+
+  endif
 
   if (rank.eq.0)  write(*,*)'Start main model!'
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------
-  call nhydro_init(npxg, npyg, neighb, dx, dy, zr, zw)
+
+  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw)
 
   call nhydro_solve(u,v,w)
 
   if(myrank == 0) call print_tictoc(myrank)
-  
-!  call nhydro_clean()
+
+  !  call nhydro_clean()
 
   call mpi_finalize(ierr)
 
@@ -134,5 +190,5 @@ contains
 
   end subroutine mm_define_heighbours
 
-end program main_model
+end program
 

@@ -36,6 +36,7 @@ mainmodel_SOURCES=       \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
 	mg_namelist.f90      \
+	mg_netcdf_out.f90    \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
 	mg_gather.f90        \

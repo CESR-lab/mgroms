@@ -18,6 +18,8 @@ module mg_namelist
   integer(kind=ip) :: ns_pre      =   2
   integer(kind=ip) :: ns_post     =   2
 
+  character(len=16) :: cmatrix='real'
+
   logical         :: aggressive = .false.
 
   namelist/nhparam/ &
@@ -26,6 +28,7 @@ module mg_namelist
        ns_coarsest, &
        ns_pre     , &
        ns_post    , &
+       cmatrix    , &
        aggressive
 
  contains
@@ -65,6 +68,7 @@ module mg_namelist
            write(*,*)'  - ns_coarsest: ', ns_coarsest
            write(*,*)'  - ns_pre     : ', ns_pre
            write(*,*)'  - ns_post    : ', ns_post
+           write(*,*)'  - cmatrix    : ', TRIM(cmatrix)
            write(*,*)'  - aggressive : ', aggressive
         endif
      endif
