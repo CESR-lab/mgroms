@@ -375,7 +375,7 @@ contains
     real(kind=rp),dimension(:,:,:,:),pointer :: Af
 
     integer(kind=ip) :: nx, ny, nz
-    integer(kind=ip) :: l
+    integer(kind=ip) :: l, nd
 
     nx = grid(lev+1)%nx
     ny = grid(lev+1)%ny
@@ -414,8 +414,8 @@ contains
     end if
 
     if (grid(lev+1)%gather == 1) then
-       
-       do l=1,8
+       nd = size(Ac,1)       
+       do l=1,nd
           grid(lev+1)%dummy3 = Ac(l,:,:,:)
           call gather(lev+1,grid(lev+1)%dummy3,grid(lev+1)%r)
           ! fill the halo
@@ -424,7 +424,8 @@ contains
        enddo
     else
        ! fill the halo
-       do l=1,8
+       nd = size(Ac,1) 
+       do l=1,nd
           grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
           call fill_halo(lev+1,grid(lev+1)%r)
           grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r

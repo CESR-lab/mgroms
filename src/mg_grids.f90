@@ -500,7 +500,11 @@ contains
           nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
           allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
-          allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
+          if(nz.eq.1)then
+             allocate(grid(lev)%cAdummy(3,nz,1-nh:ny+nh,1-nh:nx+nh))
+          else
+             allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
+          endif
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           ! number of elements of dummy3
           grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
