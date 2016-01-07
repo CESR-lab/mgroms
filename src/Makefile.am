@@ -27,7 +27,8 @@ bin_PROGRAMS   =   \
 	testcoarsening \
 	testgather     \
 	testintergrids \
-	testnetcdf
+	testnetcdf     \
+	testseamount
 #check_PROGRAMS = $(bin_PROGRAMS)
 #TESTS          = $(check_PROGRAMS)
 ##
@@ -111,3 +112,18 @@ testnetcdf_SOURCES =     \
 	mg_define_matrix.f90 \
 	mg_relax.f90         \
 	mg_testnetcdf.f90
+##
+testseamount_SOURCES=    \
+	mg_mpi.f90           \
+	mg_tictoc.f90        \
+	mg_namelist.f90      \
+	mg_netcdf_out.f90    \
+	mg_grids.f90         \
+	mg_mpi_exchange.f90  \
+	mg_gather.f90        \
+	mg_define_matrix.f90 \
+	mg_relax.f90         \
+	mg_intergrids.f90    \
+	mg_solvers.f90       \
+	nhydro.f90           \
+	mg_testseamount.f90

@@ -80,7 +80,8 @@ build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = mainmodel$(EXEEXT) testhalo$(EXEEXT) testrelax$(EXEEXT) \
 	testcoarsening$(EXEEXT) testgather$(EXEEXT) \
-	testintergrids$(EXEEXT) testnetcdf$(EXEEXT)
+	testintergrids$(EXEEXT) testnetcdf$(EXEEXT) \
+	testseamount$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -140,6 +141,15 @@ am_testrelax_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_relax.$(OBJEXT) mg_testrelax.$(OBJEXT)
 testrelax_OBJECTS = $(am_testrelax_OBJECTS)
 testrelax_LDADD = $(LDADD)
+am_testseamount_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
+	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
+	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
+	mg_gather.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
+	mg_relax.$(OBJEXT) mg_intergrids.$(OBJEXT) \
+	mg_solvers.$(OBJEXT) nhydro.$(OBJEXT) \
+	mg_testseamount.$(OBJEXT)
+testseamount_OBJECTS = $(am_testseamount_OBJECTS)
+testseamount_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -168,11 +178,11 @@ am__v_FCLD_1 =
 SOURCES = $(mainmodel_SOURCES) $(testcoarsening_SOURCES) \
 	$(testgather_SOURCES) $(testhalo_SOURCES) \
 	$(testintergrids_SOURCES) $(testnetcdf_SOURCES) \
-	$(testrelax_SOURCES)
+	$(testrelax_SOURCES) $(testseamount_SOURCES)
 DIST_SOURCES = $(mainmodel_SOURCES) $(testcoarsening_SOURCES) \
 	$(testgather_SOURCES) $(testhalo_SOURCES) \
 	$(testintergrids_SOURCES) $(testnetcdf_SOURCES) \
-	$(testrelax_SOURCES)
+	$(testrelax_SOURCES) $(testseamount_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -422,6 +432,21 @@ testnetcdf_SOURCES = \
 	mg_relax.f90         \
 	mg_testnetcdf.f90
 
+testseamount_SOURCES = \
+	mg_mpi.f90           \
+	mg_tictoc.f90        \
+	mg_namelist.f90      \
+	mg_netcdf_out.f90    \
+	mg_grids.f90         \
+	mg_mpi_exchange.f90  \
+	mg_gather.f90        \
+	mg_define_matrix.f90 \
+	mg_relax.f90         \
+	mg_intergrids.f90    \
+	mg_solvers.f90       \
+	nhydro.f90           \
+	mg_testseamount.f90
+
 all: all-recursive
 
 .SUFFIXES:
@@ -526,6 +551,10 @@ testnetcdf$(EXEEXT): $(testnetcdf_OBJECTS) $(testnetcdf_DEPENDENCIES) $(EXTRA_te
 testrelax$(EXEEXT): $(testrelax_OBJECTS) $(testrelax_DEPENDENCIES) $(EXTRA_testrelax_DEPENDENCIES) 
 	@rm -f testrelax$(EXEEXT)
 	$(AM_V_FCLD)$(FCLINK) $(testrelax_OBJECTS) $(testrelax_LDADD) $(LIBS)
+
+testseamount$(EXEEXT): $(testseamount_OBJECTS) $(testseamount_DEPENDENCIES) $(EXTRA_testseamount_DEPENDENCIES) 
+	@rm -f testseamount$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(testseamount_OBJECTS) $(testseamount_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

@@ -6,6 +6,7 @@ module mg_define_matrix
   use mg_grids
   use mg_mpi_exchange
   use mg_gather
+  use mg_netcdf_out
 
   implicit none
 
@@ -27,8 +28,7 @@ contains
        stop
     endif
 
-
-    do lev=1, nlevs-1
+    do lev = 1,nlevs-1
        call coarsen_matrix(lev)
     enddo
 
@@ -140,6 +140,9 @@ contains
     real(kind=rp), dimension(:,:,:), allocatable :: zydx,zxdy
     real(kind=rp), dimension(:,:,:), allocatable :: zxw, zyw
 
+    integer(kind=ip):: d
+    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
+
     ! TODO NG
     ! zw,zr can change in time
     ! dx,dy constant in time
@@ -159,16 +162,21 @@ contains
           enddo
        enddo
     enddo
+!ND
+    call write_netcdf(dz,vname='dz',netcdf_file_name='dz.nc',rank=myrank)
 
-    allocate(dzw(nz,0:ny+1,0:nx+1))
+    allocate(dzw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
-          do k = 1,nz-1
-             dzw(k,j,i) = zr(k+1,j,i)-zr(k,j,i) !!  cell height at w-points
+          dzw(1,j,i) = zr(1,j,i) - zw(1,j,i)
+          do k = 2,nz
+             dzw(k,j,i) = zr(k,j,i)-zr(k-1,j,i) !!  cell height at w-points
           enddo
-           dzw(nz,j,i) = zw(nz+1,j,i) - zr(nz,j,i)
+          dzw(nz+1,j,i) = zw(nz+1,j,i) - zr(nz,j,i)
        enddo
     enddo
+!ND
+    call write_netcdf(dzw,vname='dzw',netcdf_file_name='dzw.nc',rank=myrank)
 
     allocate(dxu(ny,nx+1))
     do i = 1,nx+1
@@ -182,7 +190,11 @@ contains
           dyv(j,i) = 0.5*(dy(j,i) + dy(j-1,i))
        enddo
     enddo
+!ND
+    call write_netcdf(dxu,vname='dxu',netcdf_file_name='dxu.nc',rank=myrank)
+    call write_netcdf(dyv,vname='dyv',netcdf_file_name='dyv.nc',rank=myrank)
 
+    !!  Areas
     allocate(Arx(nz,ny,nx+1))
     do i = 1,nx+1
        do j = 1,ny
@@ -202,43 +214,19 @@ contains
     allocate(Arz(ny,nx))
     do i = 1,nx
        do j = 1,ny
-          Arz(j,i) =  dx(j,i)*dy(j,i)
+          Arz(j,i) = dx(j,i)*dy(j,i)
        enddo
     enddo
 
-    !!  Slope in y-direction multiplied by dx defined at rho-points
-    !!  Slope in x-direction multiplied by dy defined at rho-points
-    allocate(zxdy(nz+1,0:ny+1,0:nx+1))
-    allocate(zydx(nz+1,0:ny+1,0:nx+1))
-    do i = 1,nx
-       do j = 1,ny
-          do k = 1,nz
-             zydx(k,j,i) = 0.5*(zr(k,j+1,i)-zw(k,j-1,i))*dx(j,i)/dy(j,i)
-             zxdy(k,j,i) = 0.5*(zr(k,j,i+1)-zw(k,j,i-1))*dy(j,i)/dx(j,i)
-          enddo
-       enddo
-    enddo
-    zydx(nz+1,:,:) = 0._8
-    zydx(:,0,:)    = 0._8
-    zydx(:,ny+1,:) = 0._8
-    zydx(:,:,0)    = 0._8
-    zydx(:,:,nx+1) = 0._8
-
-    zxdy(nz+1,:,:) = 0._8
-    zxdy(:,0,:)    = 0._8
-    zxdy(:,ny+1,:) = 0._8
-    zxdy(:,:,0)    = 0._8
-    zxdy(:,:,nx+1) = 0._8
-
-
-    !NG
+    !!  Slope in y-direction defined at rho-points
+    !!  Slope in x-direction defined at rho-points
     allocate(zx(nz+1,0:ny+1,0:nx+1))
     allocate(zy(nz+1,0:ny+1,0:nx+1))
     do i = 1,nx
        do j = 1,ny
           do k = 1,nz
-             zy(k,j,i) = 0.5*(zr(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
-             zx(k,j,i) = 0.5*(zr(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
+             zy(k,j,i) = 0.5*(zr(k,j+1,i)-zr(k,j-1,i))/dy(j,i)
+             zx(k,j,i) = 0.5*(zr(k,j,i+1)-zr(k,j,i-1))/dx(j,i)
           enddo
        enddo
     enddo
@@ -253,8 +241,13 @@ contains
     zx(:,ny+1,:) = 0._8
     zx(:,:,0)    = 0._8
     zx(:,:,nx+1) = 0._8
-    !NG
 
+    allocate(zxdy(nz+1,0:ny+1,0:nx+1))
+    allocate(zydx(nz+1,0:ny+1,0:nx+1))
+    do k = 1,nz
+       zydx(k,:,:) = zy(k,:,:) *dx(:,:)
+       zxdy(k,:,:) = zx(k,:,:) *dy(:,:)
+    enddo
 
     allocate(zyw(nz+1,ny,nx))
     allocate(zxw(nz+1,ny,nx))
@@ -267,7 +260,7 @@ contains
        enddo
     enddo
 
-    !!  ----------------------------------------------------------------------------------------------------------------
+    !! cA : levels 2 to nz
     do i = 1,nx
        do j = 1,ny
           do k = 2,nz
@@ -284,18 +277,30 @@ contains
           cA(7,k,j,i) = cA(7,k,j,i) - 0.25*zxdy(k,j,i-1) + 0.25*zxdy(k,j,i)
        enddo
     enddo
+!ND
+!    call fill_halo(1,cA) !fill_halo_4d in the future!
+    dummy3D => grid(1)%r   
+    do d = 1,8       
+       dummy3D(:,:,:) = cA(d,:,:,:)
+       call fill_halo(1,dummy3D)
+       cA(d,:,:,:) = dummy3D(:,:,:)
+    enddo
+!
     do i = 1,nx
        do j = 1,ny
           do k = 2,nz-1
-             cA(1,k,j,i) = -cA(2,k,j,i)- cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+!ND
+             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+!             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
           enddo
           k = nz
-          !NG cA(1,k,j,i) = -cA(2,k,j,i)- 2*cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
-          cA(1,k,j,i) = -2*cA(2,k,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+!ND
+          cA(1,k,j,i) = -2*cA(2,k,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+!          cA(1,k,j,i) = -2*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
        enddo
     enddo
 
-    !! Bottom level.
+    !! cA : bottom level
     k = 1
     do i = 1,nx
        do j = 1,ny
@@ -311,13 +316,28 @@ contains
           cA(8,k,j,i) =-0.125*zx(k,j-1,i)*zy(k,j-1,i) - 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j-1,i-1
        enddo
     enddo
+!ND
+!    call fill_halo(1,cA) !fill_halo_4d in the future!
+    dummy3D => grid(1)%r
+    do d = 1,8       
+       dummy3D(:,:,:) = cA(d,:,:,:)
+       call fill_halo(1,dummy3D)
+       cA(d,:,:,:) = dummy3D(:,:,:)
+    enddo
+!
     do i = 1,nx
        do j = 1,ny
-          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i)- cA(7,k,j,i+1)
+!ND
+          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+!          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
        enddo
     enddo
+
+!ND
+    call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+
     !!
-!!! For the moment, we will implement side bc by means of a buffer. The next phase will include a mask, whereupon we must
+    !!! For the moment, we will implement side bc by means of a buffer. The next phase will include a mask, whereupon we must
     !! implement horizontal condition in the matrix coefficients
 
     !! West Boundary 
@@ -363,7 +383,6 @@ contains
     deallocate(Arz)
     deallocate(zxdy)
     deallocate(zydx)
-
 
   end subroutine define_matrix_real
 
