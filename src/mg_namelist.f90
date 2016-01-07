@@ -18,9 +18,11 @@ module mg_namelist
   integer(kind=ip) :: ns_pre      =   2
   integer(kind=ip) :: ns_post     =   2
 
-  character(len=16) :: cmatrix='real'
+  character(len=16) :: cmatrix='simple'       !- 'simple' or 'real'
 
-  logical         :: aggressive = .false.
+  character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
+
+  logical           :: aggressive = .false.   !- .false. or .true.
 
   namelist/nhparam/ &
        nhalo      , &
@@ -55,10 +57,10 @@ module mg_namelist
         fn_nml = 'nh_namelist'
      endif
 
-     OPEN(unit=lun_nml, File=fn_nml, ACTION='READ')
+     open(unit=lun_nml, File=fn_nml, ACTION='READ')
 
-     REWIND(unit=lun_nml)
-     READ(unit=lun_nml, nml=nhparam)
+     rewind(unit=lun_nml)
+     read(unit=lun_nml, nml=nhparam)
 
      if (vb) then
         if (myrank == 0) then
@@ -68,7 +70,8 @@ module mg_namelist
            write(*,*)'  - ns_coarsest: ', ns_coarsest
            write(*,*)'  - ns_pre     : ', ns_pre
            write(*,*)'  - ns_post    : ', ns_post
-           write(*,*)'  - cmatrix    : ', TRIM(cmatrix)
+           write(*,*)'  - cmatrix    : ', trim(cmatrix)
+           write(*,*)'  - mpiexchange: ', trim(mpiexchange)
            write(*,*)'  - aggressive : ', aggressive
         endif
      endif
