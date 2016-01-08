@@ -3,7 +3,7 @@
 % Guillaume's matlab code
 nx = 128; 
 nz = 128;
-[ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz);
+[A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz);
 
 % fortran code
 h_000 = ncread('../../src/h_h_000.nc','h');
@@ -90,8 +90,7 @@ k = 10
 plot(cat(1,squeeze(dzr_000(k,j,2:end-1)),squeeze(dzr_001(k,j,2:end-1))),'*'); hold on
 plot(dzr(k,:),'o')
 
-% cmp dzw : problem at top level!!
-%           one level less than Guillaume's code
+% cmp dzw : problem at top level -> solved by adding a level and recomputing
 figure
 j = 2
 cmin = min(min(cat(2,squeeze(dzw_000(:,j,2:end-1)),squeeze(dzw_001(:,j,2:end-1)))));
@@ -108,67 +107,89 @@ figure;
 plot(cat(2,dxu_000(2:end-1,2:end-1),dxu_001(2:end-1,2:end-1))','*'); hold on
 plot(dxu,'o')
 
-% cmp cA with i-1 : problem at the bottom, solved by redefining zx and zx
+% cmp cA with i-1 : problem at the bottom -> solved by redefining zx and zx
 figure;
-c = 7
-j = 2
+c = 7;
+j = 2;
 cmin = min(min(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))))); 
 cmax = max(max(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1)))));
 subplot(1,2,1); imagesc(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))),[cmin cmax]); axis xy;
 subplot(1,2,2); imagesc(ce,[cmin cmax]); axis xy;
 figure;
-k = 1
+k = 1;
 plot(cat(1,squeeze(cA_000(c,k,j,2:end-1)),squeeze(cA_001(c,k,j,2:end-1))),'*'); hold on
 plot(ce(k,:),'o')
 
-% cmp cA with j-1 : not to be taken into account in the 2D version
+% cmp cA with j-1 : not to be taken into account when comparing with the 2D version
 figure;
-c = 4
-j = 2
+c = 4;
+j = 2;
 cmin = min(min(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))))); 
 cmax = max(max(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1)))));
 subplot(1,2,1); imagesc(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))),[cmin cmax]); axis xy;
 
-% cmp cA with k-1 : problem at the top, solved by redefining dzw
+% cmp cA with k-1 : problem at the top -> solved by redefining dzw
 figure;
-c = 2
-j = 2
+c = 2;
+j = 2;
 cmin = min(min(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))))); 
 cmax = max(max(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1)))));
 subplot(1,2,1); imagesc(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))),[cmin cmax]); axis xy;
 subplot(1,2,2); imagesc(cs,[cmin cmax]); axis xy;
 figure;
-k = 3
+k = 128;
 plot(cat(1,squeeze(cA_000(c,k,j,2:end-1)),squeeze(cA_001(c,k,j,2:end-1))),'*'); hold on
 plot(cs(k,:),'o')
 
 % cmp cA with i-1, k+1 : problem with sign?
 figure;
-c = 6
-j = 2
+c = 6;
+j = 2;
 cmin = min(min(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))))); 
 cmax = max(max(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1)))));
 subplot(1,2,1); imagesc(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))),[cmin cmax]); axis xy;
 subplot(1,2,2); imagesc(cen,[cmin cmax]); axis xy;
 figure;
-k = 10
+k = 10;
 plot(cat(1,squeeze(cA_000(c,k,j,2:end-1)),squeeze(cA_001(c,k,j,2:end-1))),'*'); hold on
 plot(cen(k,:),'o')
 
-% cmp cA with itself : interior problem solved with fill_halo, 
-%                      remaining problem at the top?
+% cmp cA with j-1, k+1 : not to be taken into account when comparing with the 2D version
 figure;
-c = 1 
+c = 3
 j = 2
+
+% cmp cA with i-1, k-1 : problem with sign?
+%                        bottom value in fortran code represent coupling
+%                        with i-1, j-1 : 0 in that case of no meridional slope
+figure;
+c = 8;
+j = 2;
+cmin = min(min(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))))); 
+cmax = max(max(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1)))));
+subplot(1,2,1); imagesc(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))),[cmin cmax]); axis xy;
+subplot(1,2,2); imagesc(ces,[cmin cmax]); axis xy;
+figure;
+k = 1;
+plot(cat(1,squeeze(cA_000(c,k,j,2:end-1)),squeeze(cA_001(c,k,j,2:end-1))),'*'); hold on
+plot(ces(k,:),'o')
+
+% cmp cA with j-1, k-1 : not to be taken into account when comparing with the 2D version
+figure;
+c = 5
+j = 2
+
+% cmp cA with itself : interior boundaries problem -> solved with fill_halo, 
+%                      problem at the top -> solved by changing from 2 to 3
+figure;
+c = 1;
+j = 2;
 cmin = min(min(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))))); 
 cmax = max(max(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1)))));
 subplot(1,2,1); imagesc(cat(2,squeeze(cA_000(c,:,j,2:end-1)),squeeze(cA_001(c,:,j,2:end-1))),[cmin cmax]); axis xy;
 subplot(1,2,2); imagesc(co,[cmin cmax]); axis xy;
 figure;
-k = 128
+k = 128;
 plot(cat(1,squeeze(cA_000(c,k,j,2:end-1)),squeeze(cA_001(c,k,j,2:end-1))),'*'); hold on
 plot(co(k,:),'o')
 
-%% check rhs
-
-%% check solver

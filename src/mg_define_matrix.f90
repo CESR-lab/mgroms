@@ -86,7 +86,6 @@ contains
                 cA(7,k,j,i) = dxi*dxi
                 cA(8,k,j,i) = 0.0_8
              endif
-
 ! --- extended stencil with diagonal coupling: better convergence rate ---
              if(trim(matrixname)=='15points')then
                 cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)-4*(dxi*dzi+dyi*dzi)
@@ -154,6 +153,10 @@ contains
     nh = grid(lev)%nh
     cA => grid(1)%cA 
 
+!ND
+    call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+    call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+
     allocate(dz(nz,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
@@ -162,9 +165,6 @@ contains
           enddo
        enddo
     enddo
-!ND
-    call write_netcdf(dz,vname='dz',netcdf_file_name='dz.nc',rank=myrank)
-
     allocate(dzw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
@@ -175,9 +175,6 @@ contains
           dzw(nz+1,j,i) = zw(nz+1,j,i) - zr(nz,j,i)
        enddo
     enddo
-!ND
-    call write_netcdf(dzw,vname='dzw',netcdf_file_name='dzw.nc',rank=myrank)
-
     allocate(dxu(ny,nx+1))
     do i = 1,nx+1
        do j = 1,ny
@@ -190,9 +187,6 @@ contains
           dyv(j,i) = 0.5*(dy(j,i) + dy(j-1,i))
        enddo
     enddo
-!ND
-    call write_netcdf(dxu,vname='dxu',netcdf_file_name='dxu.nc',rank=myrank)
-    call write_netcdf(dyv,vname='dyv',netcdf_file_name='dyv.nc',rank=myrank)
 
     !!  Areas
     allocate(Arx(nz,ny,nx+1))
@@ -218,8 +212,7 @@ contains
        enddo
     enddo
 
-    !!  Slope in y-direction defined at rho-points
-    !!  Slope in x-direction defined at rho-points
+    !! Slopes in x- and y-direction defined at rho-points
     allocate(zx(nz+1,0:ny+1,0:nx+1))
     allocate(zy(nz+1,0:ny+1,0:nx+1))
     do i = 1,nx
@@ -295,8 +288,8 @@ contains
           enddo
           k = nz
 !ND
-          cA(1,k,j,i) = -2*cA(2,k,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!          cA(1,k,j,i) = -2*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
+          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+!          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
        enddo
     enddo
 

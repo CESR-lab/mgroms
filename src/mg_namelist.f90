@@ -18,7 +18,7 @@ module mg_namelist
   integer(kind=ip) :: ns_pre      =   2
   integer(kind=ip) :: ns_post     =   2
 
-  character(len=16) :: cmatrix='simple'       !- 'simple' or 'real'
+  character(len=16) :: cmatrix='real'       !- 'simple' or 'real'
 
   character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
 

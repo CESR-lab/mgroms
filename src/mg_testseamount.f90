@@ -83,13 +83,13 @@ program mg_testseamount
   pj = rank/npxg   
   pi = rank-pj*npxg
 
-  x0 = Lx/2._rp
+  x0 = Lx * 0.5_rp
 
-  !!!  I need to know my global index range
-  do i = 0,nx+1
+  do i = 0,nx+1 !!!  I need to know my global index range
      do j = 0,ny+1
         x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
         h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp) )
+!        h(j,i) = Hc
      enddo
   enddo
 

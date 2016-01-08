@@ -1,8 +1,8 @@
-function [ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz)
+function [A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz)
 %% setup the 9 points pressure operator in sigma coordinates
 
-L=10e3;
-H=4e3;
+L = 10e3;
+H = 4e3;
 alpha = 25./(L^2);
 
 %% horiz metrics
@@ -21,9 +21,10 @@ xr = ones(nz,1)*x;
 
 %% vert metrics
 
-topo = inline('(H - 0.5*H*exp(-alpha*(x-0.5*L).^2))','x','H','L','alpha');
+topo = inline('H','x','H','L','alpha');
+%topo = inline('(H - 0.5*H*exp(-alpha*(x-0.5*L).^2))','x','H','L','alpha');
 
-h = topo(x,H,L,alpha);
+h = topo(x,H,L,alpha).*ones(1,nx);
 
 zw = zlevs_ND(h,nz,'w');
 zw = reshape(zw,nz+1,nx);
@@ -43,7 +44,7 @@ dzw(nz+1,:) = (3*zw(nz+1,:)-3*zr(nz,:)+zw(nz,:))-zr(nz,:);
 dzw(1,:) = zr(1,:)-(3*zw(1,:)-3*zr(1,:)+zw(2,:));
 %dzw(1,:) = 3*dzw(2,:)-dzr(1,:)-dzw(3,:);
 
-hu = topo(xu,H,L,alpha);
+hu = topo(xu,H,L,alpha).*ones(1,nx+1);
 
 zwu = zlevs_ND(hu,nz,'w');
 zwu = reshape(zwu,(nz+1),nx+1);
@@ -146,6 +147,95 @@ for k=1:nz-1
 end
 end
 
+%% define sparse matrix
+i=1:nx;im=1:nx-1;ip=2:nx;
+k=1:nz;km=1:nz-1;kp=2:nz;
 
+siz=[nz,nx];
+%
+I=[];
+J=[];
+s=[];
+% east
+c=ce(k,im);
+[ii,kk]=meshgrid(ip,k);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(im,k);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% west
+c=cw(k,ip);
+[ii,kk]=meshgrid(ip,k);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(im,k);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% north
+c=cn(km,i);
+[ii,kk]=meshgrid(i,kp);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(i,km);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% south
+c=cs(kp,i);
+[ii,kk]=meshgrid(i,kp);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(i,km);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% central
+c=co(k,i);
+[ii,kk]=meshgrid(i,k);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;I0];
+s=[s;c(:)];
+% northeast
+c=cen(km,im);
+[ii,kk]=meshgrid(ip,kp);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(im,km);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% southeast
+c=ces(kp,im);
+[ii,kk]=meshgrid(ip,km);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(im,kp);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% northwest
+c=cwn(km,ip);
+[ii,kk]=meshgrid(im,kp);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(ip,km);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% southwest
+c=cws(kp,ip);
+[ii,kk]=meshgrid(im,km);ii=ii(:);kk=kk(:);
+J0=sub2ind(siz,kk,ii);
+[ii,kk]=meshgrid(ip,kp);ii=ii(:);kk=kk(:);
+I0=sub2ind(siz,kk,ii);
+I=[I;I0];
+J=[J;J0];
+s=[s;c(:)];
+% A
+A=sparse(I,J,s,nx*nz,nx*nz);
 
 
