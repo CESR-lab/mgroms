@@ -47,8 +47,8 @@ subplot(3,2,1); imagesc(ur,[cmin cmax]); axis xy
 subplot(3,2,2); imagesc(wr,[cmin cmax]); axis xy
 subplot(3,2,3); imagesc(u,[cmin cmax]); axis xy
 subplot(3,2,4); imagesc(w,[cmin cmax]); axis xy
-subplot(3,2,5); imagesc(U./dzu,[cmin cmax]); axis xy
-subplot(3,2,6); imagesc(W./(ones(129,1)*dxw),[cmin cmax]); axis xy
+%subplot(3,2,5); imagesc(U./dzu,[cmin cmax]); axis xy
+%subplot(3,2,6); imagesc(W./(ones(129,1)*dxw),[cmin cmax]); axis xy
 figure;
 cmin = min([U(:);W(:)]);
 cmax = max([U(:);W(:)]);
@@ -91,8 +91,8 @@ subplot(3,2,1); imagesc(ur,[cmin cmax]); axis xy
 subplot(3,2,2); imagesc(wr,[cmin cmax]); axis xy
 subplot(3,2,3); imagesc(u,[cmin cmax]); axis xy
 subplot(3,2,4); imagesc(w,[cmin cmax]); axis xy
-subplot(3,2,5); imagesc(U./dzu,[cmin cmax]); axis xy
-subplot(3,2,6); imagesc(W./(ones(129,1)*dxw)); axis xy
+%subplot(3,2,5); imagesc(U./dzu,[cmin cmax]); axis xy
+%subplot(3,2,6); imagesc(W./(ones(129,1)*dxw)); axis xy
 figure;
 cmin = min([U(:);W(:)]);
 cmax = max([U(:);W(:)]);

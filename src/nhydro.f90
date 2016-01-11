@@ -101,10 +101,11 @@ contains
     !call relax(1,10000)
 
     !ND
-        call solve(tol,maxite)
+    call solve(tol,maxite)
 
     !ND
     call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
+    call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
 
   end subroutine nhydro_solve
 

@@ -13,7 +13,7 @@ else
 end
 %
 % Create S-coordinate system: based on model topography h(i,j)
-
+%
 z=zeros(N,M,L);
 for k=1:N
   z0=sc(k)*h;

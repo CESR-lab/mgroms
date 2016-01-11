@@ -96,98 +96,89 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
     !     LOCAL 
-    integer(kind=ip)           :: i,j,k,it,i0,i1,i2,j0,j1,j2
+    integer(kind=ip)            :: i,j,k,it
+    integer(kind=ip)            :: i0,i1,i2,j0,j1,j2
+    integer(kind=ip)            :: ib,ie,jb,je,red_black
     real(kind=rp),dimension(nz) :: rhs,d,ud
 
     call tic(lev,'relax_line')
 
     !--DEBUG !!!!
-!    call fill_halo(lev,p)
+    !    call fill_halo(lev,p)
     !--DEBUG !!!!
 
     !
     ! add a loop on smoothing
     do it = 1,nsweeps
-       if(mod(it,2)>=0)then
-          i0=1
-          i1=nx
-          i2=1
-          j0=1
-          j1=ny
-          j2=1
+
+       if (mod(it,nh) == 0) then
+          ib = 1 
+          ie = nx
+          jb = 1
+          je = ny
        else
-          ! try to loop in the opposite sense, once every two seeps
-          ! =>worsen the convergence rate!!!
-          i0=nx
-          i1=1
-          i2=-1
-          j0=ny
-          j1=1
-          j2=-1
+          ib = 0
+          ie = nx+1
+          jb = 0
+          je = ny+1
        endif
-       do i = i0,i1,i2
-          !           do i = 1 + mod(j+red_black,2),nx, 2
-          do j = j0,j1,j2
 
-             
-             k=1!lower level
+       do red_black = 1,2
 
+          do i = ib,ie 
+             !do j = jb,je
+             do j = jb+mod(i+red_black,2),je,2
 
-             rhs(k) = b(k,j,i)                                              &
-                  - cA(3,k,j,i)*p(k+1,j-1,i)                                &
-                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                                             - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
-                  - cA(6,k,j,i)*p(k+1,j,i-1)                                &
-                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                                             - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
-
-
-            if (cmatrix == 'real') then
-
-             rhs(k) = rhs(k) &
-                  - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j+1,i-1)*p(k,j-1,i+1) &
-                  - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
-
-             !- Exception for the redefinition of the coef for the bottom level
-             endif
-
-             d(k)   = cA(1,k,j,i)
-             ud(k)  = cA(2,k+1,j,i)
-
-             do k = 2,nz-1!interior levels
-                rhs(k) = b(k,j,i) &
-                     - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+                k=1!lower level
+                rhs(k) = b(k,j,i)                                              &
+                     - cA(3,k,j,i)*p(k+1,j-1,i)                                &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                     - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
-                     - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+                     - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
+                     - cA(6,k,j,i)*p(k+1,j,i-1)                                &
                      - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                     - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
+                     - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
+                if (cmatrix == 'real') then
+                   !- Exception for the redefinition of the coef for the bottom level
+                   rhs(k) = rhs(k) &
+                        - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
+                        - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
+                endif
                 d(k)   = cA(1,k,j,i)
                 ud(k)  = cA(2,k+1,j,i)
-             enddo
 
-             k=nz!upper level
-             rhs(k) = b(k,j,i)                                              &
-                                             - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
-                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                  - cA(5,k,j,i)*p(k-1,j-1,i)                                &
-                                             - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
-                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                  - cA(8,k,j,i)*p(k-1,j,i-1) 
-             d(k)   = cA(1,k,j,i)
+                do k = 2,nz-1!interior levels
+                   rhs(k) = b(k,j,i) &
+                        - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+                        - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+                        - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
+                        - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+                        - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
+                        - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
+                   d(k)   = cA(1,k,j,i)
+                   ud(k)  = cA(2,k+1,j,i)
+                enddo
 
- 
-!             call tic(lev,'tridiag')
-             call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
-!             call toc(lev,'tridiag')
+                k=nz!upper level
+                rhs(k) = b(k,j,i)                                              &
+                     - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+                     - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+                     - cA(5,k,j,i)*p(k-1,j-1,i)                                &
+                     - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+                     - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
+                     - cA(8,k,j,i)*p(k-1,j,i-1) 
+                d(k)   = cA(1,k,j,i)
 
-             ! December 10th, dev below is to try to by-pass the computation of the residual
-             ! in the dedicated subroutine and to use instead the rhs(k) to compute the
-             ! residual on the fly.
-             ! it seems that what we gain on the one hand, less computation, we lose it on 
-             ! the other hand, worse convergence rate. Overall the rescaled convergence time
-             ! seems to be the same
-             ! obviously, this residual is only an estimate, it is not the correct one
+                !             call tic(lev,'tridiag')
+                call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
+                !             call toc(lev,'tridiag')
+
+                ! December 10th, dev below is to try to by-pass the computation of the residual
+                ! in the dedicated subroutine and to use instead the rhs(k) to compute the
+                ! residual on the fly.
+                ! it seems that what we gain on the one hand, less computation, we lose it on 
+                ! the other hand, worse convergence rate. Overall the rescaled convergence time
+                ! seems to be the same
+                ! obviously, this residual is only an estimate, it is not the correct one
 !!$             k=1
 !!$             grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
 !!$                   - cA(2,k+1,j,i)*p(k+1,j,i)
@@ -198,21 +189,15 @@ contains
 !!$             k=nz
 !!$             grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
 !!$                  - cA(2,k,j,i)*p(k-1,j,i) 
+             enddo
           enddo
+
+          ! don't call mpi at every pass if nh>1
+          if ((mod(it,nh) == 0).or.(it==nsweeps)) then
+             call fill_halo(lev,p)
+          endif
+
        enddo
-
-!        ! don't call mpi at every pass if nh>1
-       if ((mod(it,nh) == 0).or.(it==nsweeps)) then
-          call fill_halo(lev,p)
-       endif
-!
-!    enddo
-!
-!    if (( mod(nsweeps,nh)) .ne. 0) then
-!       call fill_halo(lev,p)
-!    endif
-
-!       call fill_halo(lev,p)
     enddo
 
     call toc(lev,'relax_line')
@@ -475,16 +460,22 @@ contains
           k=1!lower level
           r(k,j,i) = b(k,j,i)                                           &
                - cA(1,k,j,i)*p(k,j,i)                                   &
-               - cA(2,k+1,j,i)*p(k+1,j,i)                               &
+                                          - cA(2,k+1,j,i)*p(k+1,j,i)    &
                - cA(3,k,j,i)*p(k+1,j-1,i)                               &
                - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)                           &
+                                          - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
                - cA(6,k,j,i)*p(k+1,j,i-1)                               &
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-               - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                                          - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+          if (cmatrix == 'real') then
+          !- Exception for the redefinition of the coef for the bottom level
+          r(k,j,i) = r(k,j,i) &
+               - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
+               - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
+          endif
 
-          res = res+r(k,j,i)*r(k,j,i)
 !          res = max(res,abs(r(k,j,i)))
+          res = res+r(k,j,i)*r(k,j,i)
 
           do k = 2,nz-1!interior levels
              r(k,j,i) = b(k,j,i)                                           &
@@ -498,20 +489,21 @@ contains
                   - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
 !             res = max(res,abs(r(k,j,i)))
-          res = res+r(k,j,i)*r(k,j,i)
+             res = res+r(k,j,i)*r(k,j,i)
           enddo
 
           k=nz!upper level
           r(k,j,i) = b(k,j,i)                                           &
                - cA(1,k,j,i)*p(k,j,i)                                   &
                - cA(2,k,j,i)*p(k-1,j,i)                                 &
-               - cA(3,k-1,j+1,i)*p(k-1,j+1,i)                           &
+                                          - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
                - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
                - cA(5,k,j,i)*p(k-1,j-1,i)                               &
-               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)                           &
+                                          - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k,j,i)*p(k-1,j,i-1)
-          
+
+
 !          res = max(res,abs(r(k,j,i)))
           res = res+r(k,j,i)*r(k,j,i)
    
