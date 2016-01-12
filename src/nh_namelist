@@ -1,10 +1,11 @@
+!- Default value are available in mg_namleist.f90 file -!
 &nhparam
-       ! nhalo      ,              !-
-       ! nsmall     ,              !-
-       ! ns_coarsest,              !-
+       ! nhalo      ,              !- number of ghost points
+       ! nsmall     ,              !- smallest dimension ever for the global domain
+       ! ns_coarsest,              !- 
        ! ns_pre     ,              !-
        ! ns_post    ,              !-
-       cmatrix    = 'simple',      !- 'simple' or 'real'
-       mpiexchange= 'nonblocking', !- 'blocking' or 'nonblocking'
+       cmatrix    = 'real',        !- Take the 'simple' or 'real' matric coefs
+       mpiexchange= 'nonblocking', !- MPI exhanges using 'blocking' or 'nonblocking' comm
        aggressive = .false.,       !- .false. or .true.
 /

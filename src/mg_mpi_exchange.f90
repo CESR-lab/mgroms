@@ -923,7 +923,7 @@ contains
 
     if (north.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                 &
-            recvN,nz*nx*nh,MPI_DOUBLE_PRECISION,north, &
+            recvN,nd*nz*nx*nh,MPI_DOUBLE_PRECISION,north, &
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     else !!Homogenous Neumann  
@@ -941,7 +941,7 @@ contains
 
     if (southwest.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                      &
-            recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest, &
+            recvSW,nd*nz*nh*nh,MPI_DOUBLE_PRECISION,southwest, &
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     else !!Homogenous Neumann  
@@ -959,7 +959,7 @@ contains
 
     if (northeast.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                      &
-            recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast, &
+            recvNE,nd*nz*nh*nh,MPI_DOUBLE_PRECISION,northeast, &
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
     else !!Homogenous Neumann  
@@ -990,7 +990,7 @@ contains
     if (east.ne.MPI_PROC_NULL) then
        sendE = cA(:,:,1:ny,nx-nh+1:nx) 
        call MPI_ISend(                                &
-            sendE,nz*ny*nh,MPI_DOUBLE_PRECISION,east, &
+            sendE,nd*nz*ny*nh,MPI_DOUBLE_PRECISION,east, &
             ewtag,MPI_COMM_WORLD,req(10),ierr)
        comm(10)=10
     endif
@@ -1006,7 +1006,7 @@ contains
     if (west.ne.MPI_PROC_NULL) then
        sendW = cA(:,:,1:ny,1:nh)  
        call MPI_ISend(                                &
-            sendW,nz*ny*nh,MPI_DOUBLE_PRECISION,west, &
+            sendW,nd*nz*ny*nh,MPI_DOUBLE_PRECISION,west, &
             wetag,MPI_COMM_WORLD,req(12),ierr)
        comm(12)=12
     endif
@@ -1022,7 +1022,7 @@ contains
     if (southeast.ne.MPI_PROC_NULL) then
        sendSE = cA(:,:,1:nh,nx-nh+1:nx)  
        call MPI_ISend(                                      &
-            sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast, &
+            sendSE,nd*nz*nh*nh,MPI_DOUBLE_PRECISION,southeast, &
             senwtag,MPI_COMM_WORLD,req(14),ierr)
        comm(14)=14
     endif
@@ -1105,6 +1105,8 @@ contains
     integer(kind=ip) :: nx, ny, nz
     integer(kind=ip) :: nh, nd
     integer(kind=ip) :: lev
+
+    allocate(halo4D(nlevs))
 
     do lev = 1, nlevs
 
