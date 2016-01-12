@@ -16,7 +16,7 @@ program mg_testintergrids
   integer(kind=ip):: ngx,ngy
   integer(kind=ip):: nsweeps
   integer(kind=ip):: nx,ny,nz,nh
-  integer(kind=ip):: lev, ierr, np
+  integer(kind=ip):: lev, ierr, np, rank
 
   !---------------!
   !- Ocean model -!
@@ -31,7 +31,7 @@ program mg_testintergrids
   nit     = 10
   nsweeps = 1
   call mpi_init(ierr)
-
+  call mpi_comm_rank(mpi_comm_world, rank, ierr)
   call mpi_comm_size(mpi_comm_world, np, ierr)
 
   if (np /= (npxg*npyg)) then
@@ -42,6 +42,10 @@ program mg_testintergrids
   nx = nxg / npxg
   ny = nyg / npyg
   nz = nzg
+
+  !- read the NonHydro namelist file if it is present 
+  !- else default values and print them (or not).
+  call read_nhnamelist(vbrank=rank)
 
   !-------------------!
   !- Enter in nhydro -!

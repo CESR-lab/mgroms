@@ -1,6 +1,5 @@
 module mg_namelist
 
-  use mg_mpi
   use mg_tictoc
 
   implicit none
@@ -18,7 +17,7 @@ module mg_namelist
   integer(kind=ip) :: ns_pre      =   2
   integer(kind=ip) :: ns_post     =   2
 
-  character(len=16) :: cmatrix='real'         !- 'simple' or 'real'
+  character(len=16) :: cmatrix='simple'         !- 'simple' or 'real'
 
   character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
 
@@ -37,35 +36,56 @@ module mg_namelist
  contains
 
    !--------------------------------------------------------------------
-   subroutine read_namelist(filename, verbose)
+   subroutine read_nhnamelist(filename, verbose, vbrank)
 
      character(len=*), optional, intent(in) :: filename
      logical         , optional, intent(in) :: verbose
+     integer(kind=4) , optional, intent(in) :: vbrank
 
      character(len=64) :: fn_nml
      logical           :: vb
      integer(kind=ip)  :: lun_nml = 4
+     integer(kind=4)   :: rank
 
-     if (present(verbose)) then
-        vb = verbose
-     else
-        vb = .true.
-     endif
+     logical :: exist=.false.
 
+     !- Namelist file name, by default 'nh_namelist'
      if (present(filename)) then
         fn_nml = filename
      else
         fn_nml = 'nh_namelist'
      endif
 
-     open(unit=lun_nml, File=fn_nml, ACTION='READ')
+     !- Check if a namelist file exist
+     inquire(file=fn_nml, exist=exist)
 
-     rewind(unit=lun_nml)
-     read(unit=lun_nml, nml=nhparam)
+     !- Read namelist file if it is present, else use default values
+     if (exist) then
+
+        open(unit=lun_nml, File=fn_nml, ACTION='READ')
+
+        rewind(unit=lun_nml)
+        read(unit=lun_nml, nml=nhparam)
+
+     endif
+
+     !- Print parameters or not !
+     if (present(verbose)) then
+        vb = verbose
+     else
+        vb = .true.
+     endif
 
      if (vb) then
-        if (myrank == 0) then
-           write(*,*)'Namelist non hydrostatic parameters:'
+
+        if (present(vbrank)) then
+           rank = vbrank
+        else
+           rank = 0
+        endif
+
+        if (rank == 0) then
+           write(*,*)'Non hydrostatic parameters: (rank:',rank,')'
            write(*,*)'  - nhalo      : ', nhalo
            write(*,*)'  - nsmall     : ', nsmall 
            write(*,*)'  - ns_coarsest: ', ns_coarsest
@@ -74,10 +94,10 @@ module mg_namelist
            write(*,*)'  - cmatrix    : ', trim(cmatrix)
            write(*,*)'  - mpiexchange: ', trim(mpiexchange)
            write(*,*)'  - aggressive : ', aggressive
+           write(*,*)'  '
         endif
      endif
 
-   end subroutine read_namelist
-
+   end subroutine read_nhnamelist
 
  end module mg_namelist

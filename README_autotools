@@ -2,10 +2,11 @@ The GNU autotools = automake and autoconf (+libtool and gettext)
 
 Quick start:
 -----------
-aclocal; automake; autoconf
+mkdir confdb
 
-if some files are missing:
 automake --add-missing
+
+aclocal; automake; autoconf
 
 More information:
 ----------------

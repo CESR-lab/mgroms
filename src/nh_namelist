@@ -1,0 +1,10 @@
+&nhparam
+       ! nhalo      ,              !-
+       ! nsmall     ,              !-
+       ! ns_coarsest,              !-
+       ! ns_pre     ,              !-
+       ! ns_post    ,              !-
+       cmatrix    = 'simple',      !- 'simple' or 'real'
+       mpiexchange= 'nonblocking', !- 'blocking' or 'nonblocking'
+       aggressive = .false.,       !- .false. or .true.
+/
