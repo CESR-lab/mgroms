@@ -21,8 +21,8 @@ xr = ones(nz,1)*x;
 
 %% vert metrics
 
-%topo = inline('H','x','H','L','alpha');
-topo = inline('(H - 0.5*H*exp(-alpha*(x-0.5*L).^2))','x','H','L','alpha');
+topo = inline('H','x','H','L','alpha');
+%topo = inline('(H - 0.5*H*exp(-alpha*(x-0.5*L).^2))','x','H','L','alpha');
 
 h = topo(x,H,L,alpha).*ones(1,nx);
 

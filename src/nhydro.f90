@@ -22,13 +22,6 @@ contains
     real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: dx, dy
     real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
 
-    integer(kind=4) :: pi, pj
-    integer(kind=4) :: k, j, i
-    real(kind=8)    :: Lx, Ly, Hc
-    real(kind=8)    :: x, x0
-    real(kind=8)    :: x1, z1, x2, z2, bet
-    real(kind=8), dimension(:,:,:), pointer :: rhs
-
 !!$    integer(kind=ip) :: nz, ny, nx
     integer(kind=ip) :: ierr, lev
 
@@ -45,34 +38,6 @@ contains
     call print_grids()
 
     call define_matrices(dx, dy, zr, zw)
-
-    ! rhs definition
-    Lx = 1.e4
-    Ly = 1.e4
-    Hc = 4.e3
-
-    bet = 600._8 / (Lx*Lx)
-    x1 = Lx * 0.65_8
-    z1 = Hc * (0.75_8 - 1._8)
-    x2 = Lx * 0.75_8
-    z2 = Hc * (0.65_8 - 1._8)
-
-    rhs => grid(1)%b
-
-    pj = myrank/npxg   
-    pi = myrank-pj*npxg
-    do i = 0,nx+1 !!!  I need to know my global index range
-       do j = 0,ny+1 
-          x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
-          do k = 1,nz
-             rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
-                  (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                   exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-          enddo
-       enddo
-    enddo
-
-    call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
 
   end subroutine nhydro_init
 
@@ -92,15 +57,10 @@ contains
     !- we need a MPI update 
     ! grid(1)%b = rhs(u,v,w) ! div of u,v,w
 
-    !call random_number(grid(1)%p(1:nz,1:ny,1:nx))
-    !call fill_halo(1,grid(1)%p)
-
     grid(1)%p(:,:,:) = 0.
 
     !ND
     !call relax(1,10000)
-
-    !ND
     call solve(tol,maxite)
 
     !ND

@@ -46,8 +46,8 @@ nx = 128;
 nz = 128;
 L = 1e4;
 xr = repmat(((0.5:1:nx)*L/nx),[nz 1]);
-xu = cat(2,zeros(nz,1),0.5*(xr(:,1:end-1)+xr(:,2:end)),L*ones(nz,1));
-xu = cat(1,xu,xu(end,:));
+xu_pc = cat(2,zeros(nz,1),0.5*(xr(:,1:end-1)+xr(:,2:end)),L*ones(nz,1));
+xu_pc = cat(1,xu_pc,xu_pc(end,:));
 zwu_pc = cat(2,zw(:,1),0.5*(zw(:,1:end-1)+zw(:,2:end)),zw(:,end));
 rhs_pc = cat(2,rhs,rhs(:,end));
 rhs_pc = cat(1,rhs_pc,rhs_pc(end,:));
@@ -62,6 +62,7 @@ hold on
 plot(xr(1,:),zw(1,:),'k','linewidth',1)
 xlim([0 L])
 ylim([-H 0])
+axis equal tight
 colorbar
 cmin = min(rhs(:));
 cmax = max(rhs(:));
@@ -75,6 +76,7 @@ contour(xr,zr,p,[-14:1:14]*1e4,'k')
 plot(xr(1,:),zw(1,:),'k','linewidth',1)
 xlim([0 L])
 ylim([-H 0])
+axis equal tight
 colorbar
 cmin = min(p(:));
 cmax = max(p(:));
@@ -87,6 +89,7 @@ hold on
 plot(xr(1,:),zw(1,:),'k','linewidth',1)
 xlim([0 L])
 ylim([-H 0])
+axis equal tight
 colorbar
 cmin = min(r(:));
 cmax = max(r(:));
@@ -103,6 +106,7 @@ hold on
 plot(xr(1,:),zw(1,:),'k','linewidth',1)
 xlim([0 L])
 ylim([-H 0])
+axis equal tight
 colorbar
 cmin = min(p(:)-p_mat(:));
 cmax = max(p(:)-p_mat(:));

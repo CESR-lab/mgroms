@@ -133,10 +133,10 @@ contains
                 rhs(k) = b(k,j,i)                                              &
                      - cA(3,k,j,i)*p(k+1,j-1,i)                                &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                     - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
+                                                - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
                      - cA(6,k,j,i)*p(k+1,j,i-1)                                &
                      - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                     - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
+                                                - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
                 if (cmatrix == 'real') then
                    !- Exception for the redefinition of the coef for the bottom level
                    rhs(k) = rhs(k) &
@@ -160,10 +160,10 @@ contains
 
                 k=nz!upper level
                 rhs(k) = b(k,j,i)                                              &
-                     - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+                                                - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
                      - cA(5,k,j,i)*p(k-1,j-1,i)                                &
-                     - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+                                                - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
                      - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
                      - cA(8,k,j,i)*p(k-1,j,i-1) 
                 d(k)   = cA(1,k,j,i)
@@ -502,7 +502,6 @@ contains
                                           - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
                - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
                - cA(8,k,j,i)*p(k-1,j,i-1)
-
 
 !          res = max(res,abs(r(k,j,i)))
           res = res+r(k,j,i)*r(k,j,i)

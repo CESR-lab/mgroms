@@ -5,8 +5,7 @@ nz = 128;
 
 [A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz);
 
-%% define rhs
-
+% define rhs
 L = 10e3;
 H = 4e3;
 bet = 600 / (L*L);
@@ -18,11 +17,11 @@ z2 = H * (0.65 - 1);
 rhs = vr .* (exp(-bet * ((xr-x1).^2 + (zr-z1).^2)) ...
           -  exp(-bet * ((xr-x2).^2 + (zr-z2).^2)));
 
-%% solve for p
+% solve for p
 p =  A \ rhs(:);
 p = reshape(p,nz,nx);
 
-%% pcolor plot
+% pcolor plot
 xu_pc = cat(2,zeros(nz,1),0.5*(xr(:,1:end-1)+xr(:,2:end)),L*ones(nz,1));
 xu_pc = cat(1,xu_pc,xu_pc(end,:));
 zwu_pc = cat(2,zw(:,1),0.5*(zw(:,1:end-1)+zw(:,2:end)),zw(:,end));
@@ -37,6 +36,7 @@ hold on
 plot(xr(1,:),zw(1,:),'k','linewidth',1)
 xlim([0 L])
 ylim([-H 0])
+axis equal tight
 colorbar
 cmin = min(rhs(:));
 cmax = max(rhs(:));
@@ -50,6 +50,7 @@ contour(xr,zr,p,[-14:1:14]*1e4,'k')
 plot(xr(1,:),zw(1,:),'k','linewidth',1)
 xlim([0 L])
 ylim([-H 0])
+axis equal tight
 colorbar
 cmin = min(p(:));
 cmax = max(p(:));

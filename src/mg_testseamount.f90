@@ -21,15 +21,16 @@ program mg_testseamount
   real(kind=8), dimension(:,:,:), allocatable :: u,v,w
   real(kind=8), dimension(:,:), allocatable :: h
 
-  integer(kind=4) :: k
-  integer(kind=4) :: np, ierr, rank
-  integer(kind=4) :: nh
   integer(kind=4) :: pi, pj
-  integer(kind=4) :: i, j
-
+  integer(kind=4) :: k, j, i
   real(kind=8)    :: Lx, Ly, Hc
   real(kind=8)    :: x, x0
+  real(kind=8)    :: x1, z1, x2, z2, bet
+  real(kind=8), dimension(:,:,:), pointer :: rhs
 
+  integer(kind=4) :: np, ierr, rank
+  integer(kind=4) :: nh
+  
   ! global domain dimensions
   nxg   = 128
   nyg   = 128
@@ -83,13 +84,13 @@ program mg_testseamount
   pj = rank/npxg   
   pi = rank-pj*npxg
 
+  ! topo definition
   x0 = Lx * 0.5_rp
-
   do i = 0,nx+1 !!!  I need to know my global index range
      do j = 0,ny+1
         x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
-        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp) )
-!        h(j,i) = Hc
+!        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp) )
+        h(j,i) = Hc
      enddo
   enddo
 
@@ -109,6 +110,28 @@ program mg_testseamount
   !-----------------------------------------------------------
 
   call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw)
+
+  ! define rhs
+  bet = 600._8 / (Lx*Lx)
+  x1 = Lx * 0.65_8
+  z1 = Hc * (0.75_8 - 1._8)
+  x2 = Lx * 0.75_8
+  z2 = Hc * (0.65_8 - 1._8)
+
+  rhs => grid(1)%b
+
+  do i = 0,nx+1 !!!  I need to know my global index range
+     do j = 0,ny+1 
+        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
+        do k = 1,nz
+           rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
+                (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
+                exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+        enddo
+     enddo
+  enddo
+
+  call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
 
   call nhydro_solve(u,v,w)
 

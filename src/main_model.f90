@@ -134,6 +134,14 @@ program main_model
 
   call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw)
 
+  ! define rhs
+  grid(1)%b(1:nz,1:ny,1:nx) = 0._8
+  grid(1)%b=0.
+  call random_number(grid(1)%p(1:nz,1:ny,1:nx))
+  call fill_halo(1,grid(1)%p)
+  call relax(1,4)
+  grid(1)%b=grid(1)%p
+
   call nhydro_solve(u,v,w)
 
   if(myrank == 0) call print_tictoc(myrank)
