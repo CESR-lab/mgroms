@@ -20,7 +20,7 @@ program mg_testrelax
 
   integer(kind=ip):: nsweeps
 
-  integer(kind=ip):: lev,ierr, np, nh
+  integer(kind=ip):: lev,ierr, np, nh, rank
   real(kind=rp)    :: res
 
   real(kind=rp),dimension(:,:,:),allocatable  :: p0
@@ -41,7 +41,7 @@ program mg_testrelax
   nsweeps = 1
 
   call mpi_init(ierr)
-
+  call mpi_comm_rank(mpi_comm_world, rank, ierr)
   call mpi_comm_size(mpi_comm_world, np, ierr)
 
   if (np /= (npxg*npyg)) then
@@ -52,6 +52,10 @@ program mg_testrelax
   nx = nxg / npxg
   ny = nyg / npyg
   nz = nzg
+
+  !- read the NonHydro namelist file if it is present 
+  !- else default values and print them (or not).
+  call read_nhnamelist(vbrank=rank)
 
   !-------------------!
   !- Enter in nhydro -!

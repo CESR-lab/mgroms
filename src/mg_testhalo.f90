@@ -21,7 +21,7 @@ program mg_testhalo
   integer(kind=ip) :: nx, ny, nz ! local dimensions
   integer(kind=ip) :: nh
 
-  integer(kind=ip):: lev,ierr, np
+  integer(kind=ip):: lev,ierr, np, rank
   real(kind=8)    :: z
   logical :: test
 
@@ -41,7 +41,7 @@ program mg_testhalo
   nsweeps = 1
 
   call mpi_init(ierr)
-
+  call mpi_comm_rank(mpi_comm_world, rank, ierr)
   call mpi_comm_size(mpi_comm_world, np, ierr)
 
   if (np /= (npxg*npyg)) then
@@ -52,6 +52,10 @@ program mg_testhalo
   nx = nxg / npxg
   ny = nyg / npyg
   nz = nzg
+
+  !- read the NonHydro namelist file if it is present 
+  !- else default values and print them (or not).
+  call read_nhnamelist(vbrank=rank)
 
   !-------------------!
   !- Enter in nhydro -!

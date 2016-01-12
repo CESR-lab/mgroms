@@ -52,6 +52,10 @@ program mg_testseamount
   ny = nyg / npyg
   nz = nzg
 
+  !- read the NonHydro namelist file if it is present 
+  !- else default values and print them (or not).
+  call read_nhnamelist(vbrank=rank)
+
   ! fill the neighbours array
   call mm_define_heighbours(npxg, npyg, neighb)
 

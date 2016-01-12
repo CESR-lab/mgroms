@@ -139,9 +139,6 @@ contains
     real(kind=rp), dimension(:,:,:), allocatable :: zydx,zxdy
     real(kind=rp), dimension(:,:,:), allocatable :: zxw, zyw
 
-    integer(kind=ip):: d
-    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
-
     ! TODO NG
     ! zw,zr can change in time
     ! dx,dy constant in time
@@ -272,13 +269,7 @@ contains
        enddo
     enddo
 !ND
-!    call fill_halo(1,cA) !fill_halo_4d in the future!
-    dummy3D => grid(1)%r   
-    do d = 1,8       
-       dummy3D(:,:,:) = cA(d,:,:,:)
-       call fill_halo(1,dummy3D)
-       cA(d,:,:,:) = dummy3D(:,:,:)
-    enddo
+    call fill_halo(1,cA) !fill_halo_4d in the future!
 !
     do i = 1,nx
        do j = 1,ny
@@ -310,15 +301,9 @@ contains
           cA(8,k,j,i) =-0.125*zx(k,j-1,i)*zy(k,j-1,i) - 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j-1,i-1
        enddo
     enddo
-!ND
-!    call fill_halo(1,cA) !fill_halo_4d in the future!
-    dummy3D => grid(1)%r
-    do d = 1,8       
-       dummy3D(:,:,:) = cA(d,:,:,:)
-       call fill_halo(1,dummy3D)
-       cA(d,:,:,:) = dummy3D(:,:,:)
-    enddo
-!
+
+    call fill_halo(1,cA) !fill_halo_4d in the future!
+
     do i = 1,nx
        do j = 1,ny
 !ND

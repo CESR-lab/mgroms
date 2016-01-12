@@ -1,6 +1,7 @@
 program main_model
 
   use mpi
+  use mg_namelist
   use nhydro
   use mg_netcdf_out
 
@@ -49,6 +50,10 @@ program main_model
   nx = nxg / npxg
   ny = nyg / npyg
   nz = nzg
+
+  !- read the NonHydro namelist file if it is present 
+  !- else default values and print them (or not).
+  call read_nhnamelist(vbrank=rank)
 
   ! fill the neighbours array
   call mm_define_heighbours(npxg, npyg, neighb)
@@ -198,5 +203,5 @@ contains
 
   end subroutine mm_define_heighbours
 
-end program
+end program main_model
 
