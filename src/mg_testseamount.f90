@@ -24,7 +24,7 @@ program mg_testseamount
   integer(kind=4) :: pi, pj
   integer(kind=4) :: k, j, i
   real(kind=8)    :: Lx, Ly, Hc
-  real(kind=8)    :: x, x0
+  real(kind=8)    :: x, x0, y, y0
   real(kind=8)    :: x1, z1, x2, z2, bet
   real(kind=8), dimension(:,:,:), pointer :: rhs
 
@@ -86,11 +86,14 @@ program mg_testseamount
 
   ! topo definition
   x0 = Lx * 0.5_rp
+  y0 = Ly * 0.5_rp
   do i = 0,nx+1 !!!  I need to know my global index range
      do j = 0,ny+1
-        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
+        x = ( real(i+(pi*nx),kind=rp)- 0.5_rp) * dx(i,j)
+        y = ( real(j+(pj*ny),kind=rp)- 0.5_rp) * dy(i,j)
+!        h(j,i) = Hc
 !        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp) )
-        h(j,i) = Hc
+        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp -(y-y0)**2._rp/(Ly/5)**2._rp) )
      enddo
   enddo
 

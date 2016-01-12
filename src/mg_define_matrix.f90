@@ -156,7 +156,8 @@ contains
 !ND
     call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
     call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
-
+ 
+    !! Cell heights and widths
     allocate(dz(nz,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
