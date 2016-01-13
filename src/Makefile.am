@@ -16,7 +16,10 @@ SUFFIXES = .F90 .f90 .o .mod
 	$(CC) $(CFLAGS) -c  $@ $<
 
 clean-local:
-	-rm -f *.mod *.o *.log *__genmod*
+	-rm -f *.mod *.o
+
+cleanf:
+	-rm -f *.nc fort.* *.dump *.xml gmon.out *.log *__genmod*
 
 ##
 SUBDIRS	       = .

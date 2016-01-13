@@ -33,4 +33,8 @@ gmon.out
 *.png
 # Ignore all files *.txt
 *.txt
+# Ignore all files *.dump
+*.dump
+# Ignore all files *.xml
+*.xml
 # script end #
