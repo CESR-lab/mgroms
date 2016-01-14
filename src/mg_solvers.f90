@@ -36,11 +36,12 @@ contains
     ny = grid(1)%ny
     nz = grid(1)%nz
     nh = grid(1)%nh
+
     allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
     allocate(b0(nz,1-nh:ny+nh,1-nh:nx+nh))
 
-    p0=p
-    b0=b
+    p0 = p
+    b0 = b
 
     call tic(1,'solve')
     call cpu_time(tstart)
@@ -48,10 +49,8 @@ contains
 !    bnorm = maxval(abs(grid(1)%b))
 !    call global_max(bnorm)
 
-    res0 = sum( grid(1)%b(1:nz,1:ny,1:nx)**2)
+    res0 = sum(grid(1)%b(1:nz,1:ny,1:nx)**2)
     call global_sum(1,res0,bnorm)
-
-
 
     call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
     
@@ -76,8 +75,8 @@ contains
        res0=rnorm
        nite=nite+1
        if (myrank == 0) write(*,10) nite, rnorm, conv
-
     enddo
+
     call cpu_time(tend)
     call toc(1,'solve')
 
@@ -137,7 +136,6 @@ contains
     do lev=lev1,nlevs0-1
        call relax(lev,ns_pre)
        call compute_residual(lev,rnorm)
-!       if (myrank == 0) write(*,*)' vcycle lev:', lev,' rnorm:', rnorm
        call fine2coarse(lev)
        grid(lev+1)%p(:,:,:) = 0._8
     enddo

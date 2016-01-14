@@ -5,6 +5,8 @@ nx = 128;
 nz = 128;
 [A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz);
 
+% Jeroen's matlab code
+
 % fortran code
 h_000 = ncread('../../src/h_h_000.nc','h');
 h_001 = ncread('../../src/h_h_001.nc','h');

@@ -59,8 +59,8 @@ contains
 
     grid(1)%p(:,:,:) = 0.
 
-    !ND
-    !call relax(1,10000)
+!ND
+!    call relax(1,100)
     call solve(tol,maxite)
 
     !ND

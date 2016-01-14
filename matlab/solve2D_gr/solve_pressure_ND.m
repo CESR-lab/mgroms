@@ -1,3 +1,5 @@
+clear all
+
 %% solve for pressure
 
 nx = 128; 
@@ -55,4 +57,4 @@ colorbar
 cmin = min(p(:));
 cmax = max(p(:));
 caxis([cmin cmax]);
-title(['pressure [' num2str(cmin) ' ' num2str(cmax) ']']);
+title(['pressure GR [' num2str(cmin) ' ' num2str(cmax) ']']);

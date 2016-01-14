@@ -77,7 +77,7 @@ program mg_testseamount
   allocate(zw(nz+1,0:ny+1,0:nx+1))
 
   Lx = 1.e4
-  Ly = 1.e4
+  Ly = 128
   Hc = 4.e3
 
   dx(:,:) = Lx/nxg
@@ -96,8 +96,8 @@ program mg_testseamount
         x = ( real(i+(pi*nx),kind=rp)- 0.5_rp) * dx(i,j)
         y = ( real(j+(pj*ny),kind=rp)- 0.5_rp) * dy(i,j)
 !        h(j,i) = Hc
-!        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp) )
-        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp -(y-y0)**2._rp/(Ly/5)**2._rp) )
+        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp) )
+!        h(j,i) = Hc * (  1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5)**2._rp -(y-y0)**2._rp/(Ly/5)**2._rp) )
      enddo
   enddo
 

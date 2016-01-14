@@ -130,14 +130,14 @@ contains
 
     real(kind=rp) ::  zxu, zyu, zxv, zyv
 
-    real(kind=rp), dimension(:,:)  , allocatable :: dxu, dyv
-    real(kind=rp), dimension(:,:,:), allocatable :: Arx, Ary
-    real(kind=rp), dimension(:,:)  , allocatable :: Arz
-    real(kind=rp), dimension(:,:,:), allocatable :: dz
-    real(kind=rp), dimension(:,:,:), allocatable :: dzw
-    real(kind=rp), dimension(:,:,:), allocatable :: zy,zx
-    real(kind=rp), dimension(:,:,:), allocatable :: zydx,zxdy
-    real(kind=rp), dimension(:,:,:), allocatable :: zxw, zyw
+    real(kind=rp), dimension(:,:)  , pointer :: dxu, dyv
+    real(kind=rp), dimension(:,:,:), pointer :: Arx, Ary
+    real(kind=rp), dimension(:,:)  , pointer :: Arz
+    real(kind=rp), dimension(:,:,:), pointer :: dz
+    real(kind=rp), dimension(:,:,:), pointer :: dzw
+    real(kind=rp), dimension(:,:,:), pointer :: zy,zx
+    real(kind=rp), dimension(:,:,:), pointer :: zydx,zxdy
+    real(kind=rp), dimension(:,:,:), pointer :: zxw, zyw
 
     ! TODO NG
     ! zw,zr can change in time
@@ -222,16 +222,20 @@ contains
        enddo
     enddo
     zy(nz+1,:,:) = 0._8
-    zy(:,0,:)    = 0._8
-    zy(:,ny+1,:) = 0._8
-    zy(:,:,0)    = 0._8
-    zy(:,:,nx+1) = 0._8
+!ND
+!    zy(:,0,:)    = 0._8
+!    zy(:,ny+1,:) = 0._8
+!    zy(:,:,0)    = 0._8
+!    zy(:,:,nx+1) = 0._8
+    call fill_halo(1,zy) 
 
     zx(nz+1,:,:) = 0._8
-    zx(:,0,:)    = 0._8
-    zx(:,ny+1,:) = 0._8
-    zx(:,:,0)    = 0._8
-    zx(:,:,nx+1) = 0._8
+!
+!    zx(:,0,:)    = 0._8
+!    zx(:,ny+1,:) = 0._8
+!    zx(:,:,0)    = 0._8
+!    zx(:,:,nx+1) = 0._8
+    call fill_halo(1,zx) 
 
     allocate(zxdy(nz+1,0:ny+1,0:nx+1))
     allocate(zydx(nz+1,0:ny+1,0:nx+1))
@@ -268,20 +272,20 @@ contains
           cA(7,k,j,i) = cA(7,k,j,i) - 0.25*zxdy(k,j,i-1) + 0.25*zxdy(k,j,i)
        enddo
     enddo
-!ND
-    call fill_halo(1,cA) !fill_halo_4d in the future!
-!
+
+    call fill_halo(1,cA) 
+ 
     do i = 1,nx
        do j = 1,ny
           do k = 2,nz-1
 !ND
-             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
+!             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
           enddo
           k = nz
 !ND
-          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
+!          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
        enddo
     enddo
 
@@ -302,13 +306,13 @@ contains
        enddo
     enddo
 
-    call fill_halo(1,cA) !fill_halo_4d in the future!
+    call fill_halo(1,cA)
 
     do i = 1,nx
        do j = 1,ny
 !ND
-          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
+!          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
+          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
        enddo
     enddo
 
