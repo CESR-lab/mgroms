@@ -395,7 +395,7 @@ contains
     if ((aggressive).and.(lev==1)) then
 !       call coarsen_matrix_aggressive(lev)
 
-    elseif (grid(lev)%nz == 1) then
+    elseif (grid(lev+1)%nz == 1) then
        call coarsen_matrix_2D(Af,Ac,nx,ny,nz)
        ! fill the halo
        do l=1,3
