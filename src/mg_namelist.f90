@@ -13,11 +13,11 @@ module mg_namelist
   ! smallest dimension ever for the global domain
   integer(kind=ip) :: nsmall      =   8
 
-  integer(kind=ip) :: ns_coarsest = 40
+  integer(kind=ip) :: ns_coarsest =  40
   integer(kind=ip) :: ns_pre      =   2
   integer(kind=ip) :: ns_post     =   2
 
-  character(len=16) :: cmatrix='simple'         !- 'simple' or 'real'
+  character(len=16) :: cmatrix='simple'
 
   character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
 

@@ -14,12 +14,13 @@ module nhydro
 contains
 
   !--------------------------------------------------------------
-  subroutine nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw)
+  subroutine nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
 
     integer(kind=ip), dimension(4) , intent(in) :: neighb ! S, E, N, W
     integer(kind=ip)               , intent(in) :: nx, ny, nz
     integer(kind=ip)               , intent(in) :: npxg, npyg
     real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: umask, vmask
     real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
 
 !!$    integer(kind=ip) :: nz, ny, nx
@@ -37,7 +38,7 @@ contains
 
     call print_grids()
 
-    call define_matrices(dx, dy, zr, zw)
+    call define_matrices(dx, dy, zr, zw, umask, vmask)
 
   end subroutine nhydro_init
 
@@ -48,7 +49,7 @@ contains
     integer(kind=ip) :: nx, ny, nz
 
     real(kind=rp)    :: tol    = 1.e-12
-    integer(kind=ip) :: maxite = 6
+    integer(kind=ip) :: maxite = 12
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)
@@ -60,7 +61,7 @@ contains
     grid(1)%p(:,:,:) = 0.
 
 !ND
-!    call relax(1,100)
+!    call relax(1,1)
     call solve(tol,maxite)
 
     !ND
