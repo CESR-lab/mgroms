@@ -145,27 +145,24 @@ contains
     ! cA(7,:,:,:)      -> p(k,j,i-1)xd
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
-    real(kind=rp), dimension(:,:,:,:), pointer :: cA
     integer(kind=ip):: k, j, i
     integer(kind=ip):: nx, ny, nz
     integer(kind=ip):: nh
 
-    real(kind=rp) :: zxu, zyu, zxv, zyv
-
-    real(kind=rp), dimension(:,:)  , pointer :: dxu, dyv
-    real(kind=rp), dimension(:,:,:), pointer :: Arx, Ary
-    real(kind=rp), dimension(:,:)  , pointer :: Arz
-    real(kind=rp), dimension(:,:,:), pointer :: dz
-    real(kind=rp), dimension(:,:,:), pointer :: dzw
-    real(kind=rp), dimension(:,:,:), pointer :: zy,zx
-    real(kind=rp), dimension(:,:,:), pointer :: zydx,zxdy
-    real(kind=rp), dimension(:,:,:), pointer :: zxw,zyw
-    real(kind=rp), dimension(:,:,:), pointer :: cw
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA
+    real(kind=rp), dimension(:,:)  ,   pointer :: dxu, dyv
+    real(kind=rp), dimension(:,:,:),   pointer :: Arx, Ary
+    real(kind=rp), dimension(:,:)  ,   pointer :: Arz
+    real(kind=rp), dimension(:,:,:),   pointer :: dz
+    real(kind=rp), dimension(:,:,:),   pointer :: dzw
+    real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
+    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
+    real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
+    real(kind=rp), dimension(:,:,:),   pointer :: cw
 
     ! TODO NG
     ! zw,zr can change in time
     ! dx,dy constant in time
-!!! I'm assuming that I'm getting zw,zr,dx,dy from outside this routine
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -296,7 +293,6 @@ contains
                         * (umask(j-1,i+1) - umask(j-1,i)) & 
                         - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
                         * (umask(j,i+1) - umask(j,i))) ) * vmask(j,i)
-!cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)*(1 - 0.5*zyv*zyv/(1+zxv*zxv+zyv*zyv)) 
           cA(6,k,j,i) = ( 0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1) ) * umask(j,i)      !! couples with k+1 i-1
           cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! couples with i-1
                         ! topo terms                                                   
@@ -309,24 +305,23 @@ contains
                         * (vmask(j+1,i-1) - vmask(j,i-1)) & 
                         - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
                         * (vmask(j+1,i) - vmask(j,i))) ) * umask(j,i) 
-!cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)*(1 - 0.5*zxu*zxu/(1+zxu*zxu+zyu*zyu))
           cA(5,k,j,i) = +0.5_8*zxdy(k,j+1,i)*zydx(k,j+1,i)/(cw(k,j+1,i)+cw(k+1,j+1,i)) &  !! only for k==1, couples with j+1,i-1
                         * umask(j+1,i) * vmask(j+1,i) &
                         +0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
                         * umask(j,i) * vmask(j+1,i-1)              
-!cA(5,k,j,i) = 0.125_8*zx(k,j+1,i)*zy(k,j+1,i) + 0.125_8*zx(k,j,i-1)*zy(k,j,i-1)!non homogeneous
           cA(8,k,j,i) =-0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &   !! only for k==1, couples with j-1,i-1
                         * umask(j-1,i) * vmask(j,i) &
                         -0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
                         * umask(j,i) * vmask(j,i-1)                                        
-!cA(8,k,j,i) =-0.125_8*zx(k,j-1,i)*zy(k,j-1,i) - 0.125_8*zx(k,j,i-1)*zy(k,j,i-1)!non homogeneous
 
           do k = 2,nz-1 !interior levels
              cA(2,k,j,i) = cw(k,j,i) &                                                    !! couples with k-1
                            ! from i,k  cross terms if lbc
-                           -(0.25_8*zxdy(k-1,j,i) - 0.25_8*zxdy(k,j,i))  * (umask(j,i+1) - umask(j,i)) &
+                           -(0.25_8*zxdy(k-1,j,i) - 0.25_8*zxdy(k,j,i)) &
+                           * (umask(j,i+1) - umask(j,i)) &
                            ! from j,k  cross terms if lbc
-                           -(0.25_8*zydx(k-1,j,i) - 0.25_8*zydx(k,j,i))  * (vmask(j+1,i) - vmask(j,i))
+                           -(0.25_8*zydx(k-1,j,i) - 0.25_8*zydx(k,j,i)) &
+                           * (vmask(j+1,i) - vmask(j,i))
              cA(3,k,j,i) = (0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i)) * vmask(j,i)     !! couples with k+1 j-1
              cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i) * vmask(j,i)                               !! couples with j-1
              cA(5,k,j,i) =-(0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i)) * vmask(j,i)     !! couples with k-1 j-1
@@ -357,8 +352,9 @@ contains
                         -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
                         -cA(6,k,j,i)-cA(8,k+1,j,i+1)-cA(3,k,j,i)-cA(5,k+1,j+1,i) &
                         -cA(5,k,j,i)-cA(5,k,j-1,i+1)-cA(8,k,j,i)-cA(8,k,j+1,i+1)
-          !for comparing with matlab code 
-          !          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+          !for comparing with matlab 2d code 
+          !          cA(1,k,j,i) = -cA(2,k+1,j,i) &
+          !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
           !                        -cA(6,k,j,i)-cA(8,k+1,j,i+1) 
 
           do k = 2,nz-1 !interior levels
@@ -366,8 +362,9 @@ contains
                            -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
                            -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) & 
                            -cA(3,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)-cA(5,k+1,j+1,i)   
-             !for comparing with matlab code
-             !             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+             !for comparing with matlab 2d code
+             !             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
+             !                           -cA(7,k,j,i)-cA(7,k,j,i+1) &
              !                           -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) 
           enddo
 
@@ -375,8 +372,9 @@ contains
           cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
                         -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
                         -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
-          !for comparing with matlab code 
-          !          cA(1,k,j,i) = -3._8*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+          !for comparing with matlab 2d code 
+          !          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
+          !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
           !                        -cA(6,k-1,j,i+1)-cA(8,k,j,i)
        enddo
     enddo
@@ -680,8 +678,6 @@ contains
 !!$    enddo
 
 !    if (myrank.eq.0) write(*,*)"coarsening done"
-
-
 
   end subroutine coarsen_matrix_3D
 

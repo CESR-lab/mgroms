@@ -16,7 +16,8 @@ cA_000 = ncread('../src/cA_cA_000.nc','cA');
 cA_001 = ncread('../src/cA_cA_001.nc','cA');
 cA_002 = ncread('../src/cA_cA_002.nc','cA');
 cA_003 = ncread('../src/cA_cA_003.nc','cA');
-cA = cat(3,squeeze(cA_000(:,:,10,1:end-1)),squeeze(cA_001(:,:,10,2:end)));
+cA = cat(3,squeeze(cA_000(:,:,10,2:end-1)),squeeze(cA_001(:,:,10,2:end-1)));
+%cA = cat(3,squeeze(cA_000(:,:,10,1:end-1)),squeeze(cA_001(:,:,10,2:end)));
 
 figure; 
 subplot(3,3,1); imagesc(squeeze(cA(6,:,:))); axis xy; colorbar
@@ -101,12 +102,6 @@ subplot(3,3,6); imagesc(ce_mgroms); axis xy; colorbar
 subplot(3,3,7); imagesc(cws_mgroms); axis xy; colorbar
 subplot(3,3,8); imagesc(cs_mgroms); axis xy; colorbar
 subplot(3,3,9); imagesc(ces_mgroms); axis xy; colorbar
-% figure;
-% subplot(3,3,1); imagesc(-cwn_mgroms-cen_mgroms-cws_mgroms-ces_mgroms); axis xy; colorbar; caxis([-0.0001 0.0001])
-% subplot(3,3,2); imagesc(-cn_mgroms-cs_mgroms); axis xy; colorbar
-% subplot(3,3,4); imagesc(-cw_mgroms-ce_mgroms); axis xy; colorbar
-% subplot(3,3,5); imagesc(co_mgroms-(-cwn_mgroms-cen_mgroms-cws_mgroms-ces_mgroms-cn_mgroms-cs_mgroms-cw_mgroms-ce_mgroms)); axis xy; colorbar
-
 figure; 
 subplot(3,3,1); imagesc(cwn_mgroms-cwn_GR); axis xy; colorbar
 subplot(3,3,2); imagesc(cn_mgroms-cn_GR); axis xy; colorbar

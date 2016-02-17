@@ -326,32 +326,31 @@ title(['relative pressure error mgroms-JM  j=' num2str(j) ' [' num2str(cmin) ' '
 % caxis([cmin cmax]);
 % title(['relative pressure error ND-JM  j=' num2str(j) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
 
-figure;
-subplot(2,1,1)
-pcolor(xu_pc,zwu_pc,p_GR_pc-p_JM_pc); shading flat;
-hold on
-plot(xr(1,:),zw(1,:),'k','linewidth',1)
-xlim([0 L])
-ylim([-H 0])
-axis equal tight
-colorbar
-cmin = min(p_GR(:)-p_JM(:));
-cmax = max(p_GR(:)-p_JM(:));
-caxis([cmin cmax]);
-title(['pressure error GR-JM  j=' num2str(j) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
-
-subplot(2,1,2)
-pcolor(xu_pc,zwu_pc,log10(abs(p_GR_pc-p_JM_pc)./abs(p_JM_pc))); shading flat;
-hold on
-plot(xr(1,:),zw(1,:),'k','linewidth',1)
-xlim([0 L])
-ylim([-H 0])
-axis equal tight
-colorbar
-cmin = min(log10(abs(p_GR_pc(:)-p_JM_pc(:))./abs(p_JM_pc(:))));
-cmax = max(log10(abs(p_GR_pc(:)-p_JM_pc(:))./abs(p_JM_pc(:))));
-caxis([cmin cmax]);
-title(['relative pressure error GR-JM  j=' num2str(j) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
+% figure;
+% subplot(2,1,1)
+% pcolor(xu_pc,zwu_pc,p_GR_pc-p_JM_pc); shading flat;
+% hold on
+% plot(xr(1,:),zw(1,:),'k','linewidth',1)
+% xlim([0 L])
+% ylim([-H 0])
+% axis equal tight
+% colorbar
+% cmin = min(p_GR(:)-p_JM(:));
+% cmax = max(p_GR(:)-p_JM(:));
+% caxis([cmin cmax]);
+% title(['pressure error GR-JM  j=' num2str(j) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
+% subplot(2,1,2)
+% pcolor(xu_pc,zwu_pc,log10(abs(p_GR_pc-p_JM_pc)./abs(p_JM_pc))); shading flat;
+% hold on
+% plot(xr(1,:),zw(1,:),'k','linewidth',1)
+% xlim([0 L])
+% ylim([-H 0])
+% axis equal tight
+% colorbar
+% cmin = min(log10(abs(p_GR_pc(:)-p_JM_pc(:))./abs(p_JM_pc(:))));
+% cmax = max(log10(abs(p_GR_pc(:)-p_JM_pc(:))./abs(p_JM_pc(:))));
+% caxis([cmin cmax]);
+% title(['relative pressure error GR-JM  j=' num2str(j) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
 
 % % pcolor sections
 % i = 60;
@@ -388,7 +387,7 @@ title(['relative pressure error GR-JM  j=' num2str(j) ' [' num2str(cmin) ' ' num
 % title(['pressure  mgroms i=' num2str(i) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
 
 % imagesc maps
-k = 10;
+k = 1;
 
 p_1 = cat(2,squeeze(p_000(k,2:end-1,2:end-1)),squeeze(p_001(k,2:end-1,2:end-1)));
 p_2 = cat(2,squeeze(p_002(k,2:end-1,2:end-1)),squeeze(p_003(k,2:end-1,2:end-1)));
@@ -398,20 +397,23 @@ r_2 = cat(2,squeeze(r_002(k,2:end-1,2:end-1)),squeeze(r_003(k,2:end-1,2:end-1)))
 r = cat(1,r_1,r_2); clear r_1 r_2;
 
 figure;
+subplot(2,1,1)
 imagesc(p); axis xy
+axis equal tight
 colorbar
 cmin = min(min(p(:)));
 cmax = max(max(p(:)));
 caxis([cmin cmax]);
 title(['pressure mgroms  k=' num2str(k) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
-
-figure;
+subplot(2,1,2)
 imagesc(r); axis xy
+axis equal tight
 colorbar
 cmin = min(r(:));
 cmax = max(r(:));
 caxis([cmin cmax]);
 title(['residual mgroms k=' num2str(k) ' [' num2str(cmin) ' ' num2str(cmax) ']']);
+
 % 
 % figure;
 % imagesc(p-repmat(p_GR(k,:),[nx 1])); axis xy

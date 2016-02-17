@@ -56,6 +56,7 @@ program mg_testseamount
   !- read the NonHydro namelist file if it is present 
   !- else default values and print them (or not).
   call read_nhnamelist(vbrank=rank)
+  nh = nhalo
 
   ! fill the neighbours array
   call mm_define_neighbours(npxg, npyg, neighb)
@@ -114,8 +115,6 @@ program mg_testseamount
   call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
   call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
 
-  nh = nhalo
-
   pj = rank/npxg   
   pi = rank-pj*npxg
 
@@ -141,7 +140,7 @@ program mg_testseamount
      enddo
   enddo
 
-  if (rank.eq.0)  write(*,*)'Start main model!'
+  if (rank.eq.0) write(*,*) 'Start main model!'
 
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------

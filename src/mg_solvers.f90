@@ -13,6 +13,7 @@ contains
 
   !---------------------------------------------------------------------
   subroutine solve(tol,maxite)
+
     real(kind=rp)   , intent(in) :: tol
     integer(kind=ip), intent(in) :: maxite
  
@@ -21,10 +22,10 @@ contains
     integer(kind=ip) :: nite
 
     integer(kind=ip) :: nx,ny,nz,nh
-    real(kind=rp),dimension(:,:,:),allocatable  :: p0,b0
-    real(kind=rp),dimension(:,:,:), pointer:: p,b,r
+    real(kind=rp), dimension(:,:,:), allocatable :: p0,b0
+    real(kind=rp), dimension(:,:,:), pointer :: p,b,r
 
-    real(kind = lg)  :: tstart,tend,perf
+    real(kind = lg) :: tstart,tend,perf
     real(kind=rp) :: rnxg,rnyg,rnzg
     real(kind=rp) :: rnpxg,rnpyg
 
@@ -54,7 +55,7 @@ contains
 
     call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
     
-    if (myrank == 0) write(*,*)' rnom:', rnorm,' bnorm:', bnorm
+    if (myrank == 0) write(*,*)'rnom:', rnorm,' bnorm:', bnorm
 
     res0 = rnorm/bnorm
     rnorm0 = res0
@@ -69,11 +70,11 @@ contains
 !      p(:,:,:)=p0
 !      b(:,:,:)=b0
        call compute_residual(1,rnorm)
-!       if (myrank == 0) write(*,*)' rnom:', rnorm,' bnorm:', bnorm
+!       if (myrank == 0) write(*,*)'rnom:', rnorm
        rnorm = rnorm/bnorm
-       conv=res0/rnorm ! error reduction after this iteration
-       res0=rnorm
-       nite=nite+1
+       conv = res0/rnorm ! error reduction after this iteration
+       res0 = rnorm
+       nite = nite+1
        if (myrank == 0) write(*,10) nite, rnorm, conv
     enddo
 
@@ -140,7 +141,7 @@ contains
        grid(lev+1)%p(:,:,:) = 0._8
     enddo
 
-    call relax(nlevs0, ns_coarsest)
+    call relax(nlevs0,ns_coarsest)
 
     do lev=nlevs0-1,lev1,-1
        call coarse2fine(lev)

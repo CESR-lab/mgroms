@@ -16,19 +16,14 @@ contains
   !--------------------------------------------------------------
   subroutine nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
 
-    integer(kind=ip), dimension(4) , intent(in) :: neighb ! S, E, N, W
-    integer(kind=ip)               , intent(in) :: nx, ny, nz
-    integer(kind=ip)               , intent(in) :: npxg, npyg
+    integer(kind=ip), dimension(4)              , intent(in) :: neighb ! S, E, N, W
+    integer(kind=ip)                            , intent(in) :: nx, ny, nz
+    integer(kind=ip)                            , intent(in) :: npxg, npyg
     real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: dx, dy
     real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: umask, vmask
     real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
 
-!!$    integer(kind=ip) :: nz, ny, nx
     integer(kind=ip) :: ierr, lev
-
-!!$    nz = size(zr,dim=1)
-!!$    ny = size(zr,dim=2)
-!!$    nx = size(zr,dim=3)
 
     call mg_mpi_init()
 
@@ -44,12 +39,12 @@ contains
 
   !--------------------------------------------------------------
   subroutine nhydro_solve(u,v,w)
+
     real(kind=rp), dimension(:,:,:), allocatable, intent(inout) :: u,v,w
 
     integer(kind=ip) :: nx, ny, nz
-
-    real(kind=rp)    :: tol    = 1.e-12
-    integer(kind=ip) :: maxite = 12
+    real(kind=rp)    :: tol = 1.e-12
+    integer(kind=ip) :: maxite = 30
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)

@@ -129,7 +129,7 @@ contains
              !do j = jb,je
              do j = jb+mod(i+red_black,2),je,2
 
-                k=1!lower level
+                k=1 !lower level
                 rhs(k) = b(k,j,i)                                              &
                      - cA(3,k,j,i)*p(k+1,j-1,i)                                &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
@@ -146,7 +146,7 @@ contains
                 d(k)   = cA(1,k,j,i)
                 ud(k)  = cA(2,k+1,j,i)
 
-                do k = 2,nz-1!interior levels
+                do k = 2,nz-1 !interior levels
                    rhs(k) = b(k,j,i) &
                         - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
                         - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
@@ -158,7 +158,7 @@ contains
                    ud(k)  = cA(2,k+1,j,i)
                 enddo
 
-                k=nz!upper level
+                k=nz !upper level
                 rhs(k) = b(k,j,i)                                              &
                                                 - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
@@ -366,7 +366,7 @@ contains
     real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
     integer(kind=ip) :: nx, ny, nz, nh
-    real(kind=rp)::resloc
+    real(kind=rp) ::resloc
 
     p  => grid(lev)%p
     b  => grid(lev)%b
