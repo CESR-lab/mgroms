@@ -44,7 +44,7 @@ contains
 
     integer(kind=ip) :: nx, ny, nz
     real(kind=rp)    :: tol = 1.e-12
-    integer(kind=ip) :: maxite = 30
+    integer(kind=ip) :: maxite = 50
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)
@@ -55,8 +55,6 @@ contains
 
     grid(1)%p(:,:,:) = 0.
 
-!ND
-!    call relax(1,1)
     call solve(tol,maxite)
 
     !ND

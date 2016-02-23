@@ -63,19 +63,18 @@ contains
     nite=0
 
     do while ((nite < maxite).and.(res0 > tol))
-!      b(:,:,:)=r(:,:,:)
-!       p(:,:,:)=0.
+
        call Vcycle(1)
-!      p0=p0+p
-!      p(:,:,:)=p0
-!      b(:,:,:)=b0
+       !call relax(1,1)
+
        call compute_residual(1,rnorm)
-!       if (myrank == 0) write(*,*)'rnom:', rnorm
        rnorm = rnorm/bnorm
        conv = res0/rnorm ! error reduction after this iteration
        res0 = rnorm
+
        nite = nite+1
        if (myrank == 0) write(*,10) nite, rnorm, conv
+       if (myrank == 0) write(100,*) rnorm, conv
     enddo
 
     call cpu_time(tend)
@@ -125,12 +124,9 @@ contains
   !----------------------------------------
   subroutine Vcycle(lev1)
 
-    integer(kind=ip),intent(in):: lev1
-
-    integer(kind=ip):: lev
-    real(kind=rp)   :: rnorm
-    
-    integer(kind=ip):: nlevs0
+    integer(kind=ip), intent(in) :: lev1
+    integer(kind=ip)             :: lev, nlevs0
+    real(kind=rp)                :: rnorm
 
     nlevs0=nlevs
 

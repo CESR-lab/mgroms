@@ -124,8 +124,8 @@ program mg_testseamount
      do j = 0,ny+1
         x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
         y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
-!        h(j,i) = Hc
-        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
+        h(j,i) = Hc
+!        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
 !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
      enddo
   enddo

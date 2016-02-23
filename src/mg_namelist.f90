@@ -19,6 +19,8 @@ module mg_namelist
 
   character(len=16) :: cmatrix='simple'
 
+  logical           :: red_black = .false.    !- .false. or .true.
+
   character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
 
   logical           :: aggressive = .false.   !- .false. or .true.
@@ -30,6 +32,7 @@ module mg_namelist
        ns_pre     , &
        ns_post    , &
        cmatrix    , &
+       red_black  , &
        mpiexchange, &
        aggressive
 
@@ -92,6 +95,7 @@ module mg_namelist
            write(*,*)'  - ns_pre     : ', ns_pre
            write(*,*)'  - ns_post    : ', ns_post
            write(*,*)'  - cmatrix    : ', trim(cmatrix)
+           write(*,*)'  - red_black  : ', red_black
            write(*,*)'  - mpiexchange: ', trim(mpiexchange)
            write(*,*)'  - aggressive : ', aggressive
            write(*,*)'  '
