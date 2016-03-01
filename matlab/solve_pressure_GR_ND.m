@@ -1,11 +1,9 @@
-clear all
-
 %% solve for pressure
 
 nx = 128; 
 nz = 128;
 
-[A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz);
+[A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw] = set_nhlap_GR_ND(nx,nz);
 
 % define rhs
 L = 10e3;
@@ -32,18 +30,18 @@ rhs_pc = cat(1,rhs_pc,rhs_pc(end,:));
 p_pc = cat(2,p,p(:,end));
 p_pc = cat(1,p_pc,p_pc(end,:));
 
-figure;
-pcolor(xu_pc,zwu_pc,rhs_pc); shading flat;
-hold on
-plot(xr(1,:),zw(1,:),'k','linewidth',1)
-xlim([0 L])
-ylim([-H 0])
-axis equal tight
-colorbar
-cmin = min(rhs(:));
-cmax = max(rhs(:));
-caxis([cmin cmax]);
-title(['rhs [' num2str(cmin) ' ' num2str(cmax) ']']);
+% figure;
+% pcolor(xu_pc,zwu_pc,rhs_pc); shading flat;
+% hold on
+% plot(xr(1,:),zw(1,:),'k','linewidth',1)
+% xlim([0 L])
+% ylim([-H 0])
+% axis equal tight
+% colorbar
+% cmin = min(rhs(:));
+% cmax = max(rhs(:));
+% caxis([cmin cmax]);
+% title(['rhs GR [' num2str(cmin) ' ' num2str(cmax) ']']);
 
 figure;
 pcolor(xu_pc,zwu_pc,p_pc); shading flat;

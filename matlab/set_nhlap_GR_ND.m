@@ -1,5 +1,4 @@
-function [A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw,dzr,dzu,dzw,dxu,dxw,alphauw,alphaw] = set_nhlap_ND(nx,nz)
-%% setup the 9 points pressure operator in sigma coordinates
+function [A,ce,cw,cn,cs,cen,cwn,ces,cws,co,h,xr,zr,vr,zw] = set_nhlap_GR_ND(nx,nz)
 
 L = 10e3;
 H = 4e3;

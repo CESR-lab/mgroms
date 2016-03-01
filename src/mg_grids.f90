@@ -47,7 +47,7 @@ contains
 
     integer(kind=ip) :: lev
 
-    call  find_grid_levels(npxg, npyg, nxl, nyl, nzl)
+    call find_grid_levels(npxg, npyg, nxl, nyl, nzl)
 
     allocate(grid(nlevs))
 

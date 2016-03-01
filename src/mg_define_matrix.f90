@@ -12,18 +12,19 @@ module mg_define_matrix
 
 contains
   !-------------------------------------------------------------------------     
-  subroutine define_matrices(dx, dy, zr, zw)
+  subroutine define_matrices(dx, dy, zr, zw, umask, vmask)
 
     real(kind=rp), dimension(:,:)  , allocatable, optional, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:)  , allocatable, optional, intent(in) :: umask, vmask
     real(kind=rp), dimension(:,:,:), allocatable, optional, intent(in) :: zr, zw
 
     integer(kind=ip)::  lev
 
     lev = 1
     if (cmatrix == 'simple') then
-       call define_matrix_simple(lev)
+       call define_matrix_simple(lev, dx, dy, zr, zw, umask, vmask)
     elseif (cmatrix == 'real') then
-       call define_matrix_real(lev, dx, dy, zr, zw)
+       call define_matrix_real(lev, dx, dy, zr, zw, umask, vmask)
     else
        stop
     endif
@@ -35,9 +36,12 @@ contains
   end subroutine define_matrices
 
   !----------------------------------------
-  subroutine define_matrix_simple(lev)
+  subroutine define_matrix_simple(lev, dx, dy, zr, zw, umask, vmask)
 
     integer(kind=ip),intent(in):: lev
+    real(kind=rp), dimension(:,:), allocatable, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:), allocatable, intent(in) :: umask, vmask
+    real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
 
     character(len=15) :: matrixname
 
@@ -57,6 +61,7 @@ contains
     real(kind=rp):: dxi, dyi, dzi
     integer(kind=ip):: nx, ny, nz
     integer(kind=ip):: nh
+    real(kind=rp), dimension(:,:,:), pointer :: dz
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -65,9 +70,23 @@ contains
 
     cA => grid(1)%cA ! check the syntax / lighten the writing
 
-    dxi=1._8   !/dx
-    dyi=1._8   !/dy
-    dzi=1._8*16   !/dz
+    !ND
+    call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+    call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+
+    !! Cell heights
+    allocate(dz(nz,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz
+             dz(k,j,i) = zw(k+1,j,i)-zw(k,j,i) !!  cell height at rho-points
+          enddo
+       enddo
+    enddo
+
+    dxi=1._8/dx(1,1)
+    dyi=1._8/dy(1,1)
+    dzi=1._8/dz(1,1,1)
 
     matrixname='7points' ! or '15points'
 
@@ -76,7 +95,7 @@ contains
        do j = 1-nh,ny+nh
           do k = 1,nz
              if(trim(matrixname)=='7points')then
-! --- regular 7 points Laplacian ---
+                ! --- regular 7 points Laplacian ---
                 cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)
                 cA(2,k,j,i) = dzi*dzi
                 cA(3,k,j,i) = 0.0_8
@@ -86,7 +105,7 @@ contains
                 cA(7,k,j,i) = dxi*dxi
                 cA(8,k,j,i) = 0.0_8
              endif
-! --- extended stencil with diagonal coupling: better convergence rate ---
+             ! --- extended stencil with diagonal coupling: better convergence rate ---
              if(trim(matrixname)=='15points')then
                 cA(1,k,j,i) = 2._8*(-dxi*dxi-dyi*dyi-dzi*dzi)-4*(dxi*dzi+dyi*dzi)
                 cA(2,k,j,i) = dzi*dzi
@@ -103,13 +122,16 @@ contains
        enddo
     enddo
 
-  end subroutine define_matrix_simple
+    call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+
+    end subroutine define_matrix_simple
 
 !----------------------------------------
-  subroutine define_matrix_real(lev, dx, dy, zr, zw)
+  subroutine define_matrix_real(lev, dx, dy, zr, zw, umask, vmask)
 
     integer(kind=ip),intent(in):: lev
-    real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:), allocatable, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:), allocatable, intent(in) :: umask, vmask 
     real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
 
     ! Define matrix coefficients cA
@@ -123,37 +145,37 @@ contains
     ! cA(7,:,:,:)      -> p(k,j,i-1)xd
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
-    real(kind=rp), dimension(:,:,:,:), pointer :: cA
     integer(kind=ip):: k, j, i
     integer(kind=ip):: nx, ny, nz
     integer(kind=ip):: nh
 
-    real(kind=rp) ::  zxu, zyu, zxv, zyv
-
-    real(kind=rp), dimension(:,:)  , allocatable :: dxu, dyv
-    real(kind=rp), dimension(:,:,:), allocatable :: Arx, Ary
-    real(kind=rp), dimension(:,:)  , allocatable :: Arz
-    real(kind=rp), dimension(:,:,:), allocatable :: dz
-    real(kind=rp), dimension(:,:,:), allocatable :: dzw
-    real(kind=rp), dimension(:,:,:), allocatable :: zy,zx
-    real(kind=rp), dimension(:,:,:), allocatable :: zydx,zxdy
-    real(kind=rp), dimension(:,:,:), allocatable :: zxw, zyw
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA
+    real(kind=rp), dimension(:,:)  ,   pointer :: dxu, dyv
+    real(kind=rp), dimension(:,:,:),   pointer :: Arx, Ary
+    real(kind=rp), dimension(:,:)  ,   pointer :: Arz
+    real(kind=rp), dimension(:,:,:),   pointer :: dz
+    real(kind=rp), dimension(:,:,:),   pointer :: dzw
+    real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
+    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
+    real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
+    real(kind=rp), dimension(:,:,:),   pointer :: cw
 
     ! TODO NG
     ! zw,zr can change in time
     ! dx,dy constant in time
-!!! I'm assuming that I'm getting zw,zr,dx,dy from outside this routine
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
     nh = grid(lev)%nh
+
     cA => grid(1)%cA 
 
-!ND
+    !ND
     call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
     call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
 
+    !! Cell heights
     allocate(dz(nz,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
@@ -165,23 +187,25 @@ contains
     allocate(dzw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
-          dzw(1,j,i) = zr(1,j,i) - zw(1,j,i)
+          dzw(1,j,i) = zr(1,j,i)-zw(1,j,i) !!
           do k = 2,nz
              dzw(k,j,i) = zr(k,j,i)-zr(k-1,j,i) !!  cell height at w-points
           enddo
-          dzw(nz+1,j,i) = zw(nz+1,j,i) - zr(nz,j,i)
+          dzw(nz+1,j,i) = zw(nz+1,j,i)-zr(nz,j,i) !!
        enddo
     enddo
+
+    !! Cell widths
     allocate(dxu(ny,nx+1))
     do i = 1,nx+1
        do j = 1,ny
-          dxu(j,i) = 0.5*(dx(j,i) + dx(j,i-1))
+          dxu(j,i) = 0.5_8*(dx(j,i)+dx(j,i-1))
        enddo
     enddo
     allocate(dyv(ny+1,nx))
     do i = 1,nx
        do j = 1,ny+1
-          dyv(j,i) = 0.5*(dy(j,i) + dy(j-1,i))
+          dyv(j,i) = 0.5_8*(dy(j,i)+dy(j-1,i))
        enddo
     enddo
 
@@ -190,7 +214,7 @@ contains
     do i = 1,nx+1
        do j = 1,ny
           do k = 1,nz
-             Arx(k,j,i) = 0.25*(dz(k,j,i)+dz(k,j,i-1))*(dy(j,i)+dy(j,i-1)) 
+             Arx(k,j,i) = 0.25_8*(dz(k,j,i)+dz(k,j,i-1))*(dy(j,i)+dy(j,i-1)) 
           enddo
        enddo
     enddo
@@ -198,169 +222,171 @@ contains
     do i = 1,nx
        do j = 1,ny+1
           do k = 1,nz
-             Ary(k,j,i) = 0.25*(dz(k,j,i)+dz(k,j-1,i))*(dx(j,i)+dx(j-1,i)) 
+             Ary(k,j,i) = 0.25_8*(dz(k,j,i)+dz(k,j-1,i))*(dx(j,i)+dx(j-1,i)) 
           enddo
        enddo
     enddo
-    allocate(Arz(ny,nx))
-    do i = 1,nx
-       do j = 1,ny
+    allocate(Arz(0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
           Arz(j,i) = dx(j,i)*dy(j,i)
        enddo
     enddo
 
     !! Slopes in x- and y-direction defined at rho-points
-    allocate(zx(nz+1,0:ny+1,0:nx+1))
-    allocate(zy(nz+1,0:ny+1,0:nx+1))
+    allocate(zx(nz,0:ny+1,0:nx+1))
+    allocate(zy(nz,0:ny+1,0:nx+1))
     do i = 1,nx
        do j = 1,ny
           do k = 1,nz
-             zy(k,j,i) = 0.5*(zr(k,j+1,i)-zr(k,j-1,i))/dy(j,i)
-             zx(k,j,i) = 0.5*(zr(k,j,i+1)-zr(k,j,i-1))/dx(j,i)
+             zy(k,j,i) = 0.5_8*(zr(k,j+1,i)-zr(k,j-1,i))/dy(j,i)
+             zx(k,j,i) = 0.5_8*(zr(k,j,i+1)-zr(k,j,i-1))/dx(j,i)
           enddo
        enddo
     enddo
-    zy(nz+1,:,:) = 0._8
-    zy(:,0,:)    = 0._8
-    zy(:,ny+1,:) = 0._8
-    zy(:,:,0)    = 0._8
-    zy(:,:,nx+1) = 0._8
+    call fill_halo(1,zy)
+    call fill_halo(1,zx) 
 
-    zx(nz+1,:,:) = 0._8
-    zx(:,0,:)    = 0._8
-    zx(:,ny+1,:) = 0._8
-    zx(:,:,0)    = 0._8
-    zx(:,:,nx+1) = 0._8
-
-    allocate(zxdy(nz+1,0:ny+1,0:nx+1))
-    allocate(zydx(nz+1,0:ny+1,0:nx+1))
+    allocate(zxdy(nz,0:ny+1,0:nx+1))
+    allocate(zydx(nz,0:ny+1,0:nx+1))
     do k = 1,nz
-       zydx(k,:,:) = zy(k,:,:) *dx(:,:)
-       zxdy(k,:,:) = zx(k,:,:) *dy(:,:)
+       zydx(k,:,:) = zy(k,:,:)*dx(:,:)
+       zxdy(k,:,:) = zx(k,:,:)*dy(:,:)
     enddo
 
-    allocate(zyw(nz+1,ny,nx))
-    allocate(zxw(nz+1,ny,nx))
+    allocate(zyw(nz+1,0:ny+1,0:nx+1))
+    allocate(zxw(nz+1,0:ny+1,0:nx+1))
     do i = 1,nx
        do j = 1,ny
           do k = 1,nz+1
-             zyw(k,j,i) = 0.5*(zw(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
-             zxw(k,j,i) = 0.5*(zw(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
+             zyw(k,j,i) = 0.5_8*(zw(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
+             zxw(k,j,i) = 0.5_8*(zw(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
+          enddo
+       enddo
+    enddo
+    call fill_halo(1,zyw)
+    call fill_halo(1,zxw)
+
+    allocate(cw(nz+1,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz+1
+             cw(k,j,i) = Arz(j,i)/dzw(k,j,i) * (1._8 + zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
           enddo
        enddo
     enddo
 
-    !! cA : levels 2 to nz
+    !! interaction coeff with neighbours
     do i = 1,nx
        do j = 1,ny
-          do k = 2,nz
-             cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
-             cA(3,k,j,i) = 0.25*zydx(k+1,j,i)+0.25*zydx(k,j-1,i)                               !! couples with k+1 j-1
-             cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)                                                 !! couples with j-1
-             cA(5,k,j,i) =-0.25*zydx(k-1,j,i)-0.25*zydx(k,j-1,i)                               !! couples with k-1 j-1
-             cA(6,k,j,i) = 0.25*zxdy(k+1,j,i)+0.25*zxdy(k,j,i-1)                               !! Couples with k+1 i-1
-             cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)                                                 !! Couples with i-1
-             cA(8,k,j,i) =-0.25*zxdy(k-1,j,i)-0.25*zxdy(k,j,i-1)                               !! Couples with k-1 i-1
+
+          k = 1 !lower level
+          cA(3,k,j,i) = ( 0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i) ) * vmask(j,i)      !! couples with k+1 j-1
+          cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
+                        ! topo terms                                           
+                        -(zydx(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+                        + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))) & 
+                        ! from j,k cross terms
+                        -(0.25_8*zydx(k,j-1,i) - 0.25_8*zydx(k,j,i)) & 
+                        ! from i,j cross terms if lbc                                         
+                        -(0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &
+                        * (umask(j-1,i+1) - umask(j-1,i)) & 
+                        - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+                        * (umask(j,i+1) - umask(j,i))) ) * vmask(j,i)
+          cA(6,k,j,i) = ( 0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1) ) * umask(j,i)      !! couples with k+1 i-1
+          cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! couples with i-1
+                        ! topo terms                                                   
+                        -(zxdy(k,j,i)*zxdy(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+                        + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))) &
+                        ! from i,k cross terms
+                        -(0.25_8*zxdy(k,j,i-1) - 0.25_8*zxdy(k,j,i)) &
+                        ! from i,j cross terms if lbc                                         
+                        -(0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+                        * (vmask(j+1,i-1) - vmask(j,i-1)) & 
+                        - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+                        * (vmask(j+1,i) - vmask(j,i))) ) * umask(j,i) 
+          cA(5,k,j,i) = +0.5_8*zxdy(k,j+1,i)*zydx(k,j+1,i)/(cw(k,j+1,i)+cw(k+1,j+1,i)) &  !! only for k==1, couples with j+1,i-1
+                        * umask(j+1,i) * vmask(j+1,i) &
+                        +0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+                        * umask(j,i) * vmask(j+1,i-1)              
+          cA(8,k,j,i) =-0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &   !! only for k==1, couples with j-1,i-1
+                        * umask(j-1,i) * vmask(j,i) &
+                        -0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+                        * umask(j,i) * vmask(j,i-1)                                        
+
+          do k = 2,nz-1 !interior levels
+             cA(2,k,j,i) = cw(k,j,i) &                                                    !! couples with k-1
+                           ! from i,k  cross terms if lbc
+                           -(0.25_8*zxdy(k-1,j,i) - 0.25_8*zxdy(k,j,i)) &
+                           * (umask(j,i+1) - umask(j,i)) &
+                           ! from j,k  cross terms if lbc
+                           -(0.25_8*zydx(k-1,j,i) - 0.25_8*zydx(k,j,i)) &
+                           * (vmask(j+1,i) - vmask(j,i))
+             cA(3,k,j,i) = (0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i)) * vmask(j,i)     !! couples with k+1 j-1
+             cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i) * vmask(j,i)                               !! couples with j-1
+             cA(5,k,j,i) =-(0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i)) * vmask(j,i)     !! couples with k-1 j-1
+             cA(6,k,j,i) = (0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1)) * umask(j,i)     !! Couples with k+1 i-1
+             cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i) * umask(j,i)                               !! Couples with i-1
+             cA(8,k,j,i) =-(0.25_8*zxdy(k-1,j,i) + 0.25_8*zxdy(k,j,i-1)) * umask(j,i)     !! Couples with k-1 i-1
           enddo
-          k = nz
-          cA(4,k,j,i) = cA(4,k,j,i) - 0.25*zydx(k,j-1,i) + 0.25*zydx(k,j,i)
-          cA(7,k,j,i) = cA(7,k,j,i) - 0.25*zxdy(k,j,i-1) + 0.25*zxdy(k,j,i)
+
+          k = nz !upper level
+          cA(2,k,j,i) = cw(k,j,i)                                                         !! couples with k-1
+          cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
+                         -(-0.25_8*zydx(k,j-1,i) + 0.25_8*zydx(k,j,i)) ) * vmask(j,i)
+          cA(5,k,j,i) =-( 0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i) )  * vmask(j,i)     !! couples with k-1 j-1
+          cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! Couples with i-1
+                         -(-0.25_8*zxdy(k,j,i-1) + 0.25_8*zxdy(k,j,i)) ) * umask(j,i)
+          cA(8,k,j,i) =-( 0.25_8*zxdy(k-1,j,i) + 0.25_8*zxdy(k,j,i-1) )  * umask(j,i)     !! Couples with k-1 i-1
        enddo
     enddo
-!ND
-    call fill_halo(1,cA) !fill_halo_4d in the future!
-!
+
+    call fill_halo(1,cA)
+
+    !! interaction coeff with itself
     do i = 1,nx
        do j = 1,ny
-          do k = 2,nz-1
-!ND
-             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
+
+          k = 1 !lower level
+          cA(1,k,j,i) = -cA(2,k+1,j,i) &
+                        -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+                        -cA(6,k,j,i)-cA(8,k+1,j,i+1)-cA(3,k,j,i)-cA(5,k+1,j+1,i) &
+                        -cA(5,k,j,i)-cA(5,k,j-1,i+1)-cA(8,k,j,i)-cA(8,k,j+1,i+1)
+          !for comparing with matlab 2d code 
+          !          cA(1,k,j,i) = -cA(2,k+1,j,i) &
+          !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
+          !                        -cA(6,k,j,i)-cA(8,k+1,j,i+1) 
+
+          do k = 2,nz-1 !interior levels
+             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
+                           -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+                           -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) & 
+                           -cA(3,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)-cA(5,k+1,j+1,i)   
+             !for comparing with matlab 2d code
+             !             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
+             !                           -cA(7,k,j,i)-cA(7,k,j,i+1) &
+             !                           -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) 
           enddo
-          k = nz
-!ND
-          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!          cA(1,k,j,i) = -3*cA(2,k,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
+
+          k = nz !upper level
+          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
+                        -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+                        -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
+          !for comparing with matlab 2d code 
+          !          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
+          !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
+          !                        -cA(6,k-1,j,i+1)-cA(8,k,j,i)
        enddo
     enddo
 
-    !! cA : bottom level
-    k = 1
-    do i = 1,nx
-       do j = 1,ny
-          zxv = 0.5_8 * (zx(k,j,i) + zx(k,j-1,i))
-          zyv = 0.5_8 * (zy(k,j,i) + zy(k,j-1,i))
-          zxu = 0.5_8 * (zx(k,j,i) + zx(k,j,i-1))
-          zyu = 0.5_8 * (zy(k,j,i) + zy(k,j,i-1))
-          cA(3,k,j,i) = 0.25*zydx(k+1,j,i)+0.25*zydx(k,j-1,i)                              !! couples with k+1 j-1
-          cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)*(1 - 0.5*zyv*zyv/(1+zxv*zxv+zyv*zyv))          !! couples with j-1
-          cA(6,k,j,i) = 0.25*zxdy(k+1,j,i)+0.25*zxdy(k,j,i-1)                              !! Couples with k+1 i-1
-          cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)*(1 - 0.5*zxu*zxu/(1+zxu*zxu+zyu*zyu))          !! Couples with i-1
-          cA(5,k,j,i) = 0.125*zx(k,j+1,i)*zy(k,j+1,i) + 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j+1,i-1
-          cA(8,k,j,i) =-0.125*zx(k,j-1,i)*zy(k,j-1,i) - 0.125*zx(k,j,i-1)*zy(k,j,i-1)      !! only for k==1, couples with j-1,i-1
-       enddo
-    enddo
-
-    call fill_halo(1,cA) !fill_halo_4d in the future!
-
-    do i = 1,nx
-       do j = 1,ny
-!ND
-          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1)
-!          cA(1,k,j,i) = -cA(2,k+1,j,i)-cA(7,k,j,i)-cA(7,k,j,i+1) ! for comparing with matlab code 
-       enddo
-    enddo
-
-!ND
     call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
-
-    !!
-    !!! For the moment, we will implement side bc by means of a buffer. The next phase will include a mask, whereupon we must
-    !! implement horizontal condition in the matrix coefficients
-
-    !! West Boundary 
-    i = 1
-    do j = 1,ny
-       do k = 1,nz
-          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+0.5*zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
-       enddo
-    enddo
-    do j = 1,ny
-       do k = 1,nz
-          !         cA(1,k,j,i) = -cA(2,k,j,i)- cA(2,k+1,j,i)-cA(4,k,j,i)- cA(4,k,j+1,i)-cA(7,k,j,i+1)
-          !         cA(2,k,j,i) = cA(2,k,j,i) - 0.25*zxdy(k-1,j,i) + 0.25*zxdy(k,j,i)
-       enddo
-    enddo
-    !! East Boundary 
-    i = nx
-    do j = 1,ny
-       do k = 1,nz
-          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+0.5*zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
-          ! &                   + 0.25*zxdy(k-1,j,i) - 0.25*zxdy(k,j,i)
-       enddo
-    enddo
-    !! South Boundary 
-    j = 1
-    do i = 1,nx
-       do k = 1,nz
-          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+0.5*zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
-          ! &                   - 0.25*zydx(k-1,j,i) + 0.25*zydx(k,j,i)
-       enddo
-    enddo
-    !! North Boundary 
-    j = ny
-    do i = 1,nx
-       do k = 1,nz
-          !         cA(2,k,j,i) = Arz(j,i)/dzw(k,j,i)*(1+zxw(k,j,i)*zxw(k,j,i)+0.5*zyw(k,j,i)*zyw(k,j,i)) !! couples with k-1
-          ! &                   + 0.25*zydx(k-1,j,i) - 0.25*zydx(k,j,i)
-       enddo
-    enddo
 
     deallocate(Arx)
     deallocate(Ary)
     deallocate(Arz)
     deallocate(zxdy)
     deallocate(zydx)
+    deallocate(cw)
 
   end subroutine define_matrix_real
 
@@ -411,22 +437,28 @@ contains
     end if
 
     if (grid(lev+1)%gather == 1) then
+!ND
        nd = size(Ac,1)       
        do l=1,nd
           grid(lev+1)%dummy3 = Ac(l,:,:,:)
           call gather(lev+1,grid(lev+1)%dummy3,grid(lev+1)%r)
-          ! fill the halo
-          call fill_halo(lev+1,grid(lev+1)%r)
+!          ! fill the halo
+!          call fill_halo(lev+1,grid(lev+1)%r)
           grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
        enddo
+       call fill_halo(lev+1,grid(lev+1)%cA)
+!
     else
-       ! fill the halo
-       nd = size(Ac,1) 
-       do l=1,nd
-          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
-          call fill_halo(lev+1,grid(lev+1)%r)
-          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
-       enddo
+!ND
+!       ! fill the halo
+!       nd = size(Ac,1) 
+!       do l=1,nd
+!          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
+!          call fill_halo(lev+1,grid(lev+1)%r)
+!          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
+!       enddo
+       call fill_halo(lev+1,grid(lev+1)%cA)
+!
     endif
 
 
@@ -443,7 +475,6 @@ contains
     stop -1
   end subroutine coarsen_matrix_aggressive
 
-
   !-------------------------------------------------------------------------     
   subroutine coarsen_matrix_2D(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
@@ -456,7 +487,6 @@ contains
     integer(kind=ip):: d
 
     real(kind=rp)   :: diag,cff
-
 
     k = 1
     km= 2
@@ -515,7 +545,6 @@ contains
        enddo
     endif
 
-
   end subroutine coarsen_matrix_2D
 
   !-------------------------------------------------------------------------     
@@ -531,7 +560,6 @@ contains
     integer(kind=ip):: k2, j2, i2
 
     real(kind=rp)   :: diag,cff
-
 
 !    cA  => grid(lev)%cA
 !    cA2 => grid(lev+1)%cA
@@ -555,17 +583,17 @@ contains
              ! cA(2,:,:,:)      -> p(k-1,j,i)
              cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,jm,i)+cA(2,k,j,im)+cA(2,k,jm,im))
              ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-             cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,j,im))
+             cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,j,im)) ! pb at BC
              ! cA(4,:,:,:)      -> p(k,j-1,i)
-             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im))
+             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im)) ! pb at BC
              ! cA(5,:,:,:)      -> p(k-1,j-1,i)
-             cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im))
+             cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) ! pb at BC
              ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-             cA2(6,k2,j2,i2) = cff*(cA(6,k,j,i)+cA(6,k,jm,i))
+             cA2(6,k2,j2,i2) = cff*(cA(6,k,j,i)+cA(6,k,jm,i)) ! pb at BC
              ! cA(7,:,:,:)      -> p(k,j,i-1)
-             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i))
+             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i)) ! pb at BC
              ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-             cA2(8,k2,j2,i2) =cff*( cA(8,k,j,i)+cA(8,k,jm,i))
+             cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) ! pb at BC
 
              ! the diagonal term is the sum of 48 terms ...             
              ! why?
@@ -650,8 +678,6 @@ contains
 !!$    enddo
 
 !    if (myrank.eq.0) write(*,*)"coarsening done"
-
-
 
   end subroutine coarsen_matrix_3D
 

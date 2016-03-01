@@ -73,10 +73,10 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-    !--DEBUG !!!!
-    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
-    nprocs = 2
-    !--DEBUG !!!!
+!    !--DEBUG !!!!
+!    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
+!    nprocs = 2
+!    !--DEBUG !!!!
 
     if ( nprocs == 1) then
 
@@ -196,7 +196,7 @@ contains
 
        if (north.ne.MPI_PROC_NULL) then
           p(:,ny+1:ny+nh,1:nx)  = recvN
-       else!!Homogenous Neumann  
+       else !!Homogenous Neumann  
           p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
        end if
        !
@@ -610,30 +610,30 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-    !--DEBUG !!!!
-    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
-    nprocs = 2
-    !--DEBUG !!!!
+!    !--DEBUG !!!!
+!    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
+!    nprocs = 2
+!    !--DEBUG !!!!
 
     if ( nprocs == 1) then
 
-       !- Neumann conditions
-       !- west
-       cA(:,:,1:ny,1-nh:0)           = cA(:,:,1:ny,nh:1:-1)
-       !- east
-       cA(:,:,1:ny,nx+1:nx+nh)       = cA(:,:,1:ny,nx:nx-nh+1:-1)
-       !- south
-       cA(:,:,1-nh:0,1:nx)           = cA(:,:,nh:1:-1,1:nx)
-       !- north
-       cA(:,:,ny+1:ny+nh,1:nx)       = cA(:,:,ny:ny-nh+1:-1,1:nx)
-       !- south west
-       cA(:,:,1-nh:0,1-nh:0)         = cA(:,:,nh:1:-1,nh:1:-1)
-       !- south east
-       cA(:,:,1-nh:0,nx+1:nx+nh)     = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
-       !- north west
-       cA(:,:,ny+1:ny+nh,1-nh:0)     = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
-       !- north east
-       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+!       !- Neumann conditions
+!       !- west
+!       cA(:,:,1:ny,1-nh:0)           = cA(:,:,1:ny,nh:1:-1)
+!       !- east
+!       cA(:,:,1:ny,nx+1:nx+nh)       = cA(:,:,1:ny,nx:nx-nh+1:-1)
+!       !- south
+!       cA(:,:,1-nh:0,1:nx)           = cA(:,:,nh:1:-1,1:nx)
+!       !- north
+!       cA(:,:,ny+1:ny+nh,1:nx)       = cA(:,:,ny:ny-nh+1:-1,1:nx)
+!       !- south west
+!       cA(:,:,1-nh:0,1-nh:0)         = cA(:,:,nh:1:-1,nh:1:-1)
+!       !- south east
+!       cA(:,:,1-nh:0,nx+1:nx+nh)     = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
+!       !- north west
+!       cA(:,:,ny+1:ny+nh,1-nh:0)     = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
+!       !- north east
+!       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
 
     else
 
@@ -695,13 +695,13 @@ contains
        if (west.ne.MPI_PROC_NULL) then
           cA(:,:,1:ny,1-nh:0) = recvW
        else !!Homogenous Neumann  
-          cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
+!          cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
        endif
 
        if (east.ne.MPI_PROC_NULL) then
           cA(:,:,1:ny,nx+1:nx+nh) = recvE
        else !!Homogenous Neumann  
-          cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
+!          cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
        end if
        !
 
@@ -730,13 +730,13 @@ contains
        if (south.ne.MPI_PROC_NULL) then
           cA(:,:,1-nh:0,1:nx)  = recvS
        else !!Homogenous Neumann  
-          cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
+!          cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
        end if
 
        if (north.ne.MPI_PROC_NULL) then
           cA(:,:,ny+1:ny+nh,1:nx)  = recvN
-       else!!Homogenous Neumann  
-          cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
+       else !!Homogenous Neumann  
+!          cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
        end if
        !
        !-----------
@@ -767,13 +767,13 @@ contains
        if (southwest.ne.MPI_PROC_NULL) then
           cA(:,:,1-nh:0,1-nh:0) = recvSW
        else !!Homogenous Neumann  
-          cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
+!          cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
        endif
 
        if (southeast.ne.MPI_PROC_NULL) then
           cA(:,:,1-nh:0,nx+1:nx+nh) = recvSE
        else !!Homogenous Neumann  
-          cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
+!          cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
        end if
        !
 
@@ -802,13 +802,13 @@ contains
        if (northwest.ne.MPI_PROC_NULL) then
           cA(:,:,ny+1:ny+nh,1-nh:0) = recvNW
        else !!Homogenous Neumann  
-          cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
+!          cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
        endif
 
        if (northeast.ne.MPI_PROC_NULL) then
           cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = recvNE
        else !!Homogenous Neumann  
-          cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+!          cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
        end if
 
     endif
@@ -909,7 +909,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     else !!Homogenous Neumann  
-       cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
+!       cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
     endif
 
     if (east.ne.MPI_PROC_NULL) then
@@ -918,7 +918,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     else !!Homogenous Neumann
-       cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
+!       cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
     endif
 
     if (north.ne.MPI_PROC_NULL) then
@@ -927,7 +927,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     else !!Homogenous Neumann  
-       cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
+!       cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
     endif
 
     if (west.ne.MPI_PROC_NULL) then
@@ -936,7 +936,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     else !!Homogenous Neumann
-       cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
+!       cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
     endif
 
     if (southwest.ne.MPI_PROC_NULL) then
@@ -945,7 +945,7 @@ contains
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     else !!Homogenous Neumann  
-       cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
+!       cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
     endif
 
     if (southeast.ne.MPI_PROC_NULL) then
@@ -954,7 +954,7 @@ contains
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
     else !!Homogenous Neumann  
-       cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
+!       cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
     endif
 
     if (northeast.ne.MPI_PROC_NULL) then
@@ -963,7 +963,7 @@ contains
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
     else !!Homogenous Neumann  
-       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+!       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     endif
 
     if (northwest.ne.MPI_PROC_NULL) then
@@ -972,7 +972,7 @@ contains
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
     else !!Homogenous Neumann  
-       cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
+!       cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
     endif
 
     !--------------------!

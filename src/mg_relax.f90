@@ -78,12 +78,14 @@ contains
   
   !----------------------------------------
   subroutine relax_3D_line(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+
     integer(kind=ip)                        , intent(in)   :: lev
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz, nh
+
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny, nz, nh
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -96,18 +98,20 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
     !
     !     LOCAL 
-    integer(kind=ip)            :: i,j,k,it
-    integer(kind=ip)            :: i0,i1,i2,j0,j1,j2
-    integer(kind=ip)            :: ib,ie,jb,je,red_black
+    integer(kind=ip)            :: i,j,k,it,rb
+    integer(kind=ip)            :: ib,ie,jb,je,rbb,rbe,rbi
     real(kind=rp),dimension(nz) :: rhs,d,ud
+
+    real(kind=rp)    :: rnorm,bnorm,res0,conv
 
     call tic(lev,'relax_line')
 
-    !--DEBUG !!!!
-    !    call fill_halo(lev,p)
-    !--DEBUG !!!!
+    ! monitor convergence
+    res0 = sum(b(1:nz,1:ny,1:nx)**2)
+    call global_sum(lev,res0,bnorm)
+    call compute_residual(lev,rnorm)
+    res0 = rnorm/bnorm
 
-    !
     ! add a loop on smoothing
     do it = 1,nsweeps
 
@@ -123,13 +127,21 @@ contains
           je = ny+1
        endif
 
-       do red_black = 1,2
+       if (red_black) then
+          rbb = 1
+          rbe = 2
+          rbi = 2
+       else
+          rbb = 0
+          rbe = 0
+          rbi = 1
+       endif
 
-          do i = ib,ie 
-             !do j = jb,je
-             do j = jb+mod(i+red_black,2),je,2
+       do rb = rbb,rbe
+          do i = ib,ie
+             do j = jb+mod(i+rb,rbi),je,rbi
 
-                k=1!lower level
+                k=1 !lower level
                 rhs(k) = b(k,j,i)                                              &
                      - cA(3,k,j,i)*p(k+1,j-1,i)                                &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
@@ -146,7 +158,7 @@ contains
                 d(k)   = cA(1,k,j,i)
                 ud(k)  = cA(2,k+1,j,i)
 
-                do k = 2,nz-1!interior levels
+                do k = 2,nz-1 !interior levels
                    rhs(k) = b(k,j,i) &
                         - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
                         - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
@@ -158,7 +170,7 @@ contains
                    ud(k)  = cA(2,k+1,j,i)
                 enddo
 
-                k=nz!upper level
+                k=nz !upper level
                 rhs(k) = b(k,j,i)                                              &
                                                 - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
                      - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
@@ -198,6 +210,14 @@ contains
           endif
 
        enddo
+
+       ! monitor convergence
+       call compute_residual(lev,rnorm)
+       rnorm = rnorm/bnorm
+       conv = res0/rnorm
+       res0 = rnorm
+       if (myrank == 0) write(200,*) lev,it,rnorm,conv
+
     enddo
 
     call toc(lev,'relax_line')
@@ -210,7 +230,7 @@ contains
     !     Solve tridiagonal system
     implicit none
     !     IMPORT/EXPORT
-    integer                  ,intent(in)  :: l
+    integer                   ,intent(in)  :: l
     real(kind=rp),dimension(l),intent(in)  :: d,b
     real(kind=rp),dimension(l),intent(in)  :: dd
     real(kind=rp),dimension(l),intent(out) :: xc
@@ -366,7 +386,7 @@ contains
     real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
     integer(kind=ip) :: nx, ny, nz, nh
-    real(kind=rp)::resloc
+    real(kind=rp) ::resloc
 
     p  => grid(lev)%p
     b  => grid(lev)%b
@@ -449,7 +469,7 @@ contains
     ! cA(6,:,:,:)      -> p(k+1,j,i-1)
     ! cA(7,:,:,:)      -> p(k,j,i-1)
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-    !
+
     integer(kind=ip)           :: i,j,k
 
     res = 0._8
@@ -457,7 +477,7 @@ contains
     do i = 1,nx
        do j = 1,ny
 
-          k=1!lower level
+          k=1 !lower level
           r(k,j,i) = b(k,j,i)                                           &
                - cA(1,k,j,i)*p(k,j,i)                                   &
                                           - cA(2,k+1,j,i)*p(k+1,j,i)    &
@@ -477,7 +497,7 @@ contains
 !          res = max(res,abs(r(k,j,i)))
           res = res+r(k,j,i)*r(k,j,i)
 
-          do k = 2,nz-1!interior levels
+          do k = 2,nz-1 !interior levels
              r(k,j,i) = b(k,j,i)                                           &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
                   - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
@@ -492,7 +512,7 @@ contains
              res = res+r(k,j,i)*r(k,j,i)
           enddo
 
-          k=nz!upper level
+          k=nz !upper level
           r(k,j,i) = b(k,j,i)                                           &
                - cA(1,k,j,i)*p(k,j,i)                                   &
                - cA(2,k,j,i)*p(k-1,j,i)                                 &
