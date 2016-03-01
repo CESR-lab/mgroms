@@ -48,7 +48,6 @@ If you've got this message error, enter 'unlimit' before to submit you test*
 unlimit
 mpirun -np 4 test*
 
-
 Profiling:
 ---------
 ./configure --prefix=/home/grima/NH_MultiGrid --enable-mpich --enable-netcdf --enable-profiling
@@ -60,3 +59,13 @@ python /home/grima/PYTHON/GPROF2DOT/gprof2dot.py -n0.5 -s mainmodel_prof.txt > m
 dot -Tpng mainmodel_prof.dot -o mainmodel_prof.png
 
 /opt/linux/intel/12.1/composer_xe_2011_sp1.7.256/bin/intel64/loopprofileviewer.sh loop_prof_*.xml
+
+Memory check (valgrind):
+-----------------------
+mpirun -np 4 valgrind --leak-check=full --undef-value-errors=yes --log-file=memcheck.%p ./testseamount
+
+Oprofile:
+--------
+/usr/bin/ophelp > oprofile_list_events.txt
+
+mpirun -np 4 /usr/bin/ocount --events=CPU_CLK_UNHALTED,INST_RETIRED ./testseamount
