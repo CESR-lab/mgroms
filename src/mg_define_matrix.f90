@@ -562,7 +562,7 @@ contains
 !    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
 
     integer(kind=ip):: k, j, i
-    integer(kind=ip):: km, jm, im
+    integer(kind=ip):: km, jm, im, kp
     integer(kind=ip):: k2, j2, i2
 
     real(kind=rp)   :: diag,cff
@@ -584,24 +584,32 @@ contains
        im = i+1
        do j2 = 1,ny2
           j = 2*j2-1
-          jm = j+1     
+          jm = j+1   
           do k2 = 1,nz2
              k = 2*k2-1
              km = k+1
+             kp = k-1
 
 
 !gr: we may be tempted to not define cA2(2,...) cA2(5,...) and cA2(8,...) at k2=1 
 !    because their fine grid correspond are not defined (they point downward at the bottom level)
 !    it's actually not a pb because these coefficients (at k2=1) are never used
+!
+!    second thought: we can't define cA2(2,1,j2,i2) because cA(3,...) and cA(6,...) ain't defined
 
-!gr             if(k2.gt.1)then
+             if(k2.gt.1)then
              ! cA(2,:,:,:)      -> p(k-1,j,i)
-             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,jm,i)+cA(2,k,j,im)+cA(2,k,jm,im))
+             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,jm,i) &
+                                   +cA(2,k,j,im)+cA(2,k,jm,im) &
+                                   +cA(5,k,jm,i)+cA(5,k,jm,im) &
+                                   +cA(8,k,j,im)+cA(8,k,jm,im) &
+                                   +cA(3,kp,jm,i)+cA(3,kp,jm,im) &
+                                   +cA(6,kp,j,im)+cA(6,kp,jm,im) )
              ! cA(5,:,:,:)      -> p(k-1,j-1,i)
              cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) ! pb at BC
              ! cA(8,:,:,:)      -> p(k-1,j,i-1)
              cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) ! pb at BC
-!gr             endif
+             endif
 
 !gr             if(k2.lt.nz2)then
              ! cA(3,:,:,:)      -> p(k+1,j-1,i)
@@ -611,9 +619,18 @@ contains
 !gr             endif
 
              ! cA(4,:,:,:)      -> p(k,j-1,i)
-             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im)) ! pb at BC
+             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i) &
+                                   +cA(4,k,j,im)+cA(4,km,j,im) &
+                                   +cA(5,km,j,i)+cA(5,km,j,im) & 
+                                   +cA(3,k,j,i)+cA(3,k,j,im) ) 
+! pb at BC
              ! cA(7,:,:,:)      -> p(k,j,i-1)
-             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i)) ! pb at BC
+             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i) &
+                                   +cA(7,k,jm,i)+cA(7,km,jm,i) &
+                                   +cA(8,km,j,i)+cA(8,km,jm,i) &
+                                   +cA(6,k,j,i)+cA(6,k,jm,i) )
+!
+! pb at BC
 
 
              ! the diagonal term is the sum of 48 terms ...             
