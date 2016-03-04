@@ -606,31 +606,37 @@ contains
                                    +cA(3,kp,jm,i)+cA(3,kp,jm,im) &
                                    +cA(6,kp,j,im)+cA(6,kp,jm,im) )
              ! cA(5,:,:,:)      -> p(k-1,j-1,i)
-             cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) ! pb at BC
+             cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) 
              ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-             cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) ! pb at BC
+             cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) 
+             else ! bottom level = horizontal diagonal cross terms
+                ! cA(5,:,:,:)      -> p(k,j+1,i-1)
+                ! cA(8,:,:,:)      -> p(k,j-1,i-1)
+             cA2(2,k2,j2,i2) = 0._8
+             cA2(5,k2,j2,i2) = cff*cA(5,k,jm,i) 
+             cA2(8,k2,j2,i2) = cff*cA(8,k,j,i) 
              endif
 
-!gr             if(k2.lt.nz2)then
+             if (k2 < nz2) then
              ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-             cA2(3,k2,j2,i2) = cff*(cA(3,km,j,i)+cA(3,km,j,im)) ! pb at BC
+             cA2(3,k2,j2,i2) = cff*(cA(3,km,j,i)+cA(3,km,j,im)) 
              ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-             cA2(6,k2,j2,i2) = cff*(cA(6,km,j,i)+cA(6,km,jm,i)) ! pb at BC
-!gr             endif
-
+             cA2(6,k2,j2,i2) = cff*(cA(6,km,j,i)+cA(6,km,jm,i)) 
+             else
+             cA2(3,k2,j2,i2) = 0._8
+             cA2(6,k2,j2,i2) = 0._8
+             endif
              ! cA(4,:,:,:)      -> p(k,j-1,i)
              cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i) &
                                    +cA(4,k,j,im)+cA(4,km,j,im) &
                                    +cA(5,km,j,i)+cA(5,km,j,im) & 
-                                   +cA(3,k,j,i)+cA(3,k,j,im) ) 
-! pb at BC
+                                   +cA(3,k ,j,i)+cA(3,k ,j,im) ) 
+
              ! cA(7,:,:,:)      -> p(k,j,i-1)
              cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i) &
                                    +cA(7,k,jm,i)+cA(7,km,jm,i) &
                                    +cA(8,km,j,i)+cA(8,km,jm,i) &
-                                   +cA(6,k,j,i)+cA(6,k,jm,i) )
-!
-! pb at BC
+                                   +cA(6,k ,j,i)+cA(6,k ,jm,i) )
 
 
              ! the diagonal term is the sum of 48 terms ...             
@@ -644,6 +650,7 @@ contains
              ! here is the first 20
 
              diag = 0._8
+             
              diag = cA(2,km,j,i)+cA(2,km,jm,i)+cA(2,km,j,im)+cA(2,km,jm,im) + diag
              diag = cA(5,km,jm,i)+cA(5,km,jm,im)                            + diag!bug fixed in cA5
              diag = cA(8,km,j,im)+cA(8,km,jm,im)                            + diag
@@ -652,6 +659,11 @@ contains
              diag = cA(4,k,jm,i)+cA(4,km,jm,i)+cA(4,k,jm,im)+cA(4,km,jm,im) + diag
              diag = cA(7,k,j,im)+cA(7,km,j,im)+cA(7,k,jm,im)+cA(7,km,jm,im) + diag
 
+             if (k2 == 1) then
+             ! add the horizontal diagonal connections in the bottom level
+             diag = cA(5,k,j,im)  + diag
+             diag = cA(8,k,jm,im) + diag
+             endif
 
              ! double that to account for symmetry of connections, we've now 40 terms
              diag = diag+diag
