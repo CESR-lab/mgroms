@@ -1032,7 +1032,7 @@ contains
     ! cI(di,ix) is the weight to put on point x(ix) for coarse grid point
     ! located at di
     !
-    cI=0.
+    cI(:,:)=0.
 
     cI(-1,1)=0.75_8
     cI(-1,2)=0.25_8
@@ -1162,9 +1162,9 @@ contains
                             kx=ky+1
                             yy = 0.
                             do m=1,27 ! assume that cA is already not symmetric
-                               di=loc(m,1)
+                               di=loc(m,3)
                                dj=loc(m,2)
-                               dk=loc(m,3)
+                               dk=loc(m,1)
                                yy = yy + cA(m,k1,j1,i1)*x(kx+dk,jx+dj,ix+di)
                             enddo
                             y(ky,jy,iy) = yy

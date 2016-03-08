@@ -30,12 +30,12 @@ program mg_testseamount
   real(kind=8), dimension(:,:,:), pointer :: rhs
 
   integer(kind=4) :: np, ierr, rank
-  integer(kind=4) :: nh
+  integer(kind=4) :: nh, lev
   
   ! global domain dimensions
-  nxg   = 128/2
-  nyg   = 128/2
-  nzg   = 128/2
+  nxg   = 128
+  nyg   = 128
+  nzg   = 128
 
   npxg  = 2
   npyg  = 2
@@ -126,7 +126,7 @@ program mg_testseamount
         y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
         h(j,i) = Hc
 !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
-        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
+!        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
      enddo
   enddo
 
@@ -170,6 +170,13 @@ program mg_testseamount
   enddo
 
   call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+
+
+! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
+!  do lev=nlevs,2,-1
+!     call testgalerkin(lev)
+!  end do
+!  stop
 
   call nhydro_solve(u,v,w)
 

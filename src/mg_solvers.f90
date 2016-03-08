@@ -12,6 +12,63 @@ module mg_solvers
 contains
 
   !---------------------------------------------------------------------
+  subroutine testgalerkin(lev)
+    real(kind=8) :: norm_c,norm_f,dummy
+    integer(kind=4) :: lev,nx,ny,nz,nh
+
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
+
+    call random_number(grid(lev)%p)!
+    grid(lev)%p(:,1,:)= 1._8
+!    grid(lev)%p(2,:,:)=0._8
+    call fill_halo(lev,grid(lev)%p)
+    grid(lev)%b = 0._8
+    call compute_residual(lev,dummy)    
+    call norm(lev,grid(lev)%p,grid(lev)%r,nx,ny,nz,norm_c)
+
+    grid(lev-1)%p = 0._8 
+    call coarse2fine(lev-1) ! interpolate p to r and add r to p
+    grid(lev-1)%b = 0._8
+    call compute_residual(lev-1,dummy)
+
+    nx = grid(lev-1)%nx
+    ny = grid(lev-1)%ny
+    nz = grid(lev-1)%nz
+    nh = grid(lev-1)%nh
+    call norm(lev-1,grid(lev-1)%p,grid(lev-1)%r,nx,ny,nz,norm_f)
+
+    if (myrank==0) then
+       write(*,*)"======== lev ",lev,"==========="
+       write(*,*)"norm coarse = ",norm_c
+       write(*,*)"norm fine   = ",norm_f/16._8
+    endif
+
+end subroutine testgalerkin
+
+
+  !---------------------------------------------------------------------
+subroutine norm(lev,x,y,nx,ny,nz,res)
+  use mg_mpi_exchange
+  integer(kind=4) :: lev,i,j,k
+  integer(kind=4) :: nx,ny,nz
+  real(kind=8) :: r,res
+  real(kind=8),dimension(:,:,:)  , pointer :: x,y
+
+  r=0._8
+  do i=1,nx
+     do j=1,ny
+        do k=1,nz
+           r=r+x(k,j,i)*y(k,j,i)
+        enddo
+     enddo
+  enddo
+  call global_sum(lev,r,res)
+end subroutine norm
+
+  !---------------------------------------------------------------------
   subroutine solve(tol,maxite)
 
     real(kind=rp)   , intent(in) :: tol
@@ -57,7 +114,7 @@ contains
     
     if (myrank == 0) write(*,*)'rnom:', rnorm,' bnorm:', bnorm
 
-    res0 = rnorm/bnorm
+    res0 = sqrt(rnorm/bnorm)
     rnorm0 = res0
 
     nite=0
@@ -68,7 +125,7 @@ contains
        !call relax(1,1)
 
        call compute_residual(1,rnorm)
-       rnorm = rnorm/bnorm
+       rnorm = sqrt(rnorm/bnorm)
        conv = res0/rnorm ! error reduction after this iteration
        res0 = rnorm
 

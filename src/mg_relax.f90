@@ -88,7 +88,7 @@ contains
     integer(kind=ip)                        , intent(in)   :: nsweeps
     integer(kind=ip)                        , intent(in)   :: nx, ny, nh
 
-    integer(kind=ip)           :: i,j,k,l,di,dj,dk, it
+    integer(kind=ip)           :: i,j,k,l,di,dj, it
 
     k=1
 
@@ -104,11 +104,10 @@ contains
        do i = 1,nx
           do j = 1,ny
              p(k,j,i) = b(k,j,i) 
-             do l=2,9
-                dk=loc(l+10,1) ! this is tricky here ...
-                dj=loc(l+10,2) ! because loc is the location index for the 27 case
-                di=loc(l+10,3) ! but the l=12:19 are those we need for the 9 case
-                p(k,j,i) = p(k,j,i) - cA(l,k,j,i) * p(k+dk,j+dj,i+di)                
+             do l=4,11
+                dj=loc(l,2) ! because loc is the location index for the 27 case
+                di=loc(l,3) ! but the l=4:11 are those we need for the 9 case
+                p(k,j,i) = p(k,j,i) - cA(l-2,k,j,i) * p(k,j+dj,i+di)                
              enddo
              p(k,j,i) = p(k,j,i) / cA(1,k,j,i)
           enddo
@@ -660,34 +659,26 @@ contains
     integer(kind=ip)                        , intent(in)   :: nx, ny
 
     integer(kind=ip) :: i,j,k,l
-    integer(kind=ip) :: di,dj,dk
+    integer(kind=ip) :: di,dj
+    real(kind=rp)              :: rr
 
     res = 0._8
 
     k=1
 
-!    cA(2)(k,j,i) -> p(k+0,j+1,i+1)
-!    cA(3)(k,j,i) -> p(k+0,j+1,i+0)
-!    cA(4)(k,j,i) -> p(k+0,j+1,i-1)
-!    cA(5)(k,j,i) -> p(k+0,j+0,i+1)
-!    cA(6)(k,j,i) -> p(k+0,j+0,i-1)
-!    cA(7)(k,j,i) -> p(k+0,j-1,i+1)
-!    cA(8)(k,j,i) -> p(k+0,j-1,i+0)
-!    cA(9)(k,j,i) -> p(k+0,j-1,i-1)
 
     do i = 1,nx
        do j = 1,ny
 
-          r(k,j,i) = b(k,j,i) - cA(1,k,j,i)*p(k,j,i)    
-          do l=2,9
-             dk=loc(l+10,1) ! this is tricky here ...
-             dj=loc(l+10,2) ! because loc is the location index for the 27 case
-             di=loc(l+10,3) ! but the l=12:19 are those we need for the 9 case
-             r(k,j,i) = r(k,j,i) - cA(l,k,j,i) * p(k+dk,j+dj,i+di)                
+          rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i)    
+          do l=4,11
+             dj=loc(l,2) ! we use loc(4:11)
+             di=loc(l,3) ! 
+             rr = rr - cA(l-2,k,j,i) * p(k,j+dj,i+di)                
           enddo
-          
+          r(k,j,i) = rr
 !          res = max(res,abs(r(k,j,i)))
-          res = res+r(k,j,i)*r(k,j,i)
+          res = res+rr*rr
           
        enddo
     enddo
@@ -785,6 +776,7 @@ contains
 
     integer(kind=ip)           :: i,j,k,l
     integer(kind=ip)            :: di,dj,dk
+    real(kind=rp)              :: rr
 
     res = 0._8
 
@@ -792,41 +784,44 @@ contains
        do j = 1,ny
 
           k=1 !lower level
-          r(k,j,i) = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(2,k,j,i)*p(k+1,j,i) 
+          rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(2,k,j,i)*p(k+1,j,i) 
           do l=4,19
              dk=loc(l,1)
              dj=loc(l,2)
              di=loc(l,3)
-             r(k,j,i) = r(k,j,i) - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
+             rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
           enddo
+          r(k,j,i) = rr
 
 !          res = max(res,abs(r(k,j,i)))
-          res = res+r(k,j,i)*r(k,j,i)
+          res = res+rr*rr
 
           do k = 2,nz-1 !interior levels
-             r(k,j,i) = b(k,j,i)
+             rr = b(k,j,i)
              do l=1,27
                 dk=loc(l,1)
                 dj=loc(l,2)
                 di=loc(l,3)
-                r(k,j,i) = r(k,j,i) - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
+                rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
              enddo
+             r(k,j,i) = rr
 
 !             res = max(res,abs(r(k,j,i)))
-             res = res+r(k,j,i)*r(k,j,i)
+             res = res+rr*rr
           enddo
 
           k=nz !upper level
-          r(k,j,i) = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(3,k,j,i)*p(k-1,j,i)
+          rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(3,k,j,i)*p(k-1,j,i)
           do l=12,27
              dk=loc(l,1)
              dj=loc(l,2)
              di=loc(l,3)
-             r(k,j,i) = r(k,j,i) - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
+             rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
           enddo
+          r(k,j,i) = rr
 
 !          res = max(res,abs(r(k,j,i)))
-          res = res+r(k,j,i)*r(k,j,i)
+          res = res+rr*rr
    
        enddo
     enddo

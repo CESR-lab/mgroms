@@ -193,7 +193,7 @@ contains
 
     rf => grid(lev)%r
 
-    if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
+    if (trim(interp_type)=='nearest')  then
 
        if ((aggressive).and.(lev==1)) then
 
@@ -201,14 +201,14 @@ contains
 
        elseif (grid(lev)%nz == 1) then
 
-          call coarse2fine_2D_nearest_avg(rf,pc,nxc,nyc)
+          call coarse2fine_2D_nearest(rf,pc,nxc,nyc)
        else
-          call coarse2fine_3D_nearest_avg(rf,pc,nxc,nyc,nzc)
+          call coarse2fine_3D_nearest(rf,pc,nxc,nyc,nzc)
 
        end if
 
 
-    elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
+    elseif ( trim(interp_type)=='linear')then
 
        if ((aggressive).and.(lev==1)) then
 
@@ -216,15 +216,11 @@ contains
 
        elseif (grid(lev)%nz == 1) then
 
-          call coarse2fine_2D_linear_avg(rf,pc,nxc,nyc)
+          call coarse2fine_2D_linear(rf,pc,nxc,nyc)
        else
-          call coarse2fine_3D_linear_avg(rf,pc,nxc,nyc,nzc)
+          call coarse2fine_3D_linear(rf,pc,nxc,nyc,nzc)
 
        end if
-
-
-    elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
-       ! todo if we think it's important
 
     endif
 
@@ -255,7 +251,7 @@ contains
   end subroutine coarse2fine_aggressive
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D_nearest_avg(xf,xc,nx,ny)
+  subroutine coarse2fine_2D_nearest(xf,xc,nx,ny)
     real(kind=rp),dimension(:,:,:),pointer,intent(out):: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: xc
     integer(kind=ip),intent(in) :: nx, ny
@@ -296,10 +292,10 @@ contains
        enddo
     endif
 
-  end subroutine coarse2fine_2D_nearest_avg
+  end subroutine coarse2fine_2D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D_linear_avg(xf,xc,nx,ny)
+  subroutine coarse2fine_2D_linear(xf,xc,nx,ny)
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny
@@ -336,10 +332,10 @@ contains
   enddo
 
 
-  end subroutine coarse2fine_2D_linear_avg
+  end subroutine coarse2fine_2D_linear
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D_nearest_avg(xf,xc,nx,ny,nz)
+  subroutine coarse2fine_3D_nearest(xf,xc,nx,ny,nz)
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -365,10 +361,10 @@ contains
        enddo
     enddo
 
-  end subroutine coarse2fine_3D_nearest_avg
+  end subroutine coarse2fine_3D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D_linear_avg(xf,xc,nx,ny,nz)
+  subroutine coarse2fine_3D_linear(xf,xc,nx,ny,nz)
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -414,25 +410,25 @@ contains
            k2 = ((k+1)/2)
            kp = k2-(mod(k,2)*2-1)
            xf(k  ,j  ,i  ) =  &
-                + d * xc(k2,j2  ,i2) + e * xc(k2,j2-1,i2-1) &
-                + f * xc(k2,j2-1,i2) + f * xc(k2,j2  ,i2-1) &
-                + f * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2-1) &
-                + e * xc(kp,j2-1,i2) + e * xc(kp,j2  ,i2-1)
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2-1) &
+                + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2-1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2-1) &
+                + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2-1)
            xf(k  ,j+1,i  ) =  &
-                + d * xc(k2,j2  ,i2) + e * xc(k2,j2+1,i2-1) &
-                + f * xc(k2,j2+1,i2) + f * xc(k2,j2  ,i2-1) &
-                + f * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2-1) &
-                + e * xc(kp,j2+1,i2) + e * xc(kp,j2  ,i2-1)
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2-1) &
+                + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2-1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2-1) &
+                + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2-1)
            xf(k  ,j  ,i+1) = &
-                + d * xc(k2,j2  ,i2) + e * xc(k2,j2-1,i2+1) &
-                + f * xc(k2,j2-1,i2) + f * xc(k2,j2  ,i2+1) &
-                + f * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2+1) &
-                + e * xc(kp,j2-1,i2) + e * xc(kp,j2  ,i2+1)
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2+1) &
+                + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2+1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2+1) &
+                + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2+1)
            xf(k  ,j+1,i+1) = &
-                + d * xc(k2,j2  ,i2) + e * xc(k2,j2+1,i2+1) &
-                + f * xc(k2,j2+1,i2) + f * xc(k2,j2  ,i2+1) &
-                + f * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2+1) &
-                + e * xc(kp,j2+1,i2) + e * xc(kp,j2  ,i2+1)
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2+1) &
+                + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2+1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2+1) &
+                + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2+1)
         enddo
         ! top level
         k = nz*2
@@ -453,7 +449,7 @@ contains
   enddo
 
 
-  end subroutine coarse2fine_3D_linear_avg
+  end subroutine coarse2fine_3D_linear
 
 !!$  !----------------------------------------
 !!$  subroutine interpolate_zzz(l2,l1,y,x)
