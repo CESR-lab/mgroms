@@ -33,9 +33,9 @@ program mg_testseamount
   integer(kind=4) :: nh
   
   ! global domain dimensions
-  nxg   = 128
-  nyg   = 128
-  nzg   = 128
+  nxg   = 128/2
+  nyg   = 128/2
+  nzg   = 128/2
 
   npxg  = 2
   npyg  = 2
@@ -126,7 +126,7 @@ program mg_testseamount
         y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
         h(j,i) = Hc
 !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
-!        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
+        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
      enddo
   enddo
 

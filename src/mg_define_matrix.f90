@@ -18,7 +18,7 @@ contains
     real(kind=rp), dimension(:,:)  , allocatable, optional, intent(in) :: umask, vmask
     real(kind=rp), dimension(:,:,:), allocatable, optional, intent(in) :: zr, zw
 
-    integer(kind=ip)::  lev
+    integer(kind=ip)::  lev,ndf,ndc
 
     lev = 1
     if (cmatrix == 'simple') then
@@ -29,11 +29,74 @@ contains
        stop
     endif
 
+    call define_loc()
+
     do lev = 1,nlevs-1
+       ndf = size(grid(lev)%cA,1)
+       ndc = size(grid(lev+1)%cA,1)
+       if(myrank==0)write(*,'(A,I2,A,I2,A,I2)')'coarsening matrix lev=',lev,' / nd fine=',ndf,' / nd coarse=',ndc
        call coarsen_matrix(lev)
     enddo
 
+    
+
   end subroutine define_matrices
+
+  !----------------------------------------
+  subroutine define_loc()
+    !loc relates each matrix coefficient cA(l,:,:,:) to a 3D direction
+
+
+!    cA(01)(k,j,i) -> p(k+0,j+0,i+0)  ***
+!    cA(02)(k,j,i) -> p(k+1,j+0,i+0)  ***
+!    cA(03)(k,j,i) -> p(k-1,j+0,i+0)  *** ! cA3(k+1,j,i) == cA2(k,j,i) ?
+
+!    cA(04)(k,j,i) -> p(k+1,j+1,i+1)
+!    cA(05)(k,j,i) -> p(k+1,j+1,i+0)
+!    cA(06)(k,j,i) -> p(k+1,j+1,i-1)
+!    cA(07)(k,j,i) -> p(k+1,j+0,i+1)
+!    cA(08)(k,j,i) -> p(k+1,j+0,i-1)
+!    cA(09)(k,j,i) -> p(k+1,j-1,i+1)
+!    cA(10)(k,j,i) -> p(k+1,j-1,i+0)
+!    cA(11)(k,j,i) -> p(k+1,j-1,i-1)
+
+!    cA(12)(k,j,i) -> p(k+0,j+1,i+1)
+!    cA(13)(k,j,i) -> p(k+0,j+1,i+0)
+!    cA(14)(k,j,i) -> p(k+0,j+1,i-1)
+!    cA(15)(k,j,i) -> p(k+0,j+0,i+1)
+!    cA(16)(k,j,i) -> p(k+0,j+0,i-1)
+!    cA(17)(k,j,i) -> p(k+0,j-1,i+1)
+!    cA(18)(k,j,i) -> p(k+0,j-1,i+0)
+!    cA(19)(k,j,i) -> p(k+0,j-1,i-1)
+
+!    cA(20)(k,j,i) -> p(k-1,j+1,i+1)
+!    cA(21)(k,j,i) -> p(k-1,j+1,i+0)
+!    cA(22)(k,j,i) -> p(k-1,j+1,i-1)
+!    cA(23)(k,j,i) -> p(k-1,j+0,i+1)
+!    cA(24)(k,j,i) -> p(k-1,j+0,i-1)
+!    cA(25)(k,j,i) -> p(k-1,j-1,i+1)
+!    cA(26)(k,j,i) -> p(k-1,j-1,i+0)
+!    cA(27)(k,j,i) -> p(k-1,j-1,i-1)
+
+    integer(kind=ip):: di,dj,dk,l,ierr
+    loc(:,:)=0
+    loc(2,1)=1
+    loc(3,1)=-1
+    l=3
+    do dk=-1,1
+       do dj=-1,1
+          do di=-1,1
+             if (not( (di==0).and.(dj==0) ))then
+                l = l+1
+                loc(l,1)=-dk
+                loc(l,2)=-dj
+                loc(l,3)=-di
+             endif
+          enddo
+       enddo
+    enddo
+
+  end subroutine define_loc
 
   !----------------------------------------
   subroutine define_matrix_simple(lev, dx, dy, zr, zw, umask, vmask)
@@ -411,54 +474,76 @@ contains
        Ac => grid(lev+1)%cAdummy
        nx = grid(lev+1)%nx / grid(lev+1)%ngx
        ny = grid(lev+1)%ny / grid(lev+1)%ngy
-!       if(myrank == 0) write(*,*)"gather lev=",lev+1,"nx,ny,nz=",nx,ny,nz
+       !       if(myrank == 0) write(*,*)"gather lev=",lev+1,"nx,ny,nz=",nx,ny,nz
     else
        Ac => grid(lev+1)%cA
-!       if(myrank == 0) write(*,*)"F2C   lev=",lev+1,"nx,ny,nz=",nx,ny,nz
+       !       if(myrank == 0) write(*,*)"F2C   lev=",lev+1,"nx,ny,nz=",nx,ny,nz
     endif
 
 
-    if ((aggressive).and.(lev==1)) then
-!       call coarsen_matrix_aggressive(lev)
+    if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
 
-    elseif (grid(lev+1)%nz == 1) then
-       call coarsen_matrix_2D(Af,Ac,nx,ny,nz)
-       ! fill the halo
-       do l=1,3
-          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
-          call fill_halo(lev+1,grid(lev+1)%r)
-          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
-       enddo
+       if ((aggressive).and.(lev==1)) then
+          !       call coarsen_matrix_aggressive(lev)
 
-    else
-       call tic(lev,'coarsen_matrix_3D')
-       call coarsen_matrix_3D(Af,Ac,nx,ny,nz)
-       call toc(lev,'coarsen_matrix_3D')
-    end if
+       elseif (grid(lev+1)%nz == 1) then
+
+          call coarsen_matrix_2D_nearest_avg(Af,Ac,nx,ny,nz)
+
+       else
+          call tic(lev,'coarsen_matrix_3D')
+          call coarsen_matrix_3D_nearest_avg(Af,Ac,nx,ny,nz)
+          call toc(lev,'coarsen_matrix_3D')
+       end if
+
+
+    elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
+
+       if ((aggressive).and.(lev==1)) then
+          !       call coarsen_matrix_aggressive(lev)
+
+       elseif (grid(lev+1)%nz == 1) then
+          call coarsen_matrix_2D_linear_avg(Af,Ac,nx,ny,nz)
+
+       else
+          call tic(lev,'coarsen_matrix_3D')
+          if (lev==1) then
+                call coarsen_matrix_3D_linear_avg_8(Af,Ac,nx,ny,nz)
+          else
+                call coarsen_matrix_3D_linear_avg_27(Af,Ac,nx,ny,nz)
+          endif
+          call toc(lev,'coarsen_matrix_3D')
+       end if
+
+    elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
+       ! todo if we think it's important
+
+    endif
+
 
     if (grid(lev+1)%gather == 1) then
-!ND
+       !ND
        nd = size(Ac,1)       
        do l=1,nd
           grid(lev+1)%dummy3 = Ac(l,:,:,:)
           call gather(lev+1,grid(lev+1)%dummy3,grid(lev+1)%r)
-!          ! fill the halo
-!          call fill_halo(lev+1,grid(lev+1)%r)
+          !          ! fill the halo
+          !          call fill_halo(lev+1,grid(lev+1)%r)
           grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
        enddo
        call fill_halo(lev+1,grid(lev+1)%cA)
-!
+       !
     else
-!ND
-!       ! fill the halo
-!       nd = size(Ac,1) 
-!       do l=1,nd
-!          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
-!          call fill_halo(lev+1,grid(lev+1)%r)
-!          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
-!       enddo
+       !ND
+       !       ! fill the halo
+       !       nd = size(Ac,1) 
+       !       do l=1,nd
+       !          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
+       !          call fill_halo(lev+1,grid(lev+1)%r)
+       !          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
+       !       enddo
        call fill_halo(lev+1,grid(lev+1)%cA)
-!
+       !
     endif
 !!$    nd = size(Ac,1) 
 !!$    do l=1,nd
@@ -482,7 +567,7 @@ contains
   end subroutine coarsen_matrix_aggressive
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_2D(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+  subroutine coarsen_matrix_2D_nearest_avg(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
     real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
@@ -551,10 +636,18 @@ contains
        enddo
     endif
 
-  end subroutine coarsen_matrix_2D
+  end subroutine coarsen_matrix_2D_nearest_avg
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_3D(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+  subroutine coarsen_matrix_2D_linear_avg(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+
+    integer(kind=ip):: nx2, ny2, nz2! on lev+1
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
+
+  end subroutine coarsen_matrix_2D_linear_avg
+
+  !-------------------------------------------------------------------------     
+  subroutine coarsen_matrix_3D_nearest_avg(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
 !    integer(kind=ip),intent(in):: lev
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
@@ -678,60 +771,425 @@ contains
        enddo
     enddo
 
-    return
+  end subroutine coarsen_matrix_3D_nearest_avg
 
-!!$!    if (myrank.eq.0)write(*,*)"coefficients computed"
-!!$
-!!$    ! fill the halo
-!!$    ! the data should be contiguous in memory to use fill_halo 
-!!$    ! no need to allocate an extra buffer
-!!$    ! use the residual as a dummy variable
-!!$    dummy3D => grid(lev+1)%r 
-!!$
-!!$    !- we should consider a specific fill_halo(4D) -!
-!!$
-!!$
-!!$
-!!$    do d = 1,8       
-!!$       !!if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
-!!$       do i2 = 1,nx2
-!!$          do j2 = 1,ny2
-!!$             do k2 = 1,nz2
-!!$                dummy3D(k2,j2,i2) = cA2(d,k2,j2,i2)
-!!$             enddo
-!!$          enddo
-!!$       enddo
-!!$
-!!$       call fill_halo(lev+1,dummy3D)
-!!$
-!!$       do i2 = 1-nh,nx2+nh
-!!$          do j2 = 1-nh,ny2+nh
-!!$             do k2 = 1,nz2
-!!$                cA2(d,k2,j2,i2) = dummy3D(k2,j2,i2) * cff
-!!$             enddo
-!!$          enddo
-!!$       enddo
-!!$       ! a way of improvement (only if it impacts perfs):
-!!$       ! copy from cA2 to dummy3 only the interior ring used to fill the halo
-!!$       ! copy from dummy to cA2 only the halo
-!!$    enddo
+  !-------------------------------------------------------------------------     
+  subroutine coarsen_matrix_3D_linear_avg_8(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
-!!$    do d = 1,8       
-!!$       if (myrank.eq.0)write(*,*)"updating halo of coef(",d,",:,:,:)"
-!!$
-!!$       dummy3D(1:nx2,1:ny2,1:nz2) = cA2(d,1:nx2,1:ny2,1:nz2)
-!!$
-!!$       call fill_halo(lev+1, dummy3D)
-!!$
-!!$       cA2(d,:,:,:) =  dummy3D(:,:,:) * cff
-!!$
-!!$       ! a way of improvement (only if it impacts perfs):
-!!$       ! copy from cA2 to dummy3 only the interior ring used to fill the halo
-!!$       ! copy from dummy to cA2 only the halo
-!!$    enddo
+!    integer(kind=ip),intent(in):: lev
+    integer(kind=ip):: nx2, ny2, nz2! on lev+1
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
 
-!    if (myrank.eq.0) write(*,*)"coarsening done"
+    !local
+    integer(kind=ip):: nx, ny, nz
+    integer(kind=ip):: m, l, k, j, i
+    integer(kind=ip):: k2, j2, i2
+    integer(kind=ip):: k1, j1, i1
+!    integer(kind=ip):: k0, j0, i0
+    integer(kind=ip):: kx, jx, ix
+    integer(kind=ip):: ky, jy, iy
+    integer(kind=ip):: dk, dj, di
+    integer(kind=ip):: dk2, dj2, di2
+    real(kind=rp)   :: cx, cy, cz
+    real(kind=rp), dimension(4,4,4) :: x
+    real(kind=rp), dimension(2,2,2) :: y
+    real(kind=rp), dimension(-1:1,1:4) :: cI
+    real(kind=rp) :: yy
 
-  end subroutine coarsen_matrix_3D
+    nx = nx2*2
+    ny = ny2*2
+    nz = nz2*2
+
+    ! weights for linear interpolation, cI has 2 entries 
+    !
+    ! cI(di,ix), di={-1,0,1}, ix={1,2,3,4}
+    !
+    ! cI(di,ix) is the weight to put on point x(ix) for coarse grid point
+    ! located at di
+    !
+    cI(:,:)=0.
+
+    cI(-1,1)=0.75_8
+    cI(-1,2)=0.25_8
+
+    cI(0,1)=0.25_8
+    cI(0,2)=0.75_8
+    cI(0,3)=0.75_8
+    cI(0,4)=0.25_8
+
+    cI(+1,3)=0.25_8
+    cI(+1,4)=0.75_8
+
+
+    ! i1,j1,k1 are index on the fine grid
+    ! i2,j2,k2 are index on the coarse grid
+
+    ! l direction
+
+    ! di2,dj2,dk2 index shift on the coarse grid (corresponding to 'l')
+
+    ! map relating 'l' to directions
+    ! l=1 is the central point (di=dj=dk=0)
+    !
+    !
+    ! map for di = 0
+    ! +---+---+---+---+---+---+
+    ! | o | o | o | o | o | o |
+    ! +--10---+---2---+---5---+
+    ! | o | x | x | x | x | o |   ^
+    ! +---+---+---+---+---+---+   |
+    ! | o | x | y | y | x | o |   |
+    ! +--18---+---1---+--13---+  k axis
+    ! | o | x | y | y | x | o |   |
+    ! +---+---+---+---+---+---+   |
+    ! | o | x | x | x | x | o |
+    ! +--26---+---3---+--21---+
+    ! | o | o | o | o | o | o |
+    ! +---+---+---+---+---+---+
+    !
+    !      -- j axis --> 
+
+    !    cA(01)(k,j,i) -> p(k+0,j+0,i+0)  ***
+    !    cA(02)(k,j,i) -> p(k+1,j+0,i+0)  ***
+    !    cA(03)(k,j,i) -> p(k-1,j+0,i+0)  *** ! cA3(k+1,j,i) == cA2(k,j,i) ?
+
+    !    cA(04)(k,j,i) -> p(k+1,j+1,i+1)
+    !    cA(05)(k,j,i) -> p(k+1,j+1,i+0)
+    !    cA(06)(k,j,i) -> p(k+1,j+1,i-1)
+    !    cA(07)(k,j,i) -> p(k+1,j+0,i+1)
+    !    cA(08)(k,j,i) -> p(k+1,j+0,i-1)
+    !    cA(09)(k,j,i) -> p(k+1,j-1,i+1)
+    !    cA(10)(k,j,i) -> p(k+1,j-1,i+0)
+    !    cA(11)(k,j,i) -> p(k+1,j-1,i-1)
+
+    !    cA(12)(k,j,i) -> p(k+0,j+1,i+1)
+    !    cA(13)(k,j,i) -> p(k+0,j+1,i+0)
+    !    cA(14)(k,j,i) -> p(k+0,j+1,i-1)
+    !    cA(15)(k,j,i) -> p(k+0,j+0,i+1)
+    !    cA(16)(k,j,i) -> p(k+0,j+0,i-1)
+    !    cA(17)(k,j,i) -> p(k+0,j-1,i+1)
+    !    cA(18)(k,j,i) -> p(k+0,j-1,i+0)
+    !    cA(19)(k,j,i) -> p(k+0,j-1,i-1)
+
+    !    cA(20)(k,j,i) -> p(k-1,j+1,i+1)
+    !    cA(21)(k,j,i) -> p(k-1,j+1,i+0)
+    !    cA(22)(k,j,i) -> p(k-1,j+1,i-1)
+    !    cA(23)(k,j,i) -> p(k-1,j+0,i+1)
+    !    cA(24)(k,j,i) -> p(k-1,j+0,i-1)
+    !    cA(25)(k,j,i) -> p(k-1,j-1,i+1)
+    !    cA(26)(k,j,i) -> p(k-1,j-1,i+0)
+    !    cA(27)(k,j,i) -> p(k-1,j-1,i-1)
+
+
+    do i2 = 1,nx2
+       do j2 = 1,ny2
+          do k2 = 1,nz2
+             !
+             do l=1,27! loop over coarse points=each connection
+                ! loc relates the index l to each direction
+                ! direction takes value in [-1,0,+1]
+                di2 = loc(l,3)
+                dj2 = loc(l,2)
+                dk2 = loc(l,1)
+                ! compute cA2 only if this is a valid direction in z
+                if ((k2+dk2>=1).and.(k2+dk2<=nz2)) then
+
+
+                   ! step 1: INTERPOLATE COARSE POINT 'l' on x's
+                   !
+                   ! x is a 4x4x4 array of fine points surrounding (k2,j2,i2)
+                   !
+                   do ix=1,4                    
+                      cx = cI(di2,ix)
+                      do jx=1,4
+                         cy = cI(dj2,jx)    
+                         do kx=1,4
+                            cz = cI(dk2,kx)
+                            if(k2==1)then
+                               ! forces x to 0 because x(k) is below the bottom boundary
+                               if ((dk2==0).and.(kx==1)) cz = 0._8 
+                               if ((dk2==0).and.(kx==2)) cz = 1._8 ! nearest interpolation
+                            endif
+                            if(k2==nz2)then
+                               ! forces x to 0 because x(k) is above the top boundary
+                               if ((dk2==0).and.(kx==4)) cz = 0._8 
+                               if ((dk2==0).and.(kx==3)) cz = 1._8 ! nearest interpolation
+                            endif
+                            x(kx,jx,ix) = cx*cy*cz
+                         enddo
+                      enddo
+                   enddo
+
+                   ! step 2: COMPUTE FINE GRID LAPLACIAN on y's
+                   !
+                   ! y is a 2x2x2 array of fine points surrounding (k2,j2,i2)
+                   !
+                   do iy=1,2        ! iy,jy,ky are coordinate of the "y" / the 2x2x2 cube
+                      i = i2*2+iy-2 ! i,j,k    are absolute position on the fine grid
+                      ix = iy+1     ! ix,jx,kx are coordinate of the "x" / the 4x4x4 cube
+                      do jy=1,2
+                         j = j2*2+jy-2
+                         jx=jy+1
+                         do ky=1,2
+                            k = k2*2+ky-2
+                            kx=ky+1
+                            if (k==1) then ! lower level
+
+                               yy = cA(1,k,j,i)*x(kx  ,jx  ,ix)                      &
+                                                + cA(2,k+1,j  ,i)  *x(kx+1,jx  ,ix)  &
+                  + cA(3,k,j,i)*x(kx+1,jx-1,ix)                                      &
+                  + cA(4,k,j,i)*x(kx  ,jx-1,ix) + cA(4,k  ,j+1,i)  *x(kx  ,jx+1,ix)&
+                                                + cA(5,k+1,j+1,i)  *x(kx+1,jx+1,ix)&
+                  + cA(6,k,j,i)*x(kx+1,jx,ix-1)                                      &
+                  + cA(7,k,j,i)*x(kx  ,jx,ix-1) + cA(7,k  ,j  ,i+1)*x(kx  ,jx  ,ix+1)&
+                                                + cA(8,k+1,j  ,i+1)*x(kx+1,jx  ,ix+1)
+                               if (cmatrix == 'real') then
+          !- Exception for the redefinition of the coef for the bottom level
+                                  yy = yy &
+               + cA(5,k,j,i)*x(kx,jx+1,ix-1) + cA(5,k,j-1,i+1)*x(kx,jx-1,ix+1) &
+               + cA(8,k,j,i)*x(kx,jx-1,ix-1) + cA(8,k,j+1,i+1)*x(kx,jx+1,ix+1)
+          endif
+
+
+                            elseif (k==nz) then
+
+                               yy = cA(1,k,j,i)*x(kx  ,jx  ,ix)                      &
+                  + cA(2,k,j,i)*x(kx-1,jx  ,ix)                                      &
+                                                + cA(3,k-1,j+1,i)  *x(kx-1,jx+1,ix)  &
+                  + cA(4,k,j,i)*x(kx  ,jx-1,ix) + cA(4,k  ,j+1,i)  *x(kx  ,jx+1,ix)&
+                  + cA(5,k,j,i)*x(kx-1,jx-1,ix)                                    &
+                                                + cA(6,k-1,j  ,i+1)*x(kx-1,jx  ,ix+1)&
+                  + cA(7,k,j,i)*x(kx  ,jx,ix-1) + cA(7,k  ,j  ,i+1)*x(kx  ,jx  ,ix+1)&
+                  + cA(8,k,j,i)*x(kx-1,jx,ix-1)                                      
+
+                            else
+
+                               yy = cA(1,k,j,i)*x(kx  ,jx  ,ix)                      &
+                  + cA(2,k,j,i)*x(kx-1,jx  ,ix) + cA(2,k+1,j  ,i)  *x(kx+1,jx  ,ix)  &
+                  + cA(3,k,j,i)*x(kx+1,jx-1,ix) + cA(3,k-1,j+1,i)  *x(kx-1,jx+1,ix)  &
+                  + cA(4,k,j,i)*x(kx  ,jx-1,ix) + cA(4,k  ,j+1,i)  *x(kx  ,jx+1,ix)&
+                  + cA(5,k,j,i)*x(kx-1,jx-1,ix) + cA(5,k+1,j+1,i)  *x(kx+1,jx+1,ix)&
+                  + cA(6,k,j,i)*x(kx+1,jx,ix-1) + cA(6,k-1,j  ,i+1)*x(kx-1,jx  ,ix+1)&
+                  + cA(7,k,j,i)*x(kx  ,jx,ix-1) + cA(7,k  ,j  ,i+1)*x(kx  ,jx  ,ix+1)&
+                  + cA(8,k,j,i)*x(kx-1,jx,ix-1) + cA(8,k+1,j  ,i+1)*x(kx+1,jx  ,ix+1)
+
+                            endif
+                            y(ky,jy,iy) = yy
+                         enddo
+                      enddo
+                   enddo
+
+                   ! step 3: APPLY THE RESTRICTION = average the 8 y's
+                   cA2(l,k2,j2,i2) = 0.125_8*( &
+                         y(1,1,1)+y(1,1,2) &
+                        +y(1,2,1)+y(1,2,2) &
+                        +y(2,1,1)+y(2,1,2) &
+                        +y(2,2,1)+y(2,2,2) )
+
+                else ! the 'l' neighbour is outside the domain
+                   ! the value of this coefficient should be
+                   ! insensitive
+                   cA2(l,k2,j2,i2) = 0. ! or better: NAN
+                endif
+             enddo ! end of l-loop: coarse point/direction
+          enddo
+       enddo
+    enddo
+
+  end subroutine coarsen_matrix_3D_linear_avg_8
+
+  !-------------------------------------------------------------------------     
+  subroutine coarsen_matrix_3D_linear_avg_27(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+
+    !    integer(kind=ip),intent(in):: lev
+    integer(kind=ip):: nx2, ny2, nz2! on lev+1
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
+
+    !local
+    integer(kind=ip):: nx, ny, nz
+    integer(kind=ip):: m, l, k, j, i
+    integer(kind=ip):: k2, j2, i2
+    integer(kind=ip):: k1, j1, i1
+!    integer(kind=ip):: k0, j0, i0
+    integer(kind=ip):: kx, jx, ix
+    integer(kind=ip):: ky, jy, iy
+    integer(kind=ip):: dk, dj, di
+    integer(kind=ip):: dk2, dj2, di2
+    real(kind=rp)   :: cx, cy, cz
+    real(kind=rp), dimension(4,4,4) :: x
+    real(kind=rp), dimension(2,2,2) :: y
+    real(kind=rp), dimension(-1:1,1:4) :: cI
+    real(kind=rp) :: yy
+
+    nx = nx2*2
+    ny = ny2*2
+    nz = nz2*2
+
+    ! weights for linear interpolation, cI has 2 entries 
+    !
+    ! cI(di,ix), di={-1,0,1}, ix={1,2,3,4}
+    !
+    ! cI(di,ix) is the weight to put on point x(ix) for coarse grid point
+    ! located at di
+    !
+    cI=0.
+
+    cI(-1,1)=0.75_8
+    cI(-1,2)=0.25_8
+
+    cI(0,1)=0.25_8
+    cI(0,2)=0.75_8
+    cI(0,3)=0.75_8
+    cI(0,4)=0.25_8
+
+    cI(+1,3)=0.25_8
+    cI(+1,4)=0.75_8
+
+
+    ! i1,j1,k1 are index on the fine grid
+    ! i2,j2,k2 are index on the coarse grid
+
+    ! l direction
+
+    ! di2,dj2,dk2 index shift on the coarse grid (corresponding to 'l')
+
+    ! map relating 'l' to directions
+    ! l=1 is the central point (di=dj=dk=0)
+    !
+    !
+    ! map for di = 0
+    ! +---+---+---+---+---+---+
+    ! | o | o | o | o | o | o |
+    ! +--10---+---2---+---5---+
+    ! | o | x | x | x | x | o |   ^
+    ! +---+---+---+---+---+---+   |
+    ! | o | x | y | y | x | o |   |
+    ! +--18---+---1---+--13---+  k axis
+    ! | o | x | y | y | x | o |   |
+    ! +---+---+---+---+---+---+   |
+    ! | o | x | x | x | x | o |
+    ! +--26---+---3---+--21---+
+    ! | o | o | o | o | o | o |
+    ! +---+---+---+---+---+---+
+    !
+    !      -- j axis --> 
+
+    !    cA(01)(k,j,i) -> p(k+0,j+0,i+0)  ***
+    !    cA(02)(k,j,i) -> p(k+1,j+0,i+0)  ***
+    !    cA(03)(k,j,i) -> p(k-1,j+0,i+0)  *** ! cA3(k+1,j,i) == cA2(k,j,i) ?
+
+    !    cA(04)(k,j,i) -> p(k+1,j+1,i+1)
+    !    cA(05)(k,j,i) -> p(k+1,j+1,i+0)
+    !    cA(06)(k,j,i) -> p(k+1,j+1,i-1)
+    !    cA(07)(k,j,i) -> p(k+1,j+0,i+1)
+    !    cA(08)(k,j,i) -> p(k+1,j+0,i-1)
+    !    cA(09)(k,j,i) -> p(k+1,j-1,i+1)
+    !    cA(10)(k,j,i) -> p(k+1,j-1,i+0)
+    !    cA(11)(k,j,i) -> p(k+1,j-1,i-1)
+
+    !    cA(12)(k,j,i) -> p(k+0,j+1,i+1)
+    !    cA(13)(k,j,i) -> p(k+0,j+1,i+0)
+    !    cA(14)(k,j,i) -> p(k+0,j+1,i-1)
+    !    cA(15)(k,j,i) -> p(k+0,j+0,i+1)
+    !    cA(16)(k,j,i) -> p(k+0,j+0,i-1)
+    !    cA(17)(k,j,i) -> p(k+0,j-1,i+1)
+    !    cA(18)(k,j,i) -> p(k+0,j-1,i+0)
+    !    cA(19)(k,j,i) -> p(k+0,j-1,i-1)
+
+    !    cA(20)(k,j,i) -> p(k-1,j+1,i+1)
+    !    cA(21)(k,j,i) -> p(k-1,j+1,i+0)
+    !    cA(22)(k,j,i) -> p(k-1,j+1,i-1)
+    !    cA(23)(k,j,i) -> p(k-1,j+0,i+1)
+    !    cA(24)(k,j,i) -> p(k-1,j+0,i-1)
+    !    cA(25)(k,j,i) -> p(k-1,j-1,i+1)
+    !    cA(26)(k,j,i) -> p(k-1,j-1,i+0)
+    !    cA(27)(k,j,i) -> p(k-1,j-1,i-1)
+
+
+
+    do i2 = 1,nx2
+       do j2 = 1,ny2
+          do k2 = 1,nz2
+             !
+             do l=1,27! loop over coarse points=each connection
+                ! loc relates the index l to each direction
+                ! direction takes value in [-1,0,+1]
+                di2 = loc(l,3)
+                dj2 = loc(l,2)
+                dk2 = loc(l,1)
+
+                ! compute cA2 only if this is a valid direction in z
+                if ((k2+dk2>=1).and.(k2+dk2<=nz2)) then
+
+
+                   ! step 1: INTERPOLATE COARSE POINT 'l' on x's
+                   !
+                   ! x is a 4x4x4 array of fine points surrounding (k2,j2,i2)
+                   !
+                   do ix=1,4                    
+                      cx = cI(di2,ix)
+                      do jx=1,4
+                         cy = cI(dj2,jx)    
+                         do kx=1,4
+                            cz = cI(dk2,kx)
+                            if(k2==1)then
+                               ! forces x to 0 because x(k) is below the bottom boundary
+                               if ((dk2==0).and.(kx==1)) cz = 0._8 
+                               if ((dk2==0).and.(kx==2)) cz = 1._8 ! nearest interpolation
+                            endif
+                            if(k2==nz2)then
+                               ! forces x to 0 because x(k) is above the top boundary
+                               if ((dk2==0).and.(kx==4)) cz = 0._8 
+                               if ((dk2==0).and.(kx==3)) cz = 1._8 ! nearest interpolation
+                            endif
+                            x(kx,jx,ix) = cx*cy*cz
+                         enddo
+                      enddo
+                   enddo
+
+                   ! step 2: COMPUTE FINE GRID LAPLACIAN on y's
+                   !
+                   ! y is a 2x2x2 array of fine points surrounding (k2,j2,i2)
+                   !
+                   do iy=1,2
+                      i1 = i2*2+iy-2 ! absolute position on the fine grid
+                      ix = iy+1 ! ix,jx,kx are coordinate of the "x" / the 4x4x4 cube
+                      do jy=1,2
+                         j1 = j2*2+jy-2
+                         jx=jy+1
+                         do ky=1,2
+                            k1 = k2*2+ky-2
+                            kx=ky+1
+                            yy = 0.
+                            do m=1,27 ! assume that cA is already not symmetric
+                               di=loc(m,1)
+                               dj=loc(m,2)
+                               dk=loc(m,3)
+                               yy = yy + cA(m,k1,j1,i1)*x(kx+dk,jx+dj,ix+di)
+                            enddo
+                            y(ky,jy,iy) = yy
+                         enddo
+                      enddo
+                   enddo
+
+                   ! step 3: APPLY THE RESTRICTION = average the 8 y's
+                   cA2(l,k2,j2,i2) = 0.125_8*( &
+                         y(1,1,1)+y(1,1,2) &
+                        +y(1,2,1)+y(1,2,2) &
+                        +y(2,1,1)+y(2,1,2) &
+                        +y(2,2,1)+y(2,2,2) )
+
+                else ! the 'l' neighbour is outside the domain
+                   ! the value of this coefficient should be
+                   ! insensitive
+                   cA2(l,k2,j2,i2) = 0. ! or better: NAN
+                endif
+             enddo ! end of l-loop: coarse point/direction
+          enddo
+       enddo
+    enddo
+
+
+  end subroutine coarsen_matrix_3D_linear_avg_27
 
 end module mg_define_matrix
