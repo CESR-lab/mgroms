@@ -33,6 +33,8 @@ module mg_grids
 
   integer(kind=ip):: nlevs ! index of the coarsest level (1 is the finest)
 
+  integer(kind=ip),dimension(27,3) :: loc
+
 contains
 
   !----------------------------------------
@@ -73,11 +75,31 @@ contains
        nz = grid(lev)%nz
        nh = grid(lev)%nh
 
-       if (nz == 1) then
-          nd = 3
-       else
-          nd = 8
+       if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
+
+          if (nz == 1) then
+             nd = 3
+          else
+             nd = 8
+          endif
+
+       elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
+
+          if (nz == 1) then
+             nd = 9
+          else
+             if (lev == 1) then
+                nd = 8
+             else
+                nd =27
+             endif
+          endif
+
+       elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
+          ! todo 
+
        endif
+
 
        allocate(grid(lev)%p(    nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%b(    nz,1-nh:ny+nh,1-nh:nx+nh))
@@ -432,7 +454,7 @@ contains
   !---------------------------------------------------------------------
   subroutine define_gather_informations()
 
-    integer(kind=ip) :: nx, ny, nz
+    integer(kind=ip) :: nx, ny, nz, nd
     integer(kind=ip) :: nh
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy
@@ -500,11 +522,14 @@ contains
           nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
           allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
-          if(nz.eq.1)then
-             allocate(grid(lev)%cAdummy(3,nz,1-nh:ny+nh,1-nh:nx+nh))
-          else
-             allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
-          endif
+
+          nd = size(grid(lev)%cA,1)
+
+!          if(nz.eq.1)then
+             allocate(grid(lev)%cAdummy(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
+!          else
+!             allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
+!          endif
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           ! number of elements of dummy3
           grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz

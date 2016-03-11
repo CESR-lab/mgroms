@@ -22,6 +22,8 @@ module mg_namelist
   logical           :: red_black = .false.    !- .false. or .true.
 
   character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
+  character(len=16) :: interp_type='linear'   !- 'nearest'  or 'linear'
+  character(len=16) :: restrict_type='avg'    !- 'avg'  or 'linear'
 
   logical           :: aggressive = .false.   !- .false. or .true.
 
@@ -34,6 +36,8 @@ module mg_namelist
        cmatrix    , &
        red_black  , &
        mpiexchange, &
+       interp_type, &
+       restrict_type, &
        aggressive
 
  contains
@@ -79,6 +83,11 @@ module mg_namelist
         vb = .true.
      endif
 
+     if ((trim(interp_type)=='linear') .and. (trim(restrict_type)=='linear')) then
+        if (rank == 0) write(*,*) "linear interp + linear restrict is not permitted"
+        stop
+     endif
+
      if (vb) then
 
         if (present(vbrank)) then
@@ -97,6 +106,8 @@ module mg_namelist
            write(*,*)'  - cmatrix    : ', trim(cmatrix)
            write(*,*)'  - red_black  : ', red_black
            write(*,*)'  - mpiexchange: ', trim(mpiexchange)
+           write(*,*)'  - interp_type: ', trim(interp_type)
+           write(*,*)'  - restrict_type: ', trim(restrict_type)
            write(*,*)'  - aggressive : ', aggressive
            write(*,*)'  '
         endif

@@ -1208,7 +1208,7 @@ contains
     ! therefore we need to rescale the global sum
     sumglo = sumglo * (grid(lev)%npx*grid(lev)%npy)/(grid(1)%npx*grid(1)%npy)
     N = grid(lev)%npx*grid(lev)%npy*grid(lev)%nx*grid(lev)%ny*grid(lev)%nz
-    sumglo=sqrt(sumglo/N)
+!    sumglo=sqrt(sumglo/N)
   end subroutine global_sum
 
 

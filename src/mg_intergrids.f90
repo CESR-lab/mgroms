@@ -182,7 +182,7 @@ contains
     pc => grid(lev+1)%p
 
     if (grid(lev+1)%gather == 1) then
-!       if(myrank==0)write(*,*)"SPLIT!!!"
+       !       if(myrank==0)write(*,*)"SPLIT!!!"
        rf => grid(lev+1)%dummy3
        call split(lev+1,pc,rf)
        pc => grid(lev+1)%dummy3
@@ -193,15 +193,37 @@ contains
 
     rf => grid(lev)%r
 
-   if ((aggressive).and.(lev==1)) then
-       call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
+    if (trim(interp_type)=='nearest')  then
 
-    elseif (grid(lev)%nz == 1) then
-       call coarse2fine_2D(rf,pc,nxc,nyc)
+       if ((aggressive).and.(lev==1)) then
 
-    else
-       call coarse2fine_3D(rf,pc,nxc,nyc,nzc)
-    end if
+          call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
+
+       elseif (grid(lev)%nz == 1) then
+
+          call coarse2fine_2D_nearest(rf,pc,nxc,nyc)
+       else
+          call coarse2fine_3D_nearest(rf,pc,nxc,nyc,nzc)
+
+       end if
+
+
+    elseif ( trim(interp_type)=='linear')then
+
+       if ((aggressive).and.(lev==1)) then
+
+          call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
+
+       elseif (grid(lev)%nz == 1) then
+
+          call coarse2fine_2D_linear(rf,pc,nxc,nyc)
+       else
+          call coarse2fine_3D_linear(rf,pc,nxc,nyc,nzc)
+
+       end if
+
+    endif
+
 
     call fill_halo(lev,grid(lev)%r)
 
@@ -229,9 +251,9 @@ contains
   end subroutine coarse2fine_aggressive
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D(xf,xc,nx,ny)
-    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xf
-    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xc
+  subroutine coarse2fine_2D_nearest(xf,xc,nx,ny)
+    real(kind=rp),dimension(:,:,:),pointer,intent(out):: xf
+    real(kind=rp),dimension(:,:,:),pointer,intent(in) :: xc
     integer(kind=ip),intent(in) :: nx, ny
 
     ! local
@@ -270,10 +292,50 @@ contains
        enddo
     endif
 
-  end subroutine coarse2fine_2D
+  end subroutine coarse2fine_2D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D(xf,xc,nx,ny,nz)
+  subroutine coarse2fine_2D_linear(xf,xc,nx,ny)
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
+    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
+    integer(kind=ip),intent(in) :: nx, ny
+
+    ! local
+  integer(kind=ip) :: i,j,i2,j2,k,k2
+  real(kind=rp) :: a,b,c
+  !
+  ! weights for bilinear in (i,j)
+  a = 9._8 / 16._8
+  b = 3._8 / 16._8
+  c = 1._8 / 16._8
+
+  k  = 1
+  k2 = 1
+
+  do i2=1,nx
+     i=2*i2-1
+     do j2=1,ny
+        j=2*j2-1
+        xf(k  ,j  ,i  ) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)
+        xf(k  ,j+1,i  ) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)
+        xf(k  ,j  ,i+1) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
+        xf(k  ,j+1,i+1) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+11,i2+1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2   ,i2+1)
+     enddo
+  enddo
+
+
+  end subroutine coarse2fine_2D_linear
+
+  !------------------------------------------------------------
+  subroutine coarse2fine_3D_nearest(xf,xc,nx,ny,nz)
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -299,7 +361,95 @@ contains
        enddo
     enddo
 
-  end subroutine coarse2fine_3D
+  end subroutine coarse2fine_3D_nearest
+
+  !------------------------------------------------------------
+  subroutine coarse2fine_3D_linear(xf,xc,nx,ny,nz)
+    real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
+    real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
+    integer(kind=ip),intent(in) :: nx, ny, nz
+
+    ! local
+  integer(kind=ip) :: i,j,k,i2,j2,k2,kp
+  real(kind=rp) :: a,b,c,d,e,f,g
+  !
+  ! weights for bilinear in (i,j), nearest in k
+  a = 9._8 / 16._8
+  b = 3._8 / 16._8
+  c = 1._8 / 16._8
+  !
+  ! weights for trilinear in (i,j,k)
+  d = 27._8 / 64._8
+  e =  9._8 / 64._8
+  f =  3._8 / 64._8
+  g =  1._8 / 64._8
+  ! 
+  do i2=1,nx
+     i=2*i2-1
+     do j2=1,ny
+        j=2*j2-1
+        ! bottom level
+        k  = 1
+        k2 = 1
+        xf(k  ,j  ,i  ) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)
+        xf(k  ,j+1,i  ) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)
+        xf(k  ,j  ,i+1) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
+        xf(k  ,j+1,i+1) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)
+        ! interior level
+        do k=2,nz*2-1
+           ! kp = k2+1 for k=2,4 ..
+           ! kp = k2-1 for k=3,5 ..
+           k2 = ((k+1)/2)
+           kp = k2-(mod(k,2)*2-1)
+           xf(k  ,j  ,i  ) =  &
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2-1) &
+                + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2-1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2-1) &
+                + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2-1)
+           xf(k  ,j+1,i  ) =  &
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2-1) &
+                + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2-1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2-1) &
+                + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2-1)
+           xf(k  ,j  ,i+1) = &
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2+1) &
+                + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2+1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2+1) &
+                + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2+1)
+           xf(k  ,j+1,i+1) = &
+                + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2+1) &
+                + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2+1) &
+                + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2+1) &
+                + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2+1)
+        enddo
+        ! top level
+        k = nz*2
+        k2 = nz
+        xf(k  ,j  ,i  ) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)
+        xf(k  ,j+1,i  ) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)
+        xf(k  ,j  ,i+1) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
+        xf(k  ,j+1,i+1) =  &
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)
+     enddo
+  enddo
+
+
+  end subroutine coarse2fine_3D_linear
 
 !!$  !----------------------------------------
 !!$  subroutine interpolate_zzz(l2,l1,y,x)

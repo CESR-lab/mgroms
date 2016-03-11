@@ -30,7 +30,7 @@ program mg_testseamount
   real(kind=8), dimension(:,:,:), pointer :: rhs
 
   integer(kind=4) :: np, ierr, rank
-  integer(kind=4) :: nh
+  integer(kind=4) :: nh, lev
   
   ! global domain dimensions
   nxg   = 128
@@ -170,6 +170,13 @@ program mg_testseamount
   enddo
 
   call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+
+
+! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
+!  do lev=nlevs,2,-1
+!     call testgalerkin(lev)
+!  end do
+!  stop
 
   call nhydro_solve(u,v,w)
 
