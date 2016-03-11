@@ -1,8 +1,15 @@
+!- Default value are available in mg_namelist.f90 file -!
 &nhparam
-       nhalo       =  1,       ! number of halo points
-       nsmall      =  2, 
-       ns_coarsest = 40, 
-       ns_pre      =  2, 
-       ns_post     =  2, 
-       aggressive  = .false.,
+       nhalo         = 1,             !- number of ghost points
+       nsmall        = 8,             !- smallest dimension ever for the global domain
+       ns_coarsest   = 40,            !- 
+       ns_pre        = 4,             !-
+       ns_post       = 2,             !-
+       cmatrix       = 'real',        !- Take the 'simple' or 'real' matric coefs
+       red_black     = .true.,        !- .false. or .true.
+       mpiexchange   = 'nonblocking', !- MPI exhanges using 'blocking' or 'nonblocking' comm
+       aggressive    = .false.,       !- .false. or .true.
+       interp_type   ='linear',       !- linear or nearest
+       restrict_type ='avg',          !- linear or avg
+       netcdf_output =.false.,        !- .false. or .true.
 /

@@ -3707,7 +3707,7 @@ LIBS=$LIBS
 #########################################################################
 { $as_echo "$as_me:${as_lineno-$LINENO}: generating makefiles" >&5
 $as_echo "$as_me: generating makefiles" >&6;}
-ac_config_files="$ac_config_files Makefile src/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile examples/Makefile examples/curie/Makefile examples/namelist/Makefile examples/perf_caparmor/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -4437,6 +4437,10 @@ do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+    "examples/Makefile") CONFIG_FILES="$CONFIG_FILES examples/Makefile" ;;
+    "examples/curie/Makefile") CONFIG_FILES="$CONFIG_FILES examples/curie/Makefile" ;;
+    "examples/namelist/Makefile") CONFIG_FILES="$CONFIG_FILES examples/namelist/Makefile" ;;
+    "examples/perf_caparmor/Makefile") CONFIG_FILES="$CONFIG_FILES examples/perf_caparmor/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

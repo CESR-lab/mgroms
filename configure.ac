@@ -726,7 +726,11 @@ AC_SUBST(LIBS,[$LIBS])
 #########################################################################
 AC_MSG_NOTICE([generating makefiles])
 AC_CONFIG_FILES([Makefile
-                 src/Makefile])
+                 src/Makefile
+                 examples/Makefile
+                 examples/curie/Makefile
+                 examples/namelist/Makefile
+                 examples/perf_caparmor/Makefile ])
 
 AC_OUTPUT()
 
