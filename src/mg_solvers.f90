@@ -147,7 +147,7 @@ end subroutine norm
        ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
        perf = (tend-tstart)*(rnpxg*rnpyg)/(-log(rnorm/rnorm0)/log(10._8))/(rnxg*rnyg*rnzg)
        write(*,*)'--- summary ---'
-       write(*,'(A,F6.3,A)')"time spent to solve :",tend-tstart," s"
+       write(*,'(A,F8.3,A)')"time spent to solve :",tend-tstart," s"
        write(*,'(A,E10.3)')"rescaled performance:",perf
        write(*,*)'---------------'
     end if

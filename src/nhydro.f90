@@ -56,8 +56,10 @@ contains
     call solve(tol,maxite)
 
     !ND
-    call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
-    call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
+    if (netcdf_output) then
+       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
+       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
+    endif
 
   end subroutine nhydro_solve
 

@@ -20,6 +20,8 @@ contains
 
     integer(kind=ip)::  lev,ndf,ndc
 
+    if (myrank==0) write(*,*)'- define matrix:'
+
     lev = 1
     if (cmatrix == 'simple') then
        call define_matrix_simple(lev, dx, dy, zr, zw, umask, vmask)
@@ -37,8 +39,6 @@ contains
        if(myrank==0)write(*,'(A,I2,A,I2,A,I2)')'coarsening matrix lev=',lev,' / nd fine=',ndf,' / nd coarse=',ndc
        call coarsen_matrix(lev)
     enddo
-
-    
 
   end subroutine define_matrices
 
@@ -134,8 +134,10 @@ contains
     cA => grid(1)%cA ! check the syntax / lighten the writing
 
     !ND
-    call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
-    call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+    if (netcdf_output) then
+       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+       call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+    endif
 
     !! Cell heights
     allocate(dz(nz,0:ny+1,0:nx+1))
@@ -185,9 +187,11 @@ contains
        enddo
     enddo
 
-    call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+    if (netcdf_output) then
+       call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+    endif
 
-    end subroutine define_matrix_simple
+  end subroutine define_matrix_simple
 
 !----------------------------------------
   subroutine define_matrix_real(lev, dx, dy, zr, zw, umask, vmask)
@@ -235,8 +239,10 @@ contains
     cA => grid(1)%cA 
 
     !ND
-    call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
-    call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+    if (netcdf_output) then
+       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+       call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+    endif
 
     !! Cell heights
     allocate(dz(nz,0:ny+1,0:nx+1))
@@ -346,45 +352,45 @@ contains
           k = 1 !lower level
           cA(3,k,j,i) = ( 0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i) ) * vmask(j,i)      !! couples with k+1 j-1
           cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
-                        ! topo terms                                           
-                        -(zydx(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
-                        + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))) & 
-                        ! from j,k cross terms
-                        -(0.25_8*zydx(k,j-1,i) - 0.25_8*zydx(k,j,i)) & 
-                        ! from i,j cross terms if lbc                                         
-                        -(0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &
-                        * (umask(j-1,i+1) - umask(j-1,i)) & 
-                        - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
-                        * (umask(j,i+1) - umask(j,i))) ) * vmask(j,i)
+                                ! topo terms                                           
+               -(zydx(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+               + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))) & 
+                                ! from j,k cross terms
+               -(0.25_8*zydx(k,j-1,i) - 0.25_8*zydx(k,j,i)) & 
+                                ! from i,j cross terms if lbc                                         
+               -(0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &
+               * (umask(j-1,i+1) - umask(j-1,i)) & 
+               - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+               * (umask(j,i+1) - umask(j,i))) ) * vmask(j,i)
           cA(6,k,j,i) = ( 0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1) ) * umask(j,i)      !! couples with k+1 i-1
           cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! couples with i-1
-                        ! topo terms                                                   
-                        -(zxdy(k,j,i)*zxdy(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
-                        + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))) &
-                        ! from i,k cross terms
-                        -(0.25_8*zxdy(k,j,i-1) - 0.25_8*zxdy(k,j,i)) &
-                        ! from i,j cross terms if lbc                                         
-                        -(0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
-                        * (vmask(j+1,i-1) - vmask(j,i-1)) & 
-                        - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
-                        * (vmask(j+1,i) - vmask(j,i))) ) * umask(j,i) 
+                                ! topo terms                                                   
+               -(zxdy(k,j,i)*zxdy(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+               + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))) &
+                                ! from i,k cross terms
+               -(0.25_8*zxdy(k,j,i-1) - 0.25_8*zxdy(k,j,i)) &
+                                ! from i,j cross terms if lbc                                         
+               -(0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+               * (vmask(j+1,i-1) - vmask(j,i-1)) & 
+               - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+               * (vmask(j+1,i) - vmask(j,i))) ) * umask(j,i) 
           cA(5,k,j,i) = +0.5_8*zxdy(k,j+1,i)*zydx(k,j+1,i)/(cw(k,j+1,i)+cw(k+1,j+1,i)) &  !! only for k==1, couples with j+1,i-1
-                        * umask(j+1,i) * vmask(j+1,i) &
-                        +0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
-                        * umask(j,i) * vmask(j+1,i-1)              
+               * umask(j+1,i) * vmask(j+1,i) &
+               +0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+               * umask(j,i) * vmask(j+1,i-1)              
           cA(8,k,j,i) =-0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &   !! only for k==1, couples with j-1,i-1
-                        * umask(j-1,i) * vmask(j,i) &
-                        -0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
-                        * umask(j,i) * vmask(j,i-1)                                        
+               * umask(j-1,i) * vmask(j,i) &
+               -0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+               * umask(j,i) * vmask(j,i-1)                                        
 
           do k = 2,nz-1 !interior levels
              cA(2,k,j,i) = cw(k,j,i) &                                                    !! couples with k-1
-                           ! from i,k  cross terms if lbc
-                           -(0.25_8*zxdy(k-1,j,i) - 0.25_8*zxdy(k,j,i)) &
-                           * (umask(j,i+1) - umask(j,i)) &
-                           ! from j,k  cross terms if lbc
-                           -(0.25_8*zydx(k-1,j,i) - 0.25_8*zydx(k,j,i)) &
-                           * (vmask(j+1,i) - vmask(j,i))
+                                ! from i,k  cross terms if lbc
+                  -(0.25_8*zxdy(k-1,j,i) - 0.25_8*zxdy(k,j,i)) &
+                  * (umask(j,i+1) - umask(j,i)) &
+                                ! from j,k  cross terms if lbc
+                  -(0.25_8*zydx(k-1,j,i) - 0.25_8*zydx(k,j,i)) &
+                  * (vmask(j+1,i) - vmask(j,i))
              cA(3,k,j,i) = (0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i)) * vmask(j,i)     !! couples with k+1 j-1
              cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i) * vmask(j,i)                               !! couples with j-1
              cA(5,k,j,i) =-(0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i)) * vmask(j,i)     !! couples with k-1 j-1
@@ -396,10 +402,10 @@ contains
           k = nz !upper level
           cA(2,k,j,i) = cw(k,j,i)                                                         !! couples with k-1
           cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
-                         -(-0.25_8*zydx(k,j-1,i) + 0.25_8*zydx(k,j,i)) ) * vmask(j,i)
+               -(-0.25_8*zydx(k,j-1,i) + 0.25_8*zydx(k,j,i)) ) * vmask(j,i)
           cA(5,k,j,i) =-( 0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i) )  * vmask(j,i)     !! couples with k-1 j-1
           cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! Couples with i-1
-                         -(-0.25_8*zxdy(k,j,i-1) + 0.25_8*zxdy(k,j,i)) ) * umask(j,i)
+               -(-0.25_8*zxdy(k,j,i-1) + 0.25_8*zxdy(k,j,i)) ) * umask(j,i)
           cA(8,k,j,i) =-( 0.25_8*zxdy(k-1,j,i) + 0.25_8*zxdy(k,j,i-1) )  * umask(j,i)     !! Couples with k-1 i-1
        enddo
     enddo
@@ -412,9 +418,9 @@ contains
 
           k = 1 !lower level
           cA(1,k,j,i) = -cA(2,k+1,j,i) &
-                        -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
-                        -cA(6,k,j,i)-cA(8,k+1,j,i+1)-cA(3,k,j,i)-cA(5,k+1,j+1,i) &
-                        -cA(5,k,j,i)-cA(5,k,j-1,i+1)-cA(8,k,j,i)-cA(8,k,j+1,i+1)
+               -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+               -cA(6,k,j,i)-cA(8,k+1,j,i+1)-cA(3,k,j,i)-cA(5,k+1,j+1,i) &
+               -cA(5,k,j,i)-cA(5,k,j-1,i+1)-cA(8,k,j,i)-cA(8,k,j+1,i+1)
           !for comparing with matlab 2d code 
           !          cA(1,k,j,i) = -cA(2,k+1,j,i) &
           !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
@@ -422,9 +428,9 @@ contains
 
           do k = 2,nz-1 !interior levels
              cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
-                           -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
-                           -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) & 
-                           -cA(3,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)-cA(5,k+1,j+1,i)   
+                  -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+                  -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) & 
+                  -cA(3,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)-cA(5,k+1,j+1,i)   
              !for comparing with matlab 2d code
              !             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
              !                           -cA(7,k,j,i)-cA(7,k,j,i+1) &
@@ -433,8 +439,8 @@ contains
 
           k = nz !upper level
           cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
-                        -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
-                        -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
+               -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+               -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
           !for comparing with matlab 2d code 
           !          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
           !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
@@ -442,7 +448,9 @@ contains
        enddo
     enddo
 
-    call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+    if (netcdf_output) then
+       call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+    endif
 
     deallocate(Arx)
     deallocate(Ary)
@@ -480,7 +488,6 @@ contains
        !       if(myrank == 0) write(*,*)"F2C   lev=",lev+1,"nx,ny,nz=",nx,ny,nz
     endif
 
-
     if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
 
        if ((aggressive).and.(lev==1)) then
@@ -496,7 +503,6 @@ contains
           call toc(lev,'coarsen_matrix_3D')
        end if
 
-
     elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
 
        if ((aggressive).and.(lev==1)) then
@@ -508,9 +514,9 @@ contains
        else
           call tic(lev,'coarsen_matrix_3D')
           if (lev==1) then
-                call coarsen_matrix_3D_linear_avg_8(Af,Ac,nx,ny,nz)
+             call coarsen_matrix_3D_linear_avg_8(Af,Ac,nx,ny,nz)
           else
-                call coarsen_matrix_3D_linear_avg_27(Af,Ac,nx,ny,nz)
+             call coarsen_matrix_3D_linear_avg_27(Af,Ac,nx,ny,nz)
           endif
           call toc(lev,'coarsen_matrix_3D')
        end if
@@ -534,24 +540,10 @@ contains
        call fill_halo(lev+1,grid(lev+1)%cA)
        !
     else
-       !ND
-       !       ! fill the halo
-       !       nd = size(Ac,1) 
-       !       do l=1,nd
-       !          grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
-       !          call fill_halo(lev+1,grid(lev+1)%r)
-       !          grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
-       !       enddo
-       call fill_halo(lev+1,grid(lev+1)%cA)
-       !
-    endif
-!!$    nd = size(Ac,1) 
-!!$    do l=1,nd
-!!$       grid(lev+1)%r = grid(lev+1)%cA(l,:,:,:)
-!!$       call fill_halo(lev+1,grid(lev+1)%r)
-!!$       grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
-!!$    enddo
 
+       call fill_halo(lev+1,grid(lev+1)%cA)
+
+    endif
 
   end subroutine coarsen_matrix
 
@@ -816,7 +808,6 @@ contains
 
     cI(+1,3)=0.25_8
     cI(+1,4)=0.75_8
-
 
     ! i1,j1,k1 are index on the fine grid
     ! i2,j2,k2 are index on the coarse grid

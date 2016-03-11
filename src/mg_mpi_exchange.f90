@@ -834,7 +834,6 @@ contains
     integer(kind=ip) :: sntag, ewtag, nstag, wetag
     integer(kind=ip) :: swnetag, senwtag, nwsetag, neswtag
 
-
     integer(kind=ip) :: i, j
     integer(kind=ip) :: icount
     integer(kind=ip) :: indx
@@ -1115,10 +1114,28 @@ contains
        nz = grid(lev)%nz
        nh = grid(lev)%nh
 
-       if (nz == 1) then
-          nd = 3
-       else
-          nd = 8
+       if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
+
+          if (nz == 1) then
+             nd = 3
+          else
+             nd = 8
+          endif
+
+       elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
+
+          if (nz == 1) then
+             nd = 9
+          else
+             if (lev == 1) then
+                nd = 8
+             else
+                nd =27
+             endif
+          endif
+
+       elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
+          ! todo 
        endif
 
        allocate(halo4D(lev)%sendS(nd,nz,nh,nx))

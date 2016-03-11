@@ -49,6 +49,8 @@ contains
 
     integer(kind=ip) :: lev
 
+    if (myrank==0) write(*,*)'- define grids:'
+    if (myrank==0) write(*,*)'  - define grid levels'
     call find_grid_levels(npxg, npyg, nxl, nyl, nzl)
 
     allocate(grid(nlevs))
@@ -64,6 +66,7 @@ contains
     grid(1)%incx=1
     grid(1)%incy=1
 
+    if (myrank==0) write(*,*)'  - define grid dims'
     ! define grid dimensions at each level
     call define_grid_dims()
 
@@ -97,9 +100,7 @@ contains
 
        elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
           ! todo 
-
        endif
-
 
        allocate(grid(lev)%p(    nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%b(    nz,1-nh:ny+nh,1-nh:nx+nh))
@@ -129,6 +130,7 @@ contains
 
     grid(1)%p(:,:,:) = 0._8
 
+    if (myrank==0) write(*,*)'  - define gather informations'
     call define_gather_informations()
 
   end subroutine define_grids
@@ -315,11 +317,14 @@ contains
 !!$    pi = mod(myrank,npx)
 !!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
 
-       npx = grid(1)%npx
-       npy = grid(1)%npy
 
-       pj = myrank/npx
-       pi = mod(myrank,npx)
+    if (myrank==0) write(*,*)'  - define neighbours'
+
+    npx = grid(1)%npx
+    npy = grid(1)%npy
+
+    pj = myrank/npx
+    pi = mod(myrank,npx)
 
     ! Neighbours
     do lev=1,nlevs       
@@ -385,69 +390,69 @@ contains
           stop -1
        endif
     endif
-!GR =======
-!GR!    return ! not yet ready to go through
-!GR    
-!GR    ! prepare the informations for the gathering 
-!GR    do lev=1,nlevs-1
-!GR       if(grid(lev)%gather.eq.1)then
-!GR          
-!GR          nx = grid(lev)%nx
-!GR          ny = grid(lev)%ny
-!GR          nz = grid(lev)%nz
-!GR          nh = grid(lev)%nh
-!GR          incx=grid(lev)%incx / 2
-!GR          incy=grid(lev)%incy / 2          
-!GR          ngx=grid(lev)%ngx
-!GR          ngy=grid(lev)%ngy
- 
+    !GR =======
+    !GR!    return ! not yet ready to go through
+    !GR    
+    !GR    ! prepare the informations for the gathering 
+    !GR    do lev=1,nlevs-1
+    !GR       if(grid(lev)%gather.eq.1)then
+    !GR          
+    !GR          nx = grid(lev)%nx
+    !GR          ny = grid(lev)%ny
+    !GR          nz = grid(lev)%nz
+    !GR          nh = grid(lev)%nh
+    !GR          incx=grid(lev)%incx / 2
+    !GR          incy=grid(lev)%incy / 2          
+    !GR          ngx=grid(lev)%ngx
+    !GR          ngy=grid(lev)%ngy
 
-!GR         !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
-!GR
-!GR         ! cores having the same family index share the same subdomain
-!GR          family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
-!GR
-!GR          nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
-!GR
-!GR          ! - assign a color to each core: make a cycling ramp index
-!GR          ! through 2 or 4 close families 
-!GR          ! - cores having the same color should be a pair or a quadruplet 
-!GR          ! - colors are all distinct *within* a family
-!GR          color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
-!GR
-!GR          
-!          prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
-!GR          N=incx*npx;
-!GR          key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
-!GR         
-!GR
-!GR          grid(lev)%color=color
-!GR          grid(lev)%family=nextfamily
-!GR          grid(lev)%key=key
-!GR
-!GR          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
-!GR          grid(lev)%localcomm = localcomm
-!GR
-!GR
-!GR          ! this dummy 3D array is to store the restriction from lev-1, before the gathering
-!GR          ! its size can be deduced from the size after the gathering
-!GR          
-!GR          nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
-!GR          ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
-!GR          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
-!GR          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
-!GR          ! number of elements of dummy3
-!GR          grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
-!GR
-!          if(myrank.eq.0)then
-!             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
-!   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
-!      endif
-!GR
-!GR      endif
-!GR   enddo
-!GR
-!GR  end subroutine define_grids
+
+    !GR         !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
+    !GR
+    !GR         ! cores having the same family index share the same subdomain
+    !GR          family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
+    !GR
+    !GR          nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
+    !GR
+    !GR          ! - assign a color to each core: make a cycling ramp index
+    !GR          ! through 2 or 4 close families 
+    !GR          ! - cores having the same color should be a pair or a quadruplet 
+    !GR          ! - colors are all distinct *within* a family
+    !GR          color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
+    !GR
+    !GR          
+    !          prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
+    !GR          N=incx*npx;
+    !GR          key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
+    !GR         
+    !GR
+    !GR          grid(lev)%color=color
+    !GR          grid(lev)%family=nextfamily
+    !GR          grid(lev)%key=key
+    !GR
+    !GR          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
+    !GR          grid(lev)%localcomm = localcomm
+    !GR
+    !GR
+    !GR          ! this dummy 3D array is to store the restriction from lev-1, before the gathering
+    !GR          ! its size can be deduced from the size after the gathering
+    !GR          
+    !GR          nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
+    !GR          ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
+    !GR          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
+    !GR          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
+    !GR          ! number of elements of dummy3
+    !GR          grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
+    !GR
+    !          if(myrank.eq.0)then
+    !             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
+    !   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
+    !      endif
+    !GR
+    !GR      endif
+    !GR   enddo
+    !GR
+    !GR  end subroutine define_grids
 
   end subroutine define_neighbours
 
@@ -477,7 +482,7 @@ contains
 
     do lev=2,nlevs-1
        if(grid(lev)%gather.eq.1)then
-          
+
           nx = grid(lev)%nx
           ny = grid(lev)%ny
           nz = grid(lev)%nz
@@ -489,25 +494,20 @@ contains
 
           !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
 
-         ! cores having the same family index share the same subdomain
+          ! cores having the same family index share the same subdomain
           family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
-
-!          if(myrank==0)write(*,*)lev,family
 
           nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
 
-          if(myrank==0)write(*,*)lev,nextfamily
           ! - assign a color to each core: make a cycling ramp index
           ! through 2 or 4 close families 
           ! - cores having the same color should be a pair or a quadruplet 
           ! - colors are all distinct *within* a family
           color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
-          if(myrank==0)write(*,*)lev,color
-          
-!          prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
+
+          ! prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
           N=incx*npx;
           key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
-          if(myrank==0)write(*,*)lev,key
 
           grid(lev)%color=color
           grid(lev)%family=nextfamily
@@ -518,51 +518,53 @@ contains
 
           ! this dummy 3D array is to store the restriction from lev-1, before the gathering
           ! its size can be deduced from the size after the gathering
-          
+
           nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
           allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
 
           nd = size(grid(lev)%cA,1)
 
-!          if(nz.eq.1)then
-             allocate(grid(lev)%cAdummy(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
-!          else
-!             allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
-!          endif
+          !          if(nz.eq.1)then
+          allocate(grid(lev)%cAdummy(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
+          !          else
+          !             allocate(grid(lev)%cAdummy(8,nz,1-nh:ny+nh,1-nh:nx+nh))
+          !          endif
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           ! number of elements of dummy3
           grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
 
-!          if(myrank.eq.0)then
-!             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
-!   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
-!      endif
+          !          if(myrank.eq.0)then
+          !             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
+          !   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
+          !      endif
 
        endif
     enddo
-    
+
   end subroutine define_gather_informations
 
   !---------------------------------------------------------------------
   subroutine print_grids()
     integer(kind=ip) :: lev,ierr
 
+    if (myrank==0) write(*,*)'- print grid information:'
+
     call MPI_Barrier( MPI_COMM_WORLD ,ierr)
     if (myrank.eq.0)then
        do lev=1,nlevs
           if (grid(lev)%gather.eq.0)then
-             write(*,100)"lev=",lev,": ", &
+             write(*,100)"  lev=",lev,": ", &
                   grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
                   " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
           else
-             write(*,100)"lev=",lev,": ", &
+             write(*,100)"  lev=",lev,": ", &
                   grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
                   " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
           endif
        enddo
     endif
-100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
+100 format (A6,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
 
     end subroutine print_grids
 

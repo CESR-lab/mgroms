@@ -118,7 +118,9 @@ program main_model
         enddo
      enddo
 
-     call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=rank)
+     if (netcdf_output) then
+        call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=rank)
+     endif
 
      do i = 0,nx+1
         do j = 0,ny+1

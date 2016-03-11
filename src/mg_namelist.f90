@@ -19,25 +19,28 @@ module mg_namelist
 
   character(len=16) :: cmatrix='simple'
 
-  logical           :: red_black = .false.    !- .false. or .true.
+  logical           :: red_black = .false.     !- .false. or .true.
 
-  character(len=16) :: mpiexchange='blocking' !- 'blocking' or 'nonblocking'
-  character(len=16) :: interp_type='linear'   !- 'nearest'  or 'linear'
-  character(len=16) :: restrict_type='avg'    !- 'avg'  or 'linear'
+  character(len=16) :: mpiexchange='blocking'  !- 'blocking' or 'nonblocking'
+  character(len=16) :: interp_type='linear'    !- 'nearest'  or 'linear'
+  character(len=16) :: restrict_type='avg'     !- 'avg'  or 'linear'
 
-  logical           :: aggressive = .false.   !- .false. or .true.
+  logical           :: aggressive = .false.    !- .false. or .true.
 
-  namelist/nhparam/ &
-       nhalo      , &
-       nsmall     , &
-       ns_coarsest, &
-       ns_pre     , &
-       ns_post    , &
-       cmatrix    , &
-       red_black  , &
-       mpiexchange, &
-       interp_type, &
+  logical           :: netcdf_output = .false. !- .false. or .true.
+
+  namelist/nhparam/   &
+       nhalo        , &
+       nsmall       , &
+       ns_coarsest  , &
+       ns_pre       , &
+       ns_post      , &
+       cmatrix      , &
+       red_black    , &
+       mpiexchange  , &
+       interp_type  , &
        restrict_type, &
+       netcdf_output, &
        aggressive
 
  contains
@@ -97,18 +100,19 @@ module mg_namelist
         endif
 
         if (rank == 0) then
-           write(*,*)'Non hydrostatic parameters: (rank:',rank,')'
-           write(*,*)'  - nhalo      : ', nhalo
-           write(*,*)'  - nsmall     : ', nsmall 
-           write(*,*)'  - ns_coarsest: ', ns_coarsest
-           write(*,*)'  - ns_pre     : ', ns_pre
-           write(*,*)'  - ns_post    : ', ns_post
-           write(*,*)'  - cmatrix    : ', trim(cmatrix)
-           write(*,*)'  - red_black  : ', red_black
-           write(*,*)'  - mpiexchange: ', trim(mpiexchange)
-           write(*,*)'  - interp_type: ', trim(interp_type)
+           write(*,*)'Non hydrostatic parameters:'
+           write(*,*)'  - nhalo        : ', nhalo
+           write(*,*)'  - nsmall       : ', nsmall 
+           write(*,*)'  - ns_coarsest  : ', ns_coarsest
+           write(*,*)'  - ns_pre       : ', ns_pre
+           write(*,*)'  - ns_post      : ', ns_post
+           write(*,*)'  - cmatrix      : ', trim(cmatrix)
+           write(*,*)'  - red_black    : ', red_black
+           write(*,*)'  - mpiexchange  : ', trim(mpiexchange)
+           write(*,*)'  - interp_type  : ', trim(interp_type)
            write(*,*)'  - restrict_type: ', trim(restrict_type)
-           write(*,*)'  - aggressive : ', aggressive
+           write(*,*)'  - aggressive   : ', aggressive
+           write(*,*)'  - netcdf_output: ', netcdf_output
            write(*,*)'  '
         endif
      endif

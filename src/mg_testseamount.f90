@@ -31,7 +31,7 @@ program mg_testseamount
 
   integer(kind=4) :: np, ierr, rank
   integer(kind=4) :: nh
-  
+
   ! global domain dimensions
   nxg   = 128
   nyg   = 128
@@ -112,8 +112,10 @@ program mg_testseamount
      vmask(ny+1,:) = 0._rp
   endif
 
-  call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
-  call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
+  if (netcdf_output) then
+     call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
+     call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
+  endif
 
   pj = rank/npxg   
   pi = rank-pj*npxg
@@ -125,8 +127,8 @@ program mg_testseamount
         x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
         y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
         h(j,i) = Hc
-!        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
-!        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
+        !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
+        !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
      enddo
   enddo
 
@@ -140,7 +142,7 @@ program mg_testseamount
      enddo
   enddo
 
-  if (rank.eq.0) write(*,*) 'Start main model!'
+  if (rank.eq.0) write(*,*) 'Start TestSeaMount!'
 
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------
@@ -162,21 +164,22 @@ program mg_testseamount
         do k = 1,nz
            rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
                 (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                 exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-!           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-!                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+                exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+           !           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
+           !                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
         enddo
      enddo
   enddo
 
-  call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+  if (netcdf_output) then
+     call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+  endif
 
-
-! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
-!  do lev=nlevs,2,-1
-!     call testgalerkin(lev)
-!  end do
-!  stop
+  ! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
+  !  do lev=nlevs,2,-1
+  !     call testgalerkin(lev)
+  !  end do
+  !  stop
 
   call nhydro_solve(u,v,w)
 
