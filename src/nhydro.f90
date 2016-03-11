@@ -23,8 +23,6 @@ contains
     real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: umask, vmask
     real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
 
-    integer(kind=ip) :: ierr, lev
-
     call mg_mpi_init()
 
     call define_grids(npxg, npyg, nx, ny, nz)

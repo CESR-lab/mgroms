@@ -469,9 +469,8 @@ contains
     !
     !     LOCAL 
     integer(kind=ip)           :: i,j,k,it,nh2
-    real(kind=rp),dimension(nz) :: rhs,d,ud
 
-    real(kind=rp) :: c1,c2,c3,z
+    real(kind=rp) :: c1,c2,c3
 
     call tic(lev,'relax_alternate')
 

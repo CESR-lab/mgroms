@@ -78,7 +78,7 @@ contains
 !    cA(26)(k,j,i) -> p(k-1,j-1,i+0)
 !    cA(27)(k,j,i) -> p(k-1,j-1,i-1)
 
-    integer(kind=ip):: di,dj,dk,l,ierr
+    integer(kind=ip):: di,dj,dk,l
     loc(:,:)=0
     loc(2,1)=1
     loc(3,1)=-1
@@ -782,13 +782,10 @@ contains
 
     !local
     integer(kind=ip):: nx, ny, nz
-    integer(kind=ip):: m, l, k, j, i
+    integer(kind=ip):: l, k, j, i
     integer(kind=ip):: k2, j2, i2
-    integer(kind=ip):: k1, j1, i1
-!    integer(kind=ip):: k0, j0, i0
     integer(kind=ip):: kx, jx, ix
     integer(kind=ip):: ky, jy, iy
-    integer(kind=ip):: dk, dj, di
     integer(kind=ip):: dk2, dj2, di2
     real(kind=rp)   :: cx, cy, cz
     real(kind=rp), dimension(4,4,4) :: x
@@ -1007,7 +1004,7 @@ contains
 
     !local
     integer(kind=ip):: nx, ny, nz
-    integer(kind=ip):: m, l, k, j, i
+    integer(kind=ip):: m, l
     integer(kind=ip):: k2, j2, i2
     integer(kind=ip):: k1, j1, i1
 !    integer(kind=ip):: k0, j0, i0

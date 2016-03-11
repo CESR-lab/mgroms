@@ -23,6 +23,8 @@ program main_model
   real(kind=8), dimension(:,:,:), allocatable :: u,v,w
   real(kind=8), dimension(:,:), allocatable :: h
 
+  real(kind=8), dimension(:,:), allocatable   :: umask, vmask
+
   integer(kind=4) :: k
   integer(kind=4) :: np, ierr, rank
   integer(kind=4) :: nh
@@ -70,10 +72,10 @@ program main_model
 
   if (cmatrix == 'simple') then
      ! grid definition
-     allocate(dx(ny,nx))
-     allocate(dy(ny,nx))
-     allocate(zr(  nz,ny,nx))
-     allocate(zw(nz+1,ny,nx))
+     allocate(dx(0:ny+1,0:nx+1))
+     allocate(dy(0:ny+1,0:nx+1))
+     allocate(zr(nz,0:ny+1,0:nx+1))
+     allocate(zw(nz+1,0:ny+1,0:nx+1))
 
      dx(:,:) = 1._8
      dy(:,:) = 1._8
@@ -133,11 +135,17 @@ program main_model
 
   endif
 
+  allocate(umask(0:ny+1,0:nx+1))
+  allocate(vmask(0:ny+1,0:nx+1))
+
+  umask(:,:) = 1._rp
+  vmask(:,:) = 1._rp
+
   if (rank.eq.0)  write(*,*)'Start main model!'
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------
 
-  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw)
+  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
 
   ! define rhs
   grid(1)%b(1:nz,1:ny,1:nx) = 0._8

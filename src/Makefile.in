@@ -78,10 +78,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = mainmodel$(EXEEXT) testhalo$(EXEEXT) testrelax$(EXEEXT) \
-	testcoarsening$(EXEEXT) testgather$(EXEEXT) \
-	testintergrids$(EXEEXT) testnetcdf$(EXEEXT) \
-	testgalerkin$(EXEEXT) testseamount$(EXEEXT)
+bin_PROGRAMS = mainmodel$(EXEEXT) testseamount$(EXEEXT) \
+	testgalerkin$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -101,14 +99,6 @@ am_mainmodel_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_solvers.$(OBJEXT) nhydro.$(OBJEXT) main_model.$(OBJEXT)
 mainmodel_OBJECTS = $(am_mainmodel_OBJECTS)
 mainmodel_LDADD = $(LDADD)
-am_testcoarsening_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_gather.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
-	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
-	mg_intergrids.$(OBJEXT) mg_testcoarsening.$(OBJEXT)
-testcoarsening_OBJECTS = $(am_testcoarsening_OBJECTS)
-testcoarsening_LDADD = $(LDADD)
 am_testgalerkin_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
 	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
@@ -117,40 +107,6 @@ am_testgalerkin_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_solvers.$(OBJEXT) mg_testgalerkin.$(OBJEXT)
 testgalerkin_OBJECTS = $(am_testgalerkin_OBJECTS)
 testgalerkin_LDADD = $(LDADD)
-am_testgather_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_gather.$(OBJEXT) mg_testgather.$(OBJEXT)
-testgather_OBJECTS = $(am_testgather_OBJECTS)
-testgather_LDADD = $(LDADD)
-am_testhalo_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_grids.$(OBJEXT) \
-	mg_mpi_exchange.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
-	mg_testhalo.$(OBJEXT)
-testhalo_OBJECTS = $(am_testhalo_OBJECTS)
-testhalo_LDADD = $(LDADD)
-am_testintergrids_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_gather.$(OBJEXT) mg_intergrids.$(OBJEXT) \
-	mg_testintergrids.$(OBJEXT)
-testintergrids_OBJECTS = $(am_testintergrids_OBJECTS)
-testintergrids_LDADD = $(LDADD)
-am_testnetcdf_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_gather.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
-	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
-	mg_testnetcdf.$(OBJEXT)
-testnetcdf_OBJECTS = $(am_testnetcdf_OBJECTS)
-testnetcdf_LDADD = $(LDADD)
-am_testrelax_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_gather.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
-	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
-	mg_testrelax.$(OBJEXT)
-testrelax_OBJECTS = $(am_testrelax_OBJECTS)
-testrelax_LDADD = $(LDADD)
 am_testseamount_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
 	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
@@ -185,15 +141,9 @@ AM_V_FCLD = $(am__v_FCLD_@AM_V@)
 am__v_FCLD_ = $(am__v_FCLD_@AM_DEFAULT_V@)
 am__v_FCLD_0 = @echo "  FCLD    " $@;
 am__v_FCLD_1 = 
-SOURCES = $(mainmodel_SOURCES) $(testcoarsening_SOURCES) \
-	$(testgalerkin_SOURCES) $(testgather_SOURCES) \
-	$(testhalo_SOURCES) $(testintergrids_SOURCES) \
-	$(testnetcdf_SOURCES) $(testrelax_SOURCES) \
+SOURCES = $(mainmodel_SOURCES) $(testgalerkin_SOURCES) \
 	$(testseamount_SOURCES)
-DIST_SOURCES = $(mainmodel_SOURCES) $(testcoarsening_SOURCES) \
-	$(testgalerkin_SOURCES) $(testgather_SOURCES) \
-	$(testhalo_SOURCES) $(testintergrids_SOURCES) \
-	$(testnetcdf_SOURCES) $(testrelax_SOURCES) \
+DIST_SOURCES = $(mainmodel_SOURCES) $(testgalerkin_SOURCES) \
 	$(testseamount_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
@@ -362,6 +312,12 @@ top_srcdir = @top_srcdir@
 FORTRAN_TOOLS = .
 SUFFIXES = .F90 .f90 .o .mod
 SUBDIRS = .
+#	testhalo       \
+#	testrelax      \
+#	testcoarsening \
+#	testgather     \
+#	testintergrids \
+#	testnetcdf     \
 #check_PROGRAMS = $(bin_PROGRAMS)
 #TESTS          = $(check_PROGRAMS)
 mainmodel_SOURCES = \
@@ -378,75 +334,6 @@ mainmodel_SOURCES = \
 	mg_solvers.f90       \
 	nhydro.f90           \
 	main_model.f90
-
-testhalo_SOURCES = \
-	mg_mpi.f90           \
-	mg_tictoc.f90        \
-	mg_namelist.f90      \
-	mg_grids.f90         \
-	mg_mpi_exchange.f90  \
-	mg_define_rhs.f90    \
-	mg_testhalo.f90
-
-testrelax_SOURCES = \
-	mg_mpi.f90           \
-	mg_tictoc.f90        \
-	mg_namelist.f90      \
-	mg_netcdf_out.f90    \
-	mg_grids.f90         \
-	mg_mpi_exchange.f90  \
-	mg_gather.f90        \
-	mg_define_rhs.f90    \
-	mg_define_matrix.f90 \
-	mg_relax.f90         \
-	mg_testrelax.f90
-
-testcoarsening_SOURCES = \
-	mg_mpi.f90           \
-	mg_tictoc.f90        \
-	mg_namelist.f90      \
-	mg_netcdf_out.f90    \
-	mg_grids.f90         \
-	mg_mpi_exchange.f90  \
-	mg_gather.f90        \
-	mg_define_rhs.f90    \
-	mg_define_matrix.f90 \
-	mg_relax.f90         \
-	mg_intergrids.f90    \
-	mg_testcoarsening.f90
-
-testgather_SOURCES = \
-	mg_mpi.f90           \
-	mg_tictoc.f90        \
-	mg_namelist.f90      \
-	mg_netcdf_out.f90    \
-	mg_grids.f90         \
-	mg_gather.f90        \
-	mg_testgather.f90
-
-testintergrids_SOURCES = \
-	mg_mpi.f90           \
-	mg_tictoc.f90        \
-	mg_namelist.f90      \
-	mg_netcdf_out.f90    \
-	mg_grids.f90         \
-	mg_mpi_exchange.f90  \
-	mg_gather.f90        \
-	mg_intergrids.f90    \
-	mg_testintergrids.f90
-
-testnetcdf_SOURCES = \
-	mg_mpi.f90           \
-	mg_tictoc.f90        \
-	mg_namelist.f90      \
-	mg_netcdf_out.f90    \
-	mg_grids.f90         \
-	mg_mpi_exchange.f90  \
-	mg_gather.f90        \
-	mg_define_rhs.f90    \
-	mg_define_matrix.f90 \
-	mg_relax.f90         \
-	mg_testnetcdf.f90
 
 testseamount_SOURCES = \
 	mg_mpi.f90           \
@@ -473,8 +360,8 @@ testgalerkin_SOURCES = \
 	mg_gather.f90        \
 	mg_define_matrix.f90 \
 	mg_intergrids.f90    \
-	mg_relax.f90  \
-	mg_solvers.f90  \
+	mg_relax.f90         \
+	mg_solvers.f90       \
 	mg_testgalerkin.f90
 
 all: all-recursive
@@ -558,33 +445,9 @@ mainmodel$(EXEEXT): $(mainmodel_OBJECTS) $(mainmodel_DEPENDENCIES) $(EXTRA_mainm
 	@rm -f mainmodel$(EXEEXT)
 	$(AM_V_FCLD)$(FCLINK) $(mainmodel_OBJECTS) $(mainmodel_LDADD) $(LIBS)
 
-testcoarsening$(EXEEXT): $(testcoarsening_OBJECTS) $(testcoarsening_DEPENDENCIES) $(EXTRA_testcoarsening_DEPENDENCIES) 
-	@rm -f testcoarsening$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(testcoarsening_OBJECTS) $(testcoarsening_LDADD) $(LIBS)
-
 testgalerkin$(EXEEXT): $(testgalerkin_OBJECTS) $(testgalerkin_DEPENDENCIES) $(EXTRA_testgalerkin_DEPENDENCIES) 
 	@rm -f testgalerkin$(EXEEXT)
 	$(AM_V_FCLD)$(FCLINK) $(testgalerkin_OBJECTS) $(testgalerkin_LDADD) $(LIBS)
-
-testgather$(EXEEXT): $(testgather_OBJECTS) $(testgather_DEPENDENCIES) $(EXTRA_testgather_DEPENDENCIES) 
-	@rm -f testgather$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(testgather_OBJECTS) $(testgather_LDADD) $(LIBS)
-
-testhalo$(EXEEXT): $(testhalo_OBJECTS) $(testhalo_DEPENDENCIES) $(EXTRA_testhalo_DEPENDENCIES) 
-	@rm -f testhalo$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(testhalo_OBJECTS) $(testhalo_LDADD) $(LIBS)
-
-testintergrids$(EXEEXT): $(testintergrids_OBJECTS) $(testintergrids_DEPENDENCIES) $(EXTRA_testintergrids_DEPENDENCIES) 
-	@rm -f testintergrids$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(testintergrids_OBJECTS) $(testintergrids_LDADD) $(LIBS)
-
-testnetcdf$(EXEEXT): $(testnetcdf_OBJECTS) $(testnetcdf_DEPENDENCIES) $(EXTRA_testnetcdf_DEPENDENCIES) 
-	@rm -f testnetcdf$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(testnetcdf_OBJECTS) $(testnetcdf_LDADD) $(LIBS)
-
-testrelax$(EXEEXT): $(testrelax_OBJECTS) $(testrelax_DEPENDENCIES) $(EXTRA_testrelax_DEPENDENCIES) 
-	@rm -f testrelax$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(testrelax_OBJECTS) $(testrelax_LDADD) $(LIBS)
 
 testseamount$(EXEEXT): $(testseamount_OBJECTS) $(testseamount_DEPENDENCIES) $(EXTRA_testseamount_DEPENDENCIES) 
 	@rm -f testseamount$(EXEEXT)
@@ -889,6 +752,69 @@ clean-local:
 
 cleanf:
 	-rm -f *.nc fort.* *.dump *.xml gmon.out *.log *__genmod*
+#testhalo_SOURCES =       \
+#	mg_mpi.f90           \
+#	mg_tictoc.f90        \
+#	mg_namelist.f90      \
+#	mg_grids.f90         \
+#	mg_mpi_exchange.f90  \
+#	mg_define_rhs.f90    \
+#	mg_testhalo.f90
+#testrelax_SOURCES =      \
+#	mg_mpi.f90           \
+#	mg_tictoc.f90        \
+#	mg_namelist.f90      \
+#	mg_netcdf_out.f90    \
+#	mg_grids.f90         \
+#	mg_mpi_exchange.f90  \
+#	mg_gather.f90        \
+#	mg_define_rhs.f90    \
+#	mg_define_matrix.f90 \
+#	mg_relax.f90         \
+#	mg_testrelax.f90
+#testcoarsening_SOURCES = \
+#	mg_mpi.f90           \
+#	mg_tictoc.f90        \
+#	mg_namelist.f90      \
+#	mg_netcdf_out.f90    \
+#	mg_grids.f90         \
+#	mg_mpi_exchange.f90  \
+#	mg_gather.f90        \
+#	mg_define_rhs.f90    \
+#	mg_define_matrix.f90 \
+#	mg_relax.f90         \
+#	mg_intergrids.f90    \
+#	mg_testcoarsening.f90
+#testgather_SOURCES =     \
+#	mg_mpi.f90           \
+#	mg_tictoc.f90        \
+#	mg_namelist.f90      \
+#	mg_netcdf_out.f90    \
+#	mg_grids.f90         \
+#	mg_gather.f90        \
+#	mg_testgather.f90
+#testintergrids_SOURCES = \
+#	mg_mpi.f90           \
+#	mg_tictoc.f90        \
+#	mg_namelist.f90      \
+#	mg_netcdf_out.f90    \
+#	mg_grids.f90         \
+#	mg_mpi_exchange.f90  \
+#	mg_gather.f90        \
+#	mg_intergrids.f90    \
+#	mg_testintergrids.f90
+#testnetcdf_SOURCES =     \
+#	mg_mpi.f90           \
+#	mg_tictoc.f90        \
+#	mg_namelist.f90      \
+#	mg_netcdf_out.f90    \
+#	mg_grids.f90         \
+#	mg_mpi_exchange.f90  \
+#	mg_gather.f90        \
+#	mg_define_rhs.f90    \
+#	mg_define_matrix.f90 \
+#	mg_relax.f90         \
+#	mg_testnetcdf.f90
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -24,7 +24,7 @@ module mg_gather
       integer(kind=ip):: nx,ny,nz,nh
       integer(kind=ip):: ngx,ngy,Ng
       integer(kind=ip):: i,j,k,l,m,ii,jj
-      integer(kind=ip):: i0,i1,j0,j1
+      integer(kind=ip):: i0,i1
       integer(kind=ip):: ierr
       real(kind=rp),dimension(:,:,:,:,:),pointer :: buffer
 
@@ -114,8 +114,7 @@ module mg_gather
 
       integer(kind=ip):: nx,ny,nz,nh
       integer(kind=ip):: ngx,ngy
-      integer(kind=ip):: i,j,k,l,m,ii,jj,key,ierr
-      real(kind=rp):: z
+      integer(kind=ip):: i,j,k,l,m,ii,jj,key
 
       ! number of cores per direction involved in this gathering (1 or 2)
       ngx = grid(lev)%ngx
