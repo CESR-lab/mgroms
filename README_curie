@@ -30,3 +30,17 @@ ccc_msub job_curie_mpi.slurm
 Namelist:
 --------
 Examples are available in the examples/namelist directory
+
+Make a test:
+-----------
+cd where_you_want
+mkdir test_v1
+cd test_v1
+ln -s /ccc/cont003/home/gen9178/griman/NH_Multigrid/bin/testseamount testseamount
+cp /ccc/cont003/home/gen9178/griman/NH_Multigrid/mgroms-0.0.9/examples/namelist/nh_namelist ./.
+cp /ccc/cont003/home/gen9178/griman/NH_Multigrid/mgroms-0.0.9/examples/curie/job_curie_mpi.slurm ./.
+
+ccc_msub job_curie_mpi.slurm
+
+ccc_mstat -u griman
+
