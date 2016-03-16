@@ -4,8 +4,10 @@ module mg_solvers
   use mg_tictoc
   use mg_namelist
   use mg_grids
+  use mg_intergrids
   use mg_relax
   use mg_intergrids
+  use mg_netcdf_out
 
   implicit none
 
@@ -13,26 +15,70 @@ contains
 
   !---------------------------------------------------------------------
   subroutine testgalerkin(lev)
+
     real(kind=8) :: norm_c,norm_f,dummy
-    integer(kind=4) :: lev,nx,ny,nz,nh
+    integer(kind=4) :: lev,nx,ny,nz,nh,i,j,k
+    character(len = 16) :: filen
+
+
+    integer(kind=4) :: npx,npy,pi,pj
+    real(kind=8) :: x,y,z,cff
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
+    npx = grid(1)%npx
+    npy = grid(1)%npy
+
+    pj = myrank/npx
+    pi = mod(myrank,npx)
+
+
     call random_number(grid(lev)%p)!
-    grid(lev)%p(:,1,:)= 1._8
-!    grid(lev)%p(2,:,:)=0._8
+    do i=1,nx
+       x=(1._8*i-0.5+pi*nx)/(npx*nx) -0.3
+       do j=1,ny
+          y=(1._8*j-0.5+pj*ny)/(npy*ny)-0.4
+          do k=1,nz
+             z=(1._8*k-0.5)/nz-0.2
+             cff = exp( - (x*x+y*y+z*z)*30 )
+!             grid(lev)%p(k,j,i)= cff
+             grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
+!             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
+!             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
+          enddo
+       enddo
+    enddo
+    !    grid(lev)%p(2,:,:)=0._8
     call fill_halo(lev,grid(lev)%p)
+
+!    write(filen,'("p_",i1,".nc")') lev
+!    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+
     grid(lev)%b = 0._8
     call compute_residual(lev,dummy)    
     call norm(lev,grid(lev)%p,grid(lev)%r,nx,ny,nz,norm_c)
 
+    write(filen,'("p_",i1,".nc")') lev
+    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+    write(filen,'("r_",i1,".nc")') lev
+    call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+
     grid(lev-1)%p = 0._8 
     call coarse2fine(lev-1) ! interpolate p to r and add r to p
+
+    write(filen,'("p_",i1,".nc")') lev-1
+    call write_netcdf(grid(lev-1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+    !    grid(lev-1)%p(:,:,:)= 1._8
     grid(lev-1)%b = 0._8
     call compute_residual(lev-1,dummy)
+    write(filen,'("r_",i1,".nc")') lev-1
+    call write_netcdf(grid(lev-1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
 
     nx = grid(lev-1)%nx
     ny = grid(lev-1)%ny
@@ -43,10 +89,11 @@ contains
     if (myrank==0) then
        write(*,*)"======== lev ",lev,"==========="
        write(*,*)"norm coarse = ",norm_c
-       write(*,*)"norm fine   = ",norm_f/16._8
+       write(*,*)"norm fine   = ",norm_f/4
+       write(*,*)"ratio       = ",norm_c/norm_f*4
     endif
 
-end subroutine testgalerkin
+  end subroutine testgalerkin
 
 
   !---------------------------------------------------------------------
@@ -60,9 +107,11 @@ subroutine norm(lev,x,y,nx,ny,nz,res)
   r=0._8
   do i=1,nx
      do j=1,ny
-        do k=1,nz
-           r=r+x(k,j,i)*y(k,j,i)
-        enddo
+        if(grid(lev)%rmask(j,i)==1)then
+           do k=1,nz
+              r=r+x(k,j,i)*y(k,j,i)
+           enddo
+        endif
      enddo
   enddo
   call global_sum(lev,r,res)
@@ -85,6 +134,7 @@ end subroutine norm
     real(kind = lg) :: tstart,tend,perf
     real(kind=rp) :: rnxg,rnyg,rnzg
     real(kind=rp) :: rnpxg,rnpyg
+    character(len = 16) :: filen
 
     p  => grid(1)%p
     b  => grid(1)%b
@@ -118,13 +168,19 @@ end subroutine norm
     rnorm0 = res0
 
     nite=0
-
     do while ((nite < maxite).and.(res0 > tol))
 
-       call Vcycle(1)
-       !call relax(1,1)
+!       call Vcycle(1)
+       call Fcycle()
 
        call compute_residual(1,rnorm)
+
+       write(filen,'("r_",i1,".nc")') nite
+       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+       write(filen,'("p_",i1,".nc")') nite
+       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+
        rnorm = sqrt(rnorm/bnorm)
        conv = res0/rnorm ! error reduction after this iteration
        res0 = rnorm
@@ -152,7 +208,7 @@ end subroutine norm
        write(*,*)'---------------'
     end if
 
-10  format("ite = ",I2,": res = ",E10.3," / conv = ",F7.1)
+10  format("ite = ",I2,": res = ",E10.3," / conv = ",F7.3)
 
   end subroutine solve
 
@@ -162,17 +218,14 @@ end subroutine norm
     integer(kind=ip):: lev
 
     do lev=1,nlevs-1
-       grid(lev)%r=grid(lev)%b
        call fine2coarse(lev)
+       grid(lev+1)%r=grid(lev+1)%b
     enddo
-
-    grid(nlevs)%p(:,:,:) = 0._8
 
     call relax(nlevs, ns_coarsest)
 
     do lev=nlevs-1,1,-1
-       grid(lev)%p(:,:,:) = 0._8
-       call coarse2fine(lev) !- fill_halo ?
+       call coarse2fine(lev) 
        call Vcycle(lev)
     enddo
 
@@ -191,7 +244,6 @@ end subroutine norm
        call relax(lev,ns_pre)
        call compute_residual(lev,rnorm)
        call fine2coarse(lev)
-       grid(lev+1)%p(:,:,:) = 0._8
     enddo
 
     call relax(nlevs0,ns_coarsest)
@@ -202,5 +254,31 @@ end subroutine norm
     enddo
 
   end subroutine Vcycle
+
+
+  !----------------------------------------
+  subroutine Vcycle2(lev1,lev2)
+    ! partial V-cycle: go down level = lev2
+
+    integer(kind=ip), intent(in) :: lev1,lev2
+    integer(kind=ip)             :: lev, nlevs0
+    real(kind=rp)                :: rnorm
+
+    nlevs0=nlevs
+
+    do lev=lev1,lev2-1
+       call relax(lev,ns_pre)
+       call compute_residual(lev,rnorm)
+       call fine2coarse(lev)
+    enddo
+
+    call relax(lev2,ns_coarsest)
+
+    do lev=lev2-1,lev1,-1
+       call coarse2fine(lev)
+       call relax(lev,ns_post)
+    enddo
+
+  end subroutine Vcycle2
 
 end module mg_solvers

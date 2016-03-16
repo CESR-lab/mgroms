@@ -19,9 +19,9 @@ contains
     integer(kind=ip), dimension(4)              , intent(in) :: neighb ! S, E, N, W
     integer(kind=ip)                            , intent(in) :: nx, ny, nz
     integer(kind=ip)                            , intent(in) :: npxg, npyg
-    real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: dx, dy
-    real(kind=rp), dimension(:,:)  , allocatable, intent(in) :: umask, vmask
-    real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
+    real(kind=rp), dimension(:,:)  , pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:)  , pointer, intent(in) :: umask, vmask
+    real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
 
     call mg_mpi_init()
 
@@ -31,18 +31,18 @@ contains
 
     call print_grids()
 
-    call define_matrices(dx, dy, zr, zw, umask, vmask)
+!    call define_matrices(dx, dy, zr, zw, umask, vmask)
 
   end subroutine nhydro_init
 
   !--------------------------------------------------------------
   subroutine nhydro_solve(u,v,w)
 
-    real(kind=rp), dimension(:,:,:), allocatable, intent(inout) :: u,v,w
+    real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
 
     integer(kind=ip) :: nx, ny, nz
     real(kind=rp)    :: tol = 1.e-12
-    integer(kind=ip) :: maxite = 50
+    integer(kind=ip) :: maxite = 10
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)

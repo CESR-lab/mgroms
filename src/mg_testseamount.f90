@@ -1,6 +1,6 @@
 program mg_testseamount
 
-  use mpi
+  use mg_mpi
   use nhydro
 
   implicit none
@@ -15,11 +15,11 @@ program mg_testseamount
   integer(kind=4), dimension(4) :: neighb ! S, E, N, W
   integer(kind=4) :: nx, ny, nz  ! local dimensions
 
-  real(kind=8), dimension(:,:), allocatable   :: dx, dy
-  real(kind=8), dimension(:,:), allocatable   :: umask, vmask
-  real(kind=8), dimension(:,:), allocatable   :: h
-  real(kind=8), dimension(:,:,:), allocatable :: zr, zw
-  real(kind=8), dimension(:,:,:), allocatable :: u,v,w
+  real(kind=8), dimension(:,:), pointer   :: dx, dy
+  real(kind=8), dimension(:,:), pointer   :: umask, vmask, rmask
+  real(kind=8), dimension(:,:), pointer   :: h
+  real(kind=8), dimension(:,:,:), pointer :: zr, zw
+  real(kind=8), dimension(:,:,:), pointer :: u,v,w
 
   integer(kind=4) :: pi, pj
   integer(kind=4) :: k, j, i
@@ -30,8 +30,11 @@ program mg_testseamount
   real(kind=8), dimension(:,:,:), pointer :: rhs
 
   integer(kind=4) :: np, ierr, rank
-  integer(kind=4) :: nh
+  integer(kind=4) :: nh, lev
 
+  real(kind=8)    :: dist
+    character(len = 16) :: filen
+  
   ! global domain dimensions
   nxg   = 128
   nyg   = 128
@@ -61,6 +64,10 @@ program mg_testseamount
   ! fill the neighbours array
   call mm_define_neighbours(npxg, npyg, neighb)
 
+
+  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
+
+
   allocate(u(nz,ny,1:nx+1))
   allocate(v(nz,1:ny+1,nx))
   allocate(w(1:nz+1,ny,nx))
@@ -77,45 +84,74 @@ program mg_testseamount
   allocate(dy(0:ny+1,0:nx+1))
   allocate(umask(0:ny+1,0:nx+1))
   allocate(vmask(0:ny+1,0:nx+1))
+  allocate(rmask(0:ny+1,0:nx+1))
   allocate(zr(nz,0:ny+1,0:nx+1))
   allocate(zw(nz+1,0:ny+1,0:nx+1))
 
-  Lx = 1.e4_rp
-  Ly = 1.e4_rp
+  Lx = 2.e4_rp
+  Ly = 2.e4_rp
   Hc = 4.e3_rp
 
   dx(:,:) = Lx/real(nxg,kind=rp)
   dy(:,:) = Ly/real(nyg,kind=rp)
 
-  umask(:,:) = 1._rp
-  vmask(:,:) = 1._rp
 
-  if (rank==0) then
-     umask(:,0:1) = 0._rp
-     vmask(:,0) = 0._rp
-     umask(0,:) = 0._rp
-     vmask(0:1,:) = 0._rp
-  elseif (rank==1) then
-     umask(:,nx+1) = 0._rp
-     vmask(:,nx+1) = 0._rp
-     umask(0,:) = 0._rp
-     vmask(0:1,:) = 0._rp
-  elseif (rank==2) then
-     umask(:,0:1) = 0._rp
-     vmask(:,0) = 0._rp
-     umask(ny+1,:) = 0._rp
-     vmask(ny+1,:) = 0._rp
-  elseif (rank==3) then
-     umask(:,nx+1) = 0._rp
-     vmask(:,nx+1) = 0._rp
-     umask(ny+1,:) = 0._rp
-     vmask(ny+1,:) = 0._rp
-  endif
+  pj = rank/npxg
+  pi = mod(rank,npxg)
 
-  if (netcdf_output) then
-     call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
-     call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
-  endif
+  rmask(:,:) = 0.
+  do i=0,nx+1
+     x=(1._8*i-0.5+pi*nx)/(npxg*nx) -0.5
+     do j=0,ny+1
+        y=(1._8*j-0.5+pj*ny)/(npyg*ny)-0.5
+        dist = sqrt(x*x+y*y) - 0.48
+!        if ((x>-0.45).and.(x<0.45).and.(y>-0.45).and.(y<0.45)) then
+!        if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
+        if (dist<0) then
+           rmask(j,i)  = 1.
+        endif
+     enddo
+  enddo
+
+  do i=1,nx+1      
+     do j=1,ny+1
+        umask(j,i)=rmask(j,i)*rmask(j,i-1)
+        vmask(j,i)=rmask(j,i)*rmask(j-1,i)
+     enddo
+  enddo
+  
+  ! unpleasant cooking to fill_halo umask and vmask (no 2D wrapper)
+  grid(1)%p(1,:,:)=umask
+  grid(1)%p(2,:,:)=vmask
+  call fill_halo(1,grid(1)%p)
+  umask = grid(1)%p(1,:,:)
+  vmask = grid(1)%p(2,:,:)
+
+!!$  if (rank==0) then
+!!$     umask(:,0:2) = 0._rp
+!!$     vmask(:,0:1) = 0._rp
+!!$     umask(0:1,:) = 0._rp
+!!$     vmask(0:2,:) = 0._rp
+!!$  elseif (rank==1) then
+!!$     umask(:,nx:nx+1) = 0._rp
+!!$     vmask(:,nx:nx+1) = 0._rp
+!!$     umask(0:1,:) = 0._rp
+!!$     vmask(0:2,:) = 0._rp
+!!$  elseif (rank==2) then
+!!$     umask(:,0:2) = 0._rp
+!!$     vmask(:,0:1) = 0._rp
+!!$     umask(ny:ny+1,:) = 0._rp
+!!$     vmask(ny:ny+1,:) = 0._rp
+!!$  elseif (rank==3) then
+!!$     umask(:,nx:nx+1) = 0._rp
+!!$     vmask(:,nx:nx+1) = 0._rp
+!!$     umask(ny:ny+1,:) = 0._rp
+!!$     vmask(ny:ny+1,:) = 0._rp
+!!$  endif
+
+  call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
+  call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
+  call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=rank)
 
   pj = rank/npxg   
   pi = rank-pj*npxg
@@ -126,9 +162,9 @@ program mg_testseamount
      do j = 0,ny+1
         x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
         y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
-        h(j,i) = Hc
-        !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
-        !        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
+        !h(j,i) = Hc
+        !h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
+        h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
      enddo
   enddo
 
@@ -142,16 +178,18 @@ program mg_testseamount
      enddo
   enddo
 
-  if (rank.eq.0) write(*,*) 'Start TestSeaMount!'
+  if (rank.eq.0) write(*,*) 'Start main model!'
 
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------
 
-  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
+!  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
+  
+  call define_matrices(dx, dy, zr, zw, umask, vmask, rmask)
 
   ! rhs definition
-  bet = 600._8 / (Lx*Lx)
-  x1 = Lx * 0.65_8
+  bet = 1200._8 / (Lx*Lx)
+  x1 = Lx * 0.45_8
   z1 = Hc * (0.75_8 - 1._8)
   x2 = Lx * 0.75_8
   z2 = Hc * (0.65_8 - 1._8)
@@ -164,22 +202,45 @@ program mg_testseamount
         do k = 1,nz
            rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
                 (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-           !           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-           !                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+                 exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+!           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
+!                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+!           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
         enddo
      enddo
   enddo
 
-  if (netcdf_output) then
-     call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
-  endif
+!  call random_number(rhs)
+  do i = 0,nx+1 !!!  I need to know my global index range
+     do j = 0,ny+1 
+        do k = 1,nz
+           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
+        enddo
+     enddo
+  enddo
+  call fill_halo(1,rhs)
 
-  ! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
-  !  do lev=nlevs,2,-1
-  !     call testgalerkin(lev)
-  !  end do
-  !  stop
+  call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+
+  
+
+! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
+!  do lev=2,2
+!     call testgalerkin(lev)
+!  end do
+!  stop
+
+!  do lev=1,nlevs-1
+!     grid(lev)%r = grid(lev)%b
+!     call fine2coarse(lev)     
+!  end do
+!  do lev=1,nlevs
+!    write(filen,'("b_",i1,".nc")') lev
+!    call write_netcdf(grid(lev)%b,vname='b',netcdf_file_name=filen,rank=myrank)
+! enddo
+!  stop
+
+
 
   call nhydro_solve(u,v,w)
 
