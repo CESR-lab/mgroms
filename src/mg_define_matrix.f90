@@ -12,19 +12,20 @@ module mg_define_matrix
 
 contains
   !-------------------------------------------------------------------------     
-  subroutine define_matrices(dx, dy, zr, zw, umask, vmask)
+  subroutine define_matrices(dx, dy, zr, zw, umask, vmask, rmask)
 
-    real(kind=rp), dimension(:,:)  , allocatable, optional, intent(in) :: dx, dy
-    real(kind=rp), dimension(:,:)  , allocatable, optional, intent(in) :: umask, vmask
-    real(kind=rp), dimension(:,:,:), allocatable, optional, intent(in) :: zr, zw
+    real(kind=rp), dimension(:,:)  , pointer, optional, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:)  , pointer, optional, intent(in) :: umask, vmask, rmask
+    real(kind=rp), dimension(:,:,:), pointer, optional, intent(in) :: zr, zw
 
-    integer(kind=ip)::  lev,ndf,ndc
+    integer(kind=ip)::  lev,ndf,ndc,i,j,nx,ny,nh
+    character(len = 16) :: filen
 
     lev = 1
     if (cmatrix == 'simple') then
        call define_matrix_simple(lev, dx, dy, zr, zw, umask, vmask)
     elseif (cmatrix == 'real') then
-       call define_matrix_real(lev, dx, dy, zr, zw, umask, vmask)
+       call define_matrix_real(lev, dx, dy, zr, zw, umask, vmask, rmask)
     else
        stop
     endif
@@ -34,8 +35,61 @@ contains
     do lev = 1,nlevs-1
        ndf = size(grid(lev)%cA,1)
        ndc = size(grid(lev+1)%cA,1)
-       if(myrank==0)write(*,'(A,I2,A,I2,A,I2)')'coarsening matrix lev=',lev,' / nd fine=',ndf,' / nd coarse=',ndc
+       if(myrank==0)write(*,'(A,I2,A,I2,A,I2)')'coarsening matrix lev=',lev,' / nd fine=',ndf,' => nd coarse=',ndc
+
+       nh=grid(lev)%nh
+       nx=grid(lev)%nx
+       ny=grid(lev)%ny
+       do i=1-nh,nx+nh
+          do j=1-nh,ny+nh
+             if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12 ) then 
+                grid(lev)%rmask(j,i)=0
+                grid(lev)%cA(:,:,j,i)=0.
+             else
+                grid(lev)%rmask(j,i)=1
+             endif
+          enddo
+       enddo
        call coarsen_matrix(lev)
+    enddo
+    lev=nlevs
+       nh=grid(lev)%nh
+       nx=grid(lev)%nx
+       ny=grid(lev)%ny
+       do i=1-nh,nx+nh
+          do j=1-nh,ny+nh
+             if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12 ) then 
+                grid(lev)%rmask(j,i)=0
+                grid(lev)%cA(:,:,j,i)=0.
+             else
+                grid(lev)%rmask(j,i)=1
+             endif
+          enddo
+       enddo
+
+
+!!$    do lev=1,nlevs
+!!$       nh=grid(lev)%nh
+!!$       nx=grid(lev)%nx
+!!$       ny=grid(lev)%ny
+!!$       do i=1-nh,nx+nh
+!!$          do j=1-nh,ny+nh
+!!$             if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12 ) then 
+!!$                grid(lev)%rmask(j,i)=0
+!!$                grid(lev)%cA(:,:1,j,i)=0.
+!!$             else
+!!$                grid(lev)%rmask(j,i)=1
+!!$             endif
+!!$          enddo
+!!$       enddo
+!!$    enddo
+
+    do lev=1,nlevs
+       write(filen,'("cA_",i1,".nc")') lev
+       call write_netcdf(grid(lev)%cA,vname='cA',netcdf_file_name=filen,rank=myrank)
+       write(filen,'("msk_",i1,".nc")') lev
+       call write_netcdf(grid(lev)%rmask*1._8,vname='msk',netcdf_file_name=filen,rank=myrank)
+
     enddo
 
     
@@ -102,9 +156,9 @@ contains
   subroutine define_matrix_simple(lev, dx, dy, zr, zw, umask, vmask)
 
     integer(kind=ip),intent(in):: lev
-    real(kind=rp), dimension(:,:), allocatable, intent(in) :: dx, dy
-    real(kind=rp), dimension(:,:), allocatable, intent(in) :: umask, vmask
-    real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: umask, vmask
+    real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
 
     character(len=15) :: matrixname
 
@@ -190,12 +244,12 @@ contains
     end subroutine define_matrix_simple
 
 !----------------------------------------
-  subroutine define_matrix_real(lev, dx, dy, zr, zw, umask, vmask)
+  subroutine define_matrix_real(lev, dx, dy, zr, zw, umask, vmask, rmask)
 
     integer(kind=ip),intent(in):: lev
-    real(kind=rp), dimension(:,:), allocatable, intent(in) :: dx, dy
-    real(kind=rp), dimension(:,:), allocatable, intent(in) :: umask, vmask 
-    real(kind=rp), dimension(:,:,:), allocatable, intent(in) :: zr, zw
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: umask, vmask, rmask
+    real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
 
     ! Define matrix coefficients cA
     ! Coefficients are stored in order of diagonals
@@ -208,7 +262,7 @@ contains
     ! cA(7,:,:,:)      -> p(k,j,i-1)xd
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
-    integer(kind=ip):: k, j, i
+    integer(kind=ip):: l, k, j, i
     integer(kind=ip):: nx, ny, nz
     integer(kind=ip):: nh
 
@@ -339,6 +393,7 @@ contains
        enddo
     enddo
 
+    cA(:,:,:,:)=0.
     !! interaction coeff with neighbours
     do i = 1,nx
        do j = 1,ny
@@ -415,6 +470,8 @@ contains
                         -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
                         -cA(6,k,j,i)-cA(8,k+1,j,i+1)-cA(3,k,j,i)-cA(5,k+1,j+1,i) &
                         -cA(5,k,j,i)-cA(5,k,j-1,i+1)-cA(8,k,j,i)-cA(8,k,j+1,i+1)
+
+!          cA(1,k,j,i) = cA(1,k,j,i)*rmask(j,i)
           !for comparing with matlab 2d code 
           !          cA(1,k,j,i) = -cA(2,k+1,j,i) &
           !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
@@ -425,6 +482,7 @@ contains
                            -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
                            -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) & 
                            -cA(3,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)-cA(5,k+1,j+1,i)   
+!             cA(1,k,j,i) = cA(1,k,j,i)*rmask(j,i)
              !for comparing with matlab 2d code
              !             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
              !                           -cA(7,k,j,i)-cA(7,k,j,i+1) &
@@ -435,6 +493,7 @@ contains
           cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
                         -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
                         -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
+!          cA(1,k,j,i) = cA(1,k,j,i)*rmask(j,i)
           !for comparing with matlab 2d code 
           !          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
           !                        -cA(7,k,j,i)-cA(7,k,j,i+1) &
@@ -442,7 +501,18 @@ contains
        enddo
     enddo
 
-    call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+    call fill_halo(lev,cA)
+
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz
+             do l = 1,8
+                cA(l,k,j,i)=cA(l,k,j,i)*rmask(j,i)
+             enddo
+          enddo
+       enddo
+    enddo
+    
 
     deallocate(Arx)
     deallocate(Ary)
@@ -492,7 +562,7 @@ contains
 
        else
           call tic(lev,'coarsen_matrix_3D')
-          call coarsen_matrix_3D_nearest_avg(Af,Ac,nx,ny,nz)
+          call coarsen_matrix_3D_nearest_avg(lev,Af,Ac,nx,ny,nz)
           call toc(lev,'coarsen_matrix_3D')
        end if
 
@@ -508,10 +578,11 @@ contains
        else
           call tic(lev,'coarsen_matrix_3D')
           if (lev==1) then
-                call coarsen_matrix_3D_linear_avg_8(Af,Ac,nx,ny,nz)
+                call coarsen_matrix_3D_linear_avg_8(lev,Af,Ac,nx,ny,nz)
           else
-                call coarsen_matrix_3D_linear_avg_27(Af,Ac,nx,ny,nz)
+                call coarsen_matrix_3D_linear_avg_27(lev,Af,Ac,nx,ny,nz)
           endif
+!          Ac = Ac /2
           call toc(lev,'coarsen_matrix_3D')
        end if
 
@@ -647,19 +718,24 @@ contains
   end subroutine coarsen_matrix_2D_linear_avg
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_3D_nearest_avg(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+  subroutine coarsen_matrix_3D_nearest_avg(lev,cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
-!    integer(kind=ip),intent(in):: lev
+    integer(kind=ip),intent(in):: lev
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
     real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
 !    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
 
     integer(kind=ip):: k, j, i
     integer(kind=ip):: km, jm, im, kp
-    integer(kind=ip):: k2, j2, i2
+    integer(kind=ip):: k2, j2, i2, sm
+ 
+    real(kind=rp)   :: diag,cff,cffm,cffp
+    real(kind=rp),dimension(0:4)::c3
 
-    real(kind=rp)   :: diag,cff
-
+    integer(kind=ip),dimension(:,:),pointer::msk
+     
+    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+    msk => grid(lev)%rmask
 !    cA  => grid(lev)%cA
 !    cA2 => grid(lev+1)%cA
 !    nx2 = grid(lev+1)%nx
@@ -671,7 +747,7 @@ contains
 
     ! the coefficients should be rescaled with 1/16
     cff = 1._8/16._8
-
+    cffp = 1._8/16._8
     do i2 = 1,nx2
        i = 2*i2-1
        im = i+1
@@ -682,6 +758,10 @@ contains
              k = 2*k2-1
              km = k+1
              kp = k-1
+             cffm=1.
+             if(k2==nz2)cffm=0.5_8
+!             cffp = 1._8/16._8
+!             if(k2==nz2)cffp=1._8/12._8
 
 
 !gr: we may be tempted to not define cA2(2,...) cA2(5,...) and cA2(8,...) at k2=1 
@@ -692,43 +772,68 @@ contains
 
              if(k2.gt.1)then
              ! cA(2,:,:,:)      -> p(k-1,j,i)
-             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,jm,i) &
-                                   +cA(2,k,j,im)+cA(2,k,jm,im) &
-                                   +cA(5,k,jm,i)+cA(5,k,jm,im) &
-                                   +cA(8,k,j,im)+cA(8,k,jm,im) &
-                                   +cA(3,kp,jm,i)+cA(3,kp,jm,im) &
-                                   +cA(6,kp,j,im)+cA(6,kp,jm,im) )
+                sm = msk(j,i)+msk(jm,i)+msk(j,im)+msk(jm,im)
+!                cff = c3(sm)/4._8
+
+             cA2(2,k2,j2,i2) = cff*(cA(2,k ,j ,i )+cA(2,k ,jm, i) &
+                                   +cA(2,k ,j ,im)+cA(2,k ,jm,im) &
+                                   +cA(5,k ,jm,i )+cA(5,k ,jm,im) &
+                                   +cA(8,k ,j ,im)+cA(8,k ,jm,im) &
+                                   +cA(3,kp,jm,i )+cA(3,kp,jm,im) &
+                                   +cA(6,kp,j ,im)+cA(6,kp,jm,im) )
+
              ! cA(5,:,:,:)      -> p(k-1,j-1,i)
+
+                sm = msk(j,i)+msk(j,im)
+!                cff = c3(sm)/8._8
+
              cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) 
              ! cA(8,:,:,:)      -> p(k-1,j,i-1)
+
+                sm = msk(j,i)+msk(jm,i)
+!                cff = c3(sm)/8._8
              cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) 
              else ! bottom level = horizontal diagonal cross terms
                 ! cA(5,:,:,:)      -> p(k,j+1,i-1)
                 ! cA(8,:,:,:)      -> p(k,j-1,i-1)
              cA2(2,k2,j2,i2) = 0._8
+!             cff = c3(msk(jm,i))/16._8
              cA2(5,k2,j2,i2) = cff*cA(5,k,jm,i) 
+!             cff = c3(msk(j,i))/16._8
              cA2(8,k2,j2,i2) = cff*cA(8,k,j,i) 
              endif
 
              if (k2 < nz2) then
              ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-             cA2(3,k2,j2,i2) = cff*(cA(3,km,j,i)+cA(3,km,j,im)) 
+                
+                sm = msk(j,i)+msk(j,im)
+!                cff = c3(sm)/8._8
+             cA2(3,k2,j2,i2) = cffp*(cA(3,km,j,i)+cA(3,km,j,im))*cffm
              ! cA(6,:,:,:)      -> p(k+1,j,i-1)
-             cA2(6,k2,j2,i2) = cff*(cA(6,km,j,i)+cA(6,km,jm,i)) 
+
+                sm = msk(j,i)+msk(jm,i)
+!                cff = c3(sm)/8._8             
+             cA2(6,k2,j2,i2) = cffp*(cA(6,km,j,i)+cA(6,km,jm,i)) *cffm
              else
              cA2(3,k2,j2,i2) = 0._8
              cA2(6,k2,j2,i2) = 0._8
              endif
              ! cA(4,:,:,:)      -> p(k,j-1,i)
-             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i) &
-                                   +cA(4,k,j,im)+cA(4,km,j,im) &
-                                   +cA(5,km,j,i)+cA(5,km,j,im) & 
+
+                sm = msk(j,i)+msk(j,im)
+!                cff = c3(sm)/8._8
+             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i) +cA(4,km,j,i)*cffm &
+                                   +cA(4,k,j,im)+cA(4,km,j,im)*cffm &
+                                   +cA(5,km,j,i)*cffm+cA(5,km,j,im)*cffm & 
                                    +cA(3,k ,j,i)+cA(3,k ,j,im) ) 
 
              ! cA(7,:,:,:)      -> p(k,j,i-1)
-             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i) &
-                                   +cA(7,k,jm,i)+cA(7,km,jm,i) &
-                                   +cA(8,km,j,i)+cA(8,km,jm,i) &
+
+                sm = msk(j,i)+msk(jm,i)
+!                cff = c3(sm)/8._8             
+             cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)*cffm &
+                                   +cA(7,k,jm,i)+cA(7,km,jm,i)*cffm &
+                                   +cA(8,km,j,i)*cffm+cA(8,km,jm,i)*cffm &
                                    +cA(6,k ,j,i)+cA(6,k ,jm,i) )
 
 
@@ -741,16 +846,16 @@ contains
              ! multifly that by the number of fine cells
 
              ! here is the first 20
-
+            
              diag = 0._8
              
-             diag = cA(2,km,j,i)+cA(2,km,jm,i)+cA(2,km,j,im)+cA(2,km,jm,im) + diag
-             diag = cA(5,km,jm,i)+cA(5,km,jm,im)                            + diag!bug fixed in cA5
-             diag = cA(8,km,j,im)+cA(8,km,jm,im)                            + diag
+             diag = (cA(2,km,j,i)+cA(2,km,jm,i)+cA(2,km,j,im)+cA(2,km,jm,im))*cffm + diag
+             diag = (cA(5,km,jm,i)+cA(5,km,jm,im))*cffm                            + diag!bug fixed in cA5
+             diag = (cA(8,km,j,im)+cA(8,km,jm,im))*cffm                            + diag
              diag = cA(3,k,jm,i)+cA(3,k,jm,im)                              + diag
              diag = cA(6,k,j,im)+cA(6,k,jm,im)                              + diag
-             diag = cA(4,k,jm,i)+cA(4,km,jm,i)+cA(4,k,jm,im)+cA(4,km,jm,im) + diag
-             diag = cA(7,k,j,im)+cA(7,km,j,im)+cA(7,k,jm,im)+cA(7,km,jm,im) + diag
+             diag = cA(4,k,jm,i)+cA(4,km,jm,i)*cffm+cA(4,k,jm,im)+cA(4,km,jm,im)*cffm + diag
+             diag = cA(7,k,j,im)+cA(7,km,j,im)*cffm+cA(7,k,jm,im)+cA(7,km,jm,im)*cffm + diag
 
              if (k2 == 1) then
              ! add the horizontal diagonal connections in the bottom level
@@ -761,9 +866,12 @@ contains
              ! double that to account for symmetry of connections, we've now 40 terms
              diag = diag+diag
 
+             
+             sm = msk(j,i)+msk(jm,i)+msk(j,im)+msk(jm,im)
+!             cff = c3(sm)/4._8
              ! add the 8 self-interacting terms
-             diag = cA(1,k,j,i) +cA(1,km,j,i) +cA(1,k,jm,i) +cA(1,km,jm,i) &
-                   +cA(1,k,j,im)+cA(1,km,j,im)+cA(1,k,jm,im)+cA(1,km,jm,im) + diag
+             diag = cA(1,k,j,i) +cA(1,km,j,i)*cffm +cA(1,k,jm,i) +cA(1,km,jm,i)*cffm &
+                   +cA(1,k,j,im)+cA(1,km,j,im)*cffm+cA(1,k,jm,im)+cA(1,km,jm,im)*cffm + diag
 
              ! here we go!
              cA2(1,k2,j2,i2) = cff*diag
@@ -774,9 +882,9 @@ contains
   end subroutine coarsen_matrix_3D_nearest_avg
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_3D_linear_avg_8(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+  subroutine coarsen_matrix_3D_linear_avg_8(lev,cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
-!    integer(kind=ip),intent(in):: lev
+    integer(kind=ip),intent(in):: lev
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
     real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
 
@@ -790,15 +898,24 @@ contains
     integer(kind=ip):: ky, jy, iy
     integer(kind=ip):: dk, dj, di
     integer(kind=ip):: dk2, dj2, di2
-    real(kind=rp)   :: cx, cy, cz
+    real(kind=rp)   :: cx, cy, cz, z1, z2
     real(kind=rp), dimension(4,4,4) :: x
     real(kind=rp), dimension(2,2,2) :: y
     real(kind=rp), dimension(-1:1,1:4) :: cI
     real(kind=rp) :: yy
+    real(kind=rp),dimension(0:4)::c3
+    real(kind=rp) :: cff
+    integer(kind=ip):: sm
+
+    integer(kind=ip),dimension(:,:),pointer::msk
 
     nx = nx2*2
     ny = ny2*2
     nz = nz2*2
+
+    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+      
+    msk => grid(lev)%rmask
 
     ! weights for linear interpolation, cI has 2 entries 
     !
@@ -883,6 +1000,7 @@ contains
 
     do i2 = 1,nx2
        do j2 = 1,ny2
+!          if(grid(lev+1)%rmask(j2,i2)==1)then
           do k2 = 1,nz2
              !
              do l=1,27! loop over coarse points=each connection
@@ -901,8 +1019,10 @@ contains
                    !
                    do ix=1,4                    
                       cx = cI(di2,ix)
+                      i = (i2+di2)*2+ix-3
                       do jx=1,4
-                         cy = cI(dj2,jx)    
+                         cy = cI(dj2,jx)  
+                         j = (j2+dj2)*2+jx-3
                          do kx=1,4
                             cz = cI(dk2,kx)
                             if(k2==1)then
@@ -913,9 +1033,9 @@ contains
                             if(k2==nz2)then
                                ! forces x to 0 because x(k) is above the top boundary
                                if ((dk2==0).and.(kx==4)) cz = 0._8 
-                               if ((dk2==0).and.(kx==3)) cz = 1._8 ! nearest interpolation
+                               if ((dk2==0).and.(kx==3)) cz = 0.5_8 ! nearest interpolation
                             endif
-                            x(kx,jx,ix) = cx*cy*cz
+                            x(kx,jx,ix) = cx*cy*cz*grid(lev)%rmask(j,i)
                          enddo
                       enddo
                    enddo
@@ -948,7 +1068,7 @@ contains
                                   yy = yy &
                + cA(5,k,j,i)*x(kx,jx+1,ix-1) + cA(5,k,j-1,i+1)*x(kx,jx-1,ix+1) &
                + cA(8,k,j,i)*x(kx,jx-1,ix-1) + cA(8,k,j+1,i+1)*x(kx,jx+1,ix+1)
-          endif
+                               endif
 
 
                             elseif (k==nz) then
@@ -980,11 +1100,24 @@ contains
                    enddo
 
                    ! step 3: APPLY THE RESTRICTION = average the 8 y's
-                   cA2(l,k2,j2,i2) = 0.125_8*( &
-                         y(1,1,1)+y(1,1,2) &
-                        +y(1,2,1)+y(1,2,2) &
-                        +y(2,1,1)+y(2,1,2) &
-                        +y(2,2,1)+y(2,2,2) )
+                   !z1 = y(1,1,1)+y(1,1,2)+y(1,2,1)+y(1,2,2)
+                   !z2 = y(2,1,1)+y(2,1,2)+y(2,2,1)+y(2,2,2)
+                   i=2*i2-1
+                   j=2*j2-1
+                   k=2*k2-1
+                   sm = msk(j,i)+msk(j,i+1)+msk(j+1,i)+msk(j+1,i+1)
+                   cff = c3(sm)*0.5_8
+          
+                   z1 = y(1,1,1)*msk(j  ,i)+y(1,1,2)*msk(j  ,i+1)&
+                       +y(1,2,1)*msk(j+1,i)+y(1,2,2)*msk(j+1,i+1)
+                   z2 = y(2,1,1)*msk(j  ,i)+y(2,1,2)*msk(j  ,i+1)&
+                       +y(2,2,1)*msk(j+1,i)+y(2,2,2)*msk(j+1,i+1)
+
+                   if(k2<nz2)then
+                      cA2(l,k2,j2,i2) = ( z1+z2 )*cff
+                   else
+                      cA2(l,k2,j2,i2) = ( z1+z2/2 )*cff
+                   endif
 
                 else ! the 'l' neighbour is outside the domain
                    ! the value of this coefficient should be
@@ -993,15 +1126,18 @@ contains
                 endif
              enddo ! end of l-loop: coarse point/direction
           enddo
+!          else
+!             cA2(:,:,j2,i2) = 0.
+!          endif
        enddo
     enddo
 
   end subroutine coarsen_matrix_3D_linear_avg_8
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_3D_linear_avg_27(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+  subroutine coarsen_matrix_3D_linear_avg_27(lev,cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
-    !    integer(kind=ip),intent(in):: lev
+    integer(kind=ip),intent(in):: lev
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
     real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
 
@@ -1015,15 +1151,25 @@ contains
     integer(kind=ip):: ky, jy, iy
     integer(kind=ip):: dk, dj, di
     integer(kind=ip):: dk2, dj2, di2
-    real(kind=rp)   :: cx, cy, cz
+    real(kind=rp)   :: cx, cy, cz, z1, z2
     real(kind=rp), dimension(4,4,4) :: x
     real(kind=rp), dimension(2,2,2) :: y
     real(kind=rp), dimension(-1:1,1:4) :: cI
     real(kind=rp) :: yy
+    real(kind=rp),dimension(0:4)::c3
+    real(kind=rp) :: cff
+    integer(kind=ip):: sm
+
+    integer(kind=ip),dimension(:,:),pointer::msk
 
     nx = nx2*2
     ny = ny2*2
     nz = nz2*2
+
+    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+      
+    msk => grid(lev)%rmask
+
 
     ! weights for linear interpolation, cI has 2 entries 
     !
@@ -1032,7 +1178,7 @@ contains
     ! cI(di,ix) is the weight to put on point x(ix) for coarse grid point
     ! located at di
     !
-    cI(:,:)=0.
+    cI(:,:)=0._8
 
     cI(-1,1)=0.75_8
     cI(-1,2)=0.25_8
@@ -1109,6 +1255,7 @@ contains
 
     do i2 = 1,nx2
        do j2 = 1,ny2
+!          if(grid(lev+1)%rmask(j2,i2)==1)then
           do k2 = 1,nz2
              !
              do l=1,27! loop over coarse points=each connection
@@ -1128,8 +1275,10 @@ contains
                    !
                    do ix=1,4                    
                       cx = cI(di2,ix)
+                      i = (i2+di2)*2+ix-3
                       do jx=1,4
                          cy = cI(dj2,jx)    
+                         j = (j2+dj2)*2+jx-3
                          do kx=1,4
                             cz = cI(dk2,kx)
                             if(k2==1)then
@@ -1140,9 +1289,9 @@ contains
                             if(k2==nz2)then
                                ! forces x to 0 because x(k) is above the top boundary
                                if ((dk2==0).and.(kx==4)) cz = 0._8 
-                               if ((dk2==0).and.(kx==3)) cz = 1._8 ! nearest interpolation
+                               if ((dk2==0).and.(kx==3)) cz = 0.5_8 ! nearest interpolation
                             endif
-                            x(kx,jx,ix) = cx*cy*cz
+                            x(kx,jx,ix) = cx*cy*cz*grid(lev)%rmask(j,i)
                          enddo
                       enddo
                    enddo
@@ -1160,7 +1309,7 @@ contains
                          do ky=1,2
                             k1 = k2*2+ky-2
                             kx=ky+1
-                            yy = 0.
+                            yy = 0._8
                             do m=1,27 ! assume that cA is already not symmetric
                                di=loc(m,3)
                                dj=loc(m,2)
@@ -1173,11 +1322,21 @@ contains
                    enddo
 
                    ! step 3: APPLY THE RESTRICTION = average the 8 y's
-                   cA2(l,k2,j2,i2) = 0.125_8*( &
-                         y(1,1,1)+y(1,1,2) &
-                        +y(1,2,1)+y(1,2,2) &
-                        +y(2,1,1)+y(2,1,2) &
-                        +y(2,2,1)+y(2,2,2) )
+                   i=2*i2-1
+                   j=2*j2-1
+                   k=2*k2-1
+                   sm = msk(j,i)+msk(j,i+1)+msk(j+1,i)+msk(j+1,i+1)
+                   cff = c3(sm)*0.5_8
+          
+                   z1 = y(1,1,1)*msk(j  ,i)+y(1,1,2)*msk(j  ,i+1)&
+                       +y(1,2,1)*msk(j+1,i)+y(1,2,2)*msk(j+1,i+1)
+                   z2 = y(2,1,1)*msk(j  ,i)+y(2,1,2)*msk(j  ,i+1)&
+                       +y(2,2,1)*msk(j+1,i)+y(2,2,2)*msk(j+1,i+1)
+                   if(k2<nz2)then
+                      cA2(l,k2,j2,i2) = ( z1+z2 )*cff
+                   else
+                      cA2(l,k2,j2,i2) = ( z1+z2/2 )*cff
+                   endif
 
                 else ! the 'l' neighbour is outside the domain
                    ! the value of this coefficient should be
@@ -1186,6 +1345,9 @@ contains
                 endif
              enddo ! end of l-loop: coarse point/direction
           enddo
+!          else
+!             cA2(:,:,j2,i2) = 0.
+!          endif
        enddo
     enddo
 

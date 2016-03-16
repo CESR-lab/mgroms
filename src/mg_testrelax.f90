@@ -2,10 +2,14 @@ program mg_testrelax
 
   use mg_mpi 
   use mg_tictoc
-  use mg_grids
-  use mg_define_rhs
-  use mg_define_matrix
-  use mg_relax
+  !  use mg_grids
+  !  use mg_define_rhs
+  !  use mg_define_matrix
+  !  use mg_relax
+  !  use mg_intergrids
+  use mg_seamount
+  !  use mg_solvers
+  use nhydro
 
   implicit none
 
@@ -20,10 +24,10 @@ program mg_testrelax
 
   integer(kind=ip):: nsweeps
 
-  integer(kind=ip):: lev,ierr, np, nh, rank
-  real(kind=rp)    :: res
+  integer(kind=ip):: lev,ierr, np, nh, rank,i,j,k
+  real(kind=rp)    :: res,conv,res0,bnorm
 
-  real(kind=rp),dimension(:,:,:),allocatable  :: p0
+  character(len = 16) :: filen
 
   call tic(1,'mg_testrelax')
 
@@ -63,40 +67,67 @@ program mg_testrelax
   call mg_mpi_init()
   call define_grids(npxg, npyg, nx, ny, nz)
   call define_neighbours()
+  call print_grids()
   !!call define_rhs(nxg, nyg, npxg)
-  
-  
+
+  hc      = 100.
+  theta_b = 2.
+  theta_s = 4.
+  Lx = 2d4
+  Ly = 2d4
+  Htot = 4d3
+
+  call setup_realistic_matrix()!2d4,2d4,4d3)
+
   nh = grid(1)%nh
-  allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
-  p0 = 0._8
 
-  grid(1)%b = 0._8
+  do lev=1,1!nlevs
+     if (myrank.eq.0)write(*,*)'----------------------------------------'
 
-  call random_number(grid(1)%p)
 
-  call random_number(grid(1)%b)
-  call fill_halo(1,grid(1)%b)
+     grid(lev)%p = 0._8
+     !     grid(lev)%b = 0._8
+     !     call random_number(grid(lev)%p)
+     !     call random_number(grid(lev)%b)
+     !     grid(lev)%b(grid(lev)%nz,:,:)= 0.
+     do k=1,grid(lev)%nz
+        grid(lev)%p(k,:,:)= grid(lev)%p(k,:,:)*grid(lev)%rmask
+        !        grid(lev)%b(k,:,:)= (2*grid(lev)%b(k,:,:)-1.)*grid(lev)%rmask
+     enddo
+     call fill_halo(lev,grid(lev)%p)
+     !     call fill_halo(lev,grid(lev)%b)
 
-  lev = 1
+     call setup_rhs(nx,ny,nz,nh,grid(lev)%b)
+     call write_netcdf(grid(lev)%b,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
 
-  call define_matrix_simple(lev)
+     call norm(lev,grid(lev)%b,grid(lev)%b,nx,ny,nz,bnorm)
 
-  call compute_residual(lev,res)
-    if (myrank.eq.0) write(*,1000)"ite=",0," - res=",res
+!     grid(lev)%p=grid(lev)%b
+!     grid(lev)%b=0.
 
-  do it=1, nit
-!     grid(1)%p=0._8
-     call relax(lev,nsweeps)
-!     p0 = p0 + grid(1)%p
-!     grid(1)%p = p0
-     call compute_residual(lev,res)
-     if (myrank.eq.0)then
-        write(*,1000)"ite=",it," - res=",res
-     endif
+     do it=0, nit
+        if(it>0) call Vcycle(lev)!2(lev,lev+1)
+        !if(it>0)call relax(lev,nsweeps)
+        call compute_residual(lev,res)
+        res=sqrt(res/bnorm)
+
+        write(filen,'("r_",i0.2,".nc")') it
+        call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+        write(filen,'("p_",i0.2,".nc")') it
+        call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+        if(it>0)then
+           conv=res0/res
+           !           conv=log(res0/res)/log(10._8)
+        else
+           conv=0.
+        endif
+        res0=res
+        if (myrank.eq.0)write(*,1000)"lev=",lev," - ite=",it," - res=",res," - conv=",conv
+     enddo
+
   enddo
-1000 format(A,I5,A,F8.3)
-
-!  call check_solution(lev)
+1000 format(A,I2,A,I5,A,G16.3,A,F6.3)
 
   call mpi_finalize(ierr)
 

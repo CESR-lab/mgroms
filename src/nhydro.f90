@@ -33,7 +33,7 @@ contains
 
     call print_grids()
 
-    call define_matrices(dx, dy, zr, zw, umask, vmask)
+!    call define_matrices(dx, dy, zr, zw, umask, vmask)
 
   end subroutine nhydro_init
 
@@ -44,7 +44,7 @@ contains
 
     integer(kind=ip) :: nx, ny, nz
     real(kind=rp)    :: tol = 1.e-12
-    integer(kind=ip) :: maxite = 50
+    integer(kind=ip) :: maxite = 10
 
     nz = size(u,dim=1)
     ny = size(u,dim=2)
@@ -58,8 +58,8 @@ contains
     call solve(tol,maxite)
 
     !ND
-    call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
-    call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
+!    call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
+!    call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
 
   end subroutine nhydro_solve
 

@@ -15,7 +15,7 @@ contains
   !------------------------------------------------------------
   subroutine fine2coarse(lev)
 
-    ! coarsen grid(lev)%r to grid(lev+1)%b
+    ! coarsen grid(lev)%r to grid(lev+1)%b and set grid(lev+1)%p=0
 
     integer(kind=ip), intent(in) :: lev
 
@@ -44,18 +44,17 @@ contains
 !       if(myrank == 0) write(*,*)"F2C   lev=",lev+1,"nx,ny,nz=",nx,ny,nz
     endif
 
-    grid(lev+1)%p = 0._8
 
     if ((aggressive).and.(lev==1)) then
-       call fine2coarse_aggressive(r,b,nx,ny,nz)
+       call fine2coarse_aggressive(lev,r,b,nx,ny,nz)
 
     elseif (grid(lev)%nz == 1) then
-       call fine2coarse_2D(r,b,nx,ny)
+       call fine2coarse_2D(lev,r,b,nx,ny)
 
     else
        call tic(lev,'fine2coarse_3D')
 
-       call fine2coarse_3D(r,b,nx,ny,nz)
+       call fine2coarse_3D(lev,r,b,nx,ny,nz)
 
       call toc(lev,'fine2coarse_3D')
 
@@ -71,10 +70,13 @@ contains
 
     call fill_halo(lev+1,grid(lev+1)%b)
 
+    grid(lev+1)%p = 0._8
+
   end subroutine fine2coarse
   !----------------------------------------
-  subroutine fine2coarse_aggressive(x,y,nx,ny,nz)
+  subroutine fine2coarse_aggressive(lev,x,y,nx,ny,nz)
 
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp)   , dimension(:,:,:), intent(in)    :: x !fine
     real(kind=rp)   , dimension(:,:,:), intent(inout) :: y ! coarse
     integer(kind=ip)                  , intent(in)    :: nx, ny, nz
@@ -102,13 +104,23 @@ contains
   end subroutine fine2coarse_aggressive
 
   !------------------------------------------------------------
-  subroutine fine2coarse_2D(x,y,nx,ny)
+  subroutine fine2coarse_2D(lev,x,y,nx,ny)
+
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip), intent(in) :: nx, ny
 
     integer(kind=ip) :: i,j,i2,j2
-    integer(kind=ip) :: d
+    integer(kind=ip) :: d,sm
+    real(kind=rp),dimension(0:4)::c3
+    real(kind=rp) :: cff
+
+    integer(kind=ip),dimension(:,:),pointer::m
+
+    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+      
+    m => grid(lev)%rmask
 
     d = size(x,1) ! vertical dimension of the fine level, can 2 or 1
 
@@ -117,8 +129,10 @@ contains
        do i2=1,nx
           i=2*i2-1
           do j2=1,ny
-             j=2*j2-1       
-             y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*0.25_8
+             j=2*j2-1      
+             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
+             cff = c3(sm)
+             y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*cff
           enddo
        enddo
     else
@@ -126,9 +140,11 @@ contains
        do i2=1,nx
           i=2*i2-1
           do j2=1,ny
-             j=2*j2-1       
+             j=2*j2-1     
+             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
+             cff = c3(sm)*0.5_8
              y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1)&
-                          +x(2,j,i)+x(2,j,i+1)+x(2,j+1,i)+x(2,j+1,i+1))*0.125_8
+                          +x(2,j,i)+x(2,j,i+1)+x(2,j+1,i)+x(2,j+1,i+1))*cff
           enddo
        enddo
     endif
@@ -136,27 +152,48 @@ contains
   end subroutine fine2coarse_2D
 
   !------------------------------------------------------------
-  subroutine fine2coarse_3D(x,y,nx,ny,nz)
+  subroutine fine2coarse_3D(lev,x,y,nx,ny,nz)
     !
     ! Fine2coarse 'x' from fine level l1 to 'y' on coarse level l2=l1+1
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip), intent(in) :: nx, ny, nz
     ! local
-    integer(kind=ip) :: i,j,k,i2,j2,k2
-    real(kind=rp):: z
+    integer(kind=ip) :: i,j,k,i2,j2,k2,sm
+    real(kind=rp):: z1,z2
+    real(kind=rp),dimension(0:4)::c3
+    real(kind=rp) :: cff
+    
+    integer(kind=ip),dimension(:,:),pointer::m
+
+    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+      
+    m => grid(lev)%rmask
 
     ! 
     do i2=1,nx
        i=2*i2-1
+       
        do j2=1,ny
           j=2*j2-1
+          sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
+!          cff = c3(sm)*0.5_8
+          cff = 0.125_8
           do k2=1,nz
              k=2*k2-1
-             z = x(k,j,i)  +x(k,j,i+1)  +x(k,j+1,i)  +x(k,j+1,i+1) &
-                  + x(k+1,j,i)+x(k+1,j,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
-             y(k2,j2,i2) = z * 0.125_8
+!             z1 = x(k  ,j  ,i)*m(j  ,i) +x(k  ,j  ,i+1)*m(j  ,i+1) &
+!                 +x(k  ,j+1,i)*m(j+1,i) +x(k  ,j+1,i+1)*m(j+1,i+1)
+!             z2 = x(k+1,j,  i)*m(j  ,i) +x(k+1,j  ,i+1)*m(j  ,i+1) &
+!                 +x(k+1,j+1,i)*m(j+1,i) +x(k+1,j+1,i+1)*m(j+1,i+1)
+             z1 = x(k  ,j  ,i)+x(k  ,j  ,i+1) &
+                 +x(k  ,j+1,i)+x(k  ,j+1,i+1)
+             z2 = x(k+1,j,  i)+x(k+1,j  ,i+1) &
+                 +x(k+1,j+1,i)+x(k+1,j+1,i+1)
+             y(k2,j2,i2) = (z1+z2) *cff
           enddo
+          y(nz,j2,i2) = (z1+z2/2) *cff
+          y(:,j2,i2) = y(:,j2,i2)*grid(lev+1)%rmask(j2,i2)
        enddo
     enddo
 
@@ -167,7 +204,8 @@ contains
   !------------------------------------------------------------
   subroutine coarse2fine(lev)
 
-    !- coarse2fine from level lev+1 to level lev
+    ! interpolate grid(lev+1)%p to grid(lev)%r and add it to grid(lev)%p
+
     integer(kind=ip), intent(in) :: lev
 
     real(kind=rp),dimension(:,:,:),pointer :: rf
@@ -197,13 +235,14 @@ contains
 
        if ((aggressive).and.(lev==1)) then
 
-          call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
+          call coarse2fine_aggressive(lev,rf,pc,nxc,nyc,nzc)
 
        elseif (grid(lev)%nz == 1) then
 
-          call coarse2fine_2D_nearest(rf,pc,nxc,nyc)
+          call coarse2fine_2D_nearest(lev,rf,pc,nxc,nyc)
        else
-          call coarse2fine_3D_nearest(rf,pc,nxc,nyc,nzc)
+          call coarse2fine_3D_nearest(lev,rf,pc,nxc,nyc,nzc)
+          !call coarse2fine_3D_linear(lev,rf,pc,nxc,nyc,nzc)
 
        end if
 
@@ -212,28 +251,29 @@ contains
 
        if ((aggressive).and.(lev==1)) then
 
-          call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
+          call coarse2fine_aggressive(lev,rf,pc,nxc,nyc,nzc)
 
        elseif (grid(lev)%nz == 1) then
 
-          call coarse2fine_2D_linear(rf,pc,nxc,nyc)
+          call coarse2fine_2D_linear(lev,rf,pc,nxc,nyc)
        else
-          call coarse2fine_3D_linear(rf,pc,nxc,nyc,nzc)
+          call coarse2fine_3D_linear(lev,rf,pc,nxc,nyc,nzc)
 
        end if
 
     endif
 
 
-    call fill_halo(lev,grid(lev)%r)
 
     grid(lev)%p = grid(lev)%p + grid(lev)%r
+    call fill_halo(lev,grid(lev)%p)
 
 
   end subroutine coarse2fine
 
   !------------------------------------------------------------
-  subroutine coarse2fine_aggressive(x,y,nx,ny,nz)
+  subroutine coarse2fine_aggressive(lev,x,y,nx,ny,nz)
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -251,7 +291,8 @@ contains
   end subroutine coarse2fine_aggressive
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D_nearest(xf,xc,nx,ny)
+  subroutine coarse2fine_2D_nearest(lev,xf,xc,nx,ny)
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(out):: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: xc
     integer(kind=ip),intent(in) :: nx, ny
@@ -284,10 +325,10 @@ contains
              xf(1,j+1,i  ) = xc(1,j2,i2)
              xf(1,j  ,i+1) = xc(1,j2,i2)
              xf(1,j+1,i+1) = xc(1,j2,i2)
-             xf(2,j  ,i  ) = xc(1,j2,i2)
-             xf(2,j+1,i  ) = xc(1,j2,i2)
-             xf(2,j  ,i+1) = xc(1,j2,i2)
-             xf(2,j+1,i+1) = xc(1,j2,i2)
+             xf(2,j  ,i  ) = xc(1,j2,i2)/2
+             xf(2,j+1,i  ) = xc(1,j2,i2)/2
+             xf(2,j  ,i+1) = xc(1,j2,i2)/2
+             xf(2,j+1,i+1) = xc(1,j2,i2)/2
           enddo
        enddo
     endif
@@ -295,7 +336,8 @@ contains
   end subroutine coarse2fine_2D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D_linear(xf,xc,nx,ny)
+  subroutine coarse2fine_2D_linear(lev,xf,xc,nx,ny)
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny
@@ -326,8 +368,8 @@ contains
              + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
              + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
         xf(k  ,j+1,i+1) =  &
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+11,i2+1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2   ,i2+1)
+             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)
      enddo
   enddo
 
@@ -335,7 +377,8 @@ contains
   end subroutine coarse2fine_2D_linear
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D_nearest(xf,xc,nx,ny,nz)
+  subroutine coarse2fine_3D_nearest(lev,xf,xc,nx,ny,nz)
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -357,14 +400,26 @@ contains
              xf(k+1,j  ,i+1) = xc(k2,j2,i2)
              xf(k  ,j+1,i+1) = xc(k2,j2,i2)
              xf(k+1,j+1,i+1) = xc(k2,j2,i2)
-          enddo
-       enddo
+          enddo     
+          k2=nz
+          k=2*nz
+          xf(k  ,j  ,i  ) = xc(k2,j2,i2)/2
+          xf(k  ,j+1,i  ) = xc(k2,j2,i2)/2
+          xf(k  ,j  ,i+1) = xc(k2,j2,i2)/2
+          xf(k  ,j+1,i+1) = xc(k2,j2,i2)/2
+ 
+          xf(:,j  ,i  ) = xf(:,j  ,i  ) * grid(lev)%rmask(j  ,i  )
+          xf(:,j+1,i  ) = xf(:,j+1,i  ) * grid(lev)%rmask(j+1,i  )
+          xf(:,j  ,i+1) = xf(:,j  ,i+1) * grid(lev)%rmask(j  ,i+1)
+          xf(:,j+1,i+1) = xf(:,j+1,i+1) * grid(lev)%rmask(j+1,i+1)
+      enddo
     enddo
 
   end subroutine coarse2fine_3D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D_linear(xf,xc,nx,ny,nz)
+  subroutine coarse2fine_3D_linear(lev,xf,xc,nx,ny,nz)
+    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -432,19 +487,20 @@ contains
         enddo
         ! top level
         k = nz*2
-        k2 = nz
-        xf(k  ,j  ,i  ) =  &
+        xf(k  ,j  ,i  ) =  (&
              + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
-             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)
-        xf(k  ,j+1,i  ) =  &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1))/2
+        xf(k  ,j+1,i  ) =  (&
              + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)
-        xf(k  ,j  ,i+1) =  &
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1))/2
+        xf(k  ,j  ,i+1) =  (&
              + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
-             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
-        xf(k  ,j+1,i+1) =  &
+             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1))/2
+        xf(k  ,j+1,i+1) =  (&
              + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)
+             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1))/2
+
+        xf(:,j,i) = xf(:,j,i) * grid(lev)%rmask(j,i)
      enddo
   enddo
 

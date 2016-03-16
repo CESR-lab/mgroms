@@ -4,6 +4,7 @@ program mg_testintergrids
   use mg_grids
   use mg_intergrids
   use mg_gather
+  use mg_netcdf_out
 
   implicit none
 
@@ -17,6 +18,9 @@ program mg_testintergrids
   integer(kind=ip):: nsweeps
   integer(kind=ip):: nx,ny,nz,nh
   integer(kind=ip):: lev, ierr, np, rank
+  character(len = 16) :: filen
+  real(kind=rp) :: x
+  integer(kind=ip):: i,px
 
   !---------------!
   !- Ocean model -!
@@ -25,8 +29,8 @@ program mg_testintergrids
   nyg   = 128*2
   nzg   = 128/4
 
-  npxg  = 4
-  npyg  = 4
+  npxg  = 2
+  npyg  = 2
 
   nit     = 10
   nsweeps = 1
@@ -81,18 +85,35 @@ program mg_testintergrids
   call fill_halo(1,grid(1)%b)
 
   do lev=1,nlevs-1
-     grid(lev)%r=grid(lev)%b
+     grid(lev)%rmask=1
+  enddo
+  do lev=1,nlevs-1
+     grid(lev)%r=myrank!grid(lev)%b
      call fine2coarse(lev)
+     write(filen,'("b_",i1,".nc")') lev+1
+     call write_netcdf(grid(lev+1)%b,vname='b',netcdf_file_name=filen,rank=myrank)
+
      if(myrank==0)write(*,*)"lev =",lev+1," is ok / b(1,1,1)=",grid(lev+1)%b(1,1,1)
 !     if((myrank==0).and.(lev==nlevs-2))write(*,*)grid(lev+1)%b
   enddo
 
   if (myrank.eq.0)write(*,*)"---------- check coarse2fine ----------"
   grid(nlevs)%p=1.2345_8
-  do lev=nlevs-1,1,-1
+  grid(5)%p=myrank
+  do lev=4,1,-1!nlevs-1,1,-1
 !     grid(lev+1)%p=1.2345_8
+     grid(lev)%p=0.
+     nx = grid(lev+1)%nx
+     px= mod(myrank,grid(lev+1)%npx)
+     do i=0,nx+1
+        x = real(i+nx*px)-0.5_8
+        grid(lev+1)%p(:,:,i)=x
+     enddo
+
      call coarse2fine(lev)
-     grid(lev)%p=grid(lev)%r
+    write(filen,'("p_",i1,".nc")') lev
+    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
      nx=grid(lev)%nx
      ny=grid(lev)%ny
      if(myrank==0)write(*,*)"lev =",lev," is ok / b(1,1,1)=",grid(lev)%r(1,ny/2,nx/2)
