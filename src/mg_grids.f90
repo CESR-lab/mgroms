@@ -8,6 +8,8 @@ module mg_grids
 
   type grid_type
      real(kind=rp),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
+     integer(kind=ip),dimension(:,:),pointer :: rmask
+
      real(kind=rp),dimension(:,:,:,:),pointer :: cA,cAdummy
 !!TODO
      real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer ! a 5D(!) buffer for the gathering
@@ -106,6 +108,8 @@ contains
        allocate(grid(lev)%b(    nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%r(    nz,1-nh:ny+nh,1-nh:nx+nh)) ! Need or not ?
        allocate(grid(lev)%cA(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
+
+       allocate(grid(lev)%rmask(1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(grid(lev)%sendS(nz,nh,nx))
        allocate(grid(lev)%recvS(nz,nh,nx))
@@ -505,7 +509,6 @@ contains
           ! - colors are all distinct *within* a family
           color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
 
-          ! prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
           N=incx*npx;
           key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
 

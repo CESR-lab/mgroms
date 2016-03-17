@@ -20,7 +20,7 @@ module mg_mpi_exchange
      real(kind=rp), dimension(:,:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
   end type halo
 
-  type(halo), dimension(:), pointer :: halo4D
+  type(halo), dimension(40) :: halo4D
 
   logical :: flag4D = .true.
 
@@ -82,21 +82,21 @@ contains
 
        !- Neumann conditions
        !- west
-       p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
+       p(:,1:ny,1-nh:0) = 0.!p(:,1:ny,nh:1:-1)
        !- east
-       p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
+       p(:,1:ny,nx+1:nx+nh) = 0.!p(:,1:ny,nx:nx-nh+1:-1)
        !- south
-       p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
+       p(:,1-nh:0,1:nx) = 0.!p(:,nh:1:-1,1:nx)
        !- north
-       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
+       p(:,ny+1:ny+nh,1:nx) = 0.!p(:,ny:ny-nh+1:-1,1:nx)
        !- south west
-       p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
+       p(:,1-nh:0,1-nh:0) = 0.!p(:,nh:1:-1,nh:1:-1)
        !- south east
-       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
+       p(:,1-nh:0,nx+1:nx+nh) = 0.!p(:,nh:1:-1,nx:nx-nh+1:-1)
        !- north west
-       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
+       p(:,ny+1:ny+nh,1-nh:0) = 0.!p(:,ny:ny-nh+1:-1,nh:1:-1)
        !- north east
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0.!p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
 
     else
 
@@ -368,7 +368,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     else !!Homogenous Neumann  
-       p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
+       p(:,1-nh:0,1:nx) = 0.!p(:,nh:1:-1,1:nx)
     endif
 
     if (east.ne.MPI_PROC_NULL) then
@@ -377,7 +377,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     else !!Homogenous Neumann
-       p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
+       p(:,1:ny,nx+1:nx+nh) = 0.!p(:,1:ny,nx:nx-nh+1:-1)
     endif
 
     if (north.ne.MPI_PROC_NULL) then
@@ -386,7 +386,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     else !!Homogenous Neumann  
-       p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
+       p(:,ny+1:ny+nh,1:nx) = 0.!p(:,ny:ny-nh+1:-1,1:nx)
     endif
 
     if (west.ne.MPI_PROC_NULL) then
@@ -395,7 +395,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     else !!Homogenous Neumann
-       p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
+       p(:,1:ny,1-nh:0) = 0.!p(:,1:ny,nh:1:-1)
     endif
 
     if (southwest.ne.MPI_PROC_NULL) then
@@ -413,7 +413,7 @@ contains
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
     else !!Homogenous Neumann  
-       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
+       p(:,1-nh:0,nx+1:nx+nh) = 0.!p(:,nh:1:-1,nx:nx-nh+1:-1)
     endif
 
     if (northeast.ne.MPI_PROC_NULL) then
@@ -431,7 +431,7 @@ contains
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
     else !!Homogenous Neumann  
-       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
+       p(:,ny+1:ny+nh,1-nh:0) = 0.!p(:,ny:ny-nh+1:-1,nh:1:-1)
     endif
 
     !--------------------!
@@ -564,10 +564,17 @@ contains
     integer(kind=ip), intent(in):: lev
     real(kind=rp), dimension(:,:,:,:), pointer, intent(inout)::cA
 
-    if (flag4D) then
-       call alloc_halo4D()
-       flag4D = .false.
-    endif
+    integer(kind=ip) :: nd
+
+    nd=size(cA,1)
+
+!    if(lev==2)allocate(halo4D(nlevs))
+    call alloc_halo4D(lev,nd)
+!    if (flag4D) then
+!       
+!
+!       flag4D = .false.
+!    endif
 
     if (trim(mpiexchange)=='blocking') then
        call fill_halo_4D_b(lev,cA)
@@ -619,21 +626,21 @@ contains
 
 !       !- Neumann conditions
 !       !- west
-!       cA(:,:,1:ny,1-nh:0)           = cA(:,:,1:ny,nh:1:-1)
+       cA(:,:,1:ny,1-nh:0)           = 0.!cA(:,:,1:ny,nh:1:-1)
 !       !- east
-!       cA(:,:,1:ny,nx+1:nx+nh)       = cA(:,:,1:ny,nx:nx-nh+1:-1)
+       cA(:,:,1:ny,nx+1:nx+nh)       = 0.!cA(:,:,1:ny,nx:nx-nh+1:-1)
 !       !- south
-!       cA(:,:,1-nh:0,1:nx)           = cA(:,:,nh:1:-1,1:nx)
+       cA(:,:,1-nh:0,1:nx)           = 0.!cA(:,:,nh:1:-1,1:nx)
 !       !- north
-!       cA(:,:,ny+1:ny+nh,1:nx)       = cA(:,:,ny:ny-nh+1:-1,1:nx)
+       cA(:,:,ny+1:ny+nh,1:nx)       = 0.!cA(:,:,ny:ny-nh+1:-1,1:nx)
 !       !- south west
-!       cA(:,:,1-nh:0,1-nh:0)         = cA(:,:,nh:1:-1,nh:1:-1)
+       cA(:,:,1-nh:0,1-nh:0)         = 0.!cA(:,:,nh:1:-1,nh:1:-1)
 !       !- south east
-!       cA(:,:,1-nh:0,nx+1:nx+nh)     = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
+       cA(:,:,1-nh:0,nx+1:nx+nh)     = 0.!cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
 !       !- north west
-!       cA(:,:,ny+1:ny+nh,1-nh:0)     = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
+       cA(:,:,ny+1:ny+nh,1-nh:0)     = 0.!cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
 !       !- north east
-!       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = 0.!cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
 
     else
 
@@ -908,7 +915,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     else !!Homogenous Neumann  
-!       cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
+       cA(:,:,1-nh:0,1:nx) = 0.!cA(:,:,nh:1:-1,1:nx)
     endif
 
     if (east.ne.MPI_PROC_NULL) then
@@ -917,7 +924,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     else !!Homogenous Neumann
-!       cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
+       cA(:,:,1:ny,nx+1:nx+nh) = 0.!cA(:,:,1:ny,nx:nx-nh+1:-1)
     endif
 
     if (north.ne.MPI_PROC_NULL) then
@@ -926,7 +933,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     else !!Homogenous Neumann  
-!       cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
+       cA(:,:,ny+1:ny+nh,1:nx) = 0.!cA(:,:,ny:ny-nh+1:-1,1:nx)
     endif
 
     if (west.ne.MPI_PROC_NULL) then
@@ -935,7 +942,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     else !!Homogenous Neumann
-!       cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
+       cA(:,:,1:ny,1-nh:0) = 0.!cA(:,:,1:ny,nh:1:-1)
     endif
 
     if (southwest.ne.MPI_PROC_NULL) then
@@ -944,7 +951,7 @@ contains
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     else !!Homogenous Neumann  
-!       cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
+       cA(:,:,1-nh:0,1-nh:0) = 0.!cA(:,:,nh:1:-1,nh:1:-1)
     endif
 
     if (southeast.ne.MPI_PROC_NULL) then
@@ -953,7 +960,7 @@ contains
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
     else !!Homogenous Neumann  
-!       cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
+       cA(:,:,1-nh:0,nx+1:nx+nh) = 0.!cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
     endif
 
     if (northeast.ne.MPI_PROC_NULL) then
@@ -962,7 +969,7 @@ contains
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
     else !!Homogenous Neumann  
-!       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+       cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = 0.!cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     endif
 
     if (northwest.ne.MPI_PROC_NULL) then
@@ -971,7 +978,7 @@ contains
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
     else !!Homogenous Neumann  
-!       cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
+       cA(:,:,ny+1:ny+nh,1-nh:0) = 0.!cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
     endif
 
     !--------------------!
@@ -1099,15 +1106,14 @@ contains
   end subroutine fill_halo_4D_nb
 
   !----------------------------------------
-  subroutine alloc_halo4D()
+  subroutine alloc_halo4D(lev,nd)
 
     integer(kind=ip) :: nx, ny, nz
     integer(kind=ip) :: nh, nd
     integer(kind=ip) :: lev
 
-    allocate(halo4D(nlevs))
 
-    do lev = 1, nlevs
+!    do lev = 1, nlevs
 
        nx = grid(lev)%nx
        ny = grid(lev)%ny
@@ -1158,7 +1164,7 @@ contains
        allocate(halo4D(lev)%recvNW(nd,nz,nh,nh))
        allocate(halo4D(lev)%recvNE(nd,nz,nh,nh))
 
-    enddo
+!    enddo
 
   end subroutine alloc_halo4D
 
