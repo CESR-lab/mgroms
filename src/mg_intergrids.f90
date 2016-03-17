@@ -116,7 +116,7 @@ contains
     real(kind=rp),dimension(0:4)::c3
     real(kind=rp) :: cff
 
-    integer(kind=ip),dimension(:,:),pointer::m
+    integer(kind=1),dimension(:,:),pointer::m
 
     data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
       
@@ -164,36 +164,37 @@ contains
     real(kind=rp):: z1,z2
     real(kind=rp),dimension(0:4)::c3
     real(kind=rp) :: cff
-    
-    integer(kind=ip),dimension(:,:),pointer::m
+
+    integer(kind=1),dimension(:,:),pointer::m
 
     data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
-      
+
     m => grid(lev)%rmask
 
     ! 
     do i2=1,nx
        i=2*i2-1
-       
+
        do j2=1,ny
           j=2*j2-1
-          sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
-!          cff = c3(sm)*0.5_8
-          cff = 0.125_8
-          do k2=1,nz
-             k=2*k2-1
-!             z1 = x(k  ,j  ,i)*m(j  ,i) +x(k  ,j  ,i+1)*m(j  ,i+1) &
-!                 +x(k  ,j+1,i)*m(j+1,i) +x(k  ,j+1,i+1)*m(j+1,i+1)
-!             z2 = x(k+1,j,  i)*m(j  ,i) +x(k+1,j  ,i+1)*m(j  ,i+1) &
-!                 +x(k+1,j+1,i)*m(j+1,i) +x(k+1,j+1,i+1)*m(j+1,i+1)
-             z1 = x(k  ,j  ,i)+x(k  ,j  ,i+1) &
-                 +x(k  ,j+1,i)+x(k  ,j+1,i+1)
-             z2 = x(k+1,j,  i)+x(k+1,j  ,i+1) &
-                 +x(k+1,j+1,i)+x(k+1,j+1,i+1)
-             y(k2,j2,i2) = (z1+z2) *cff
-          enddo
-          y(nz,j2,i2) = (z1+z2/2) *cff
-          y(:,j2,i2) = y(:,j2,i2)*grid(lev+1)%rmask(j2,i2)
+          ! sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
+          ! cff = c3(sm)*0.5_8
+          if(grid(lev+1)%rmask(j2,i2)==1)then
+             cff = 0.125_8
+             do k2=1,nz
+                k=2*k2-1
+                !             z1 = x(k  ,j  ,i)*m(j  ,i) +x(k  ,j  ,i+1)*m(j  ,i+1) &
+                !                 +x(k  ,j+1,i)*m(j+1,i) +x(k  ,j+1,i+1)*m(j+1,i+1)
+                !             z2 = x(k+1,j,  i)*m(j  ,i) +x(k+1,j  ,i+1)*m(j  ,i+1) &
+                !                 +x(k+1,j+1,i)*m(j+1,i) +x(k+1,j+1,i+1)*m(j+1,i+1)
+                z1 = x(k  ,j  ,i)+x(k  ,j  ,i+1)+x(k  ,j+1,i)+x(k  ,j+1,i+1)
+                z2 = x(k+1,j,  i)+x(k+1,j  ,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
+                y(k2,j2,i2) = (z1+z2) /8!*cff
+             enddo
+             y(nz,j2,i2) = (z1+z2/2) /8!*cff
+          else
+             y(:,j2,i2) = 0.
+          endif
        enddo
     enddo
 
@@ -385,34 +386,90 @@ contains
 
     ! local
     integer(kind=ip) :: i,j,k,i2,j2,k2
+    real(kind=rp) :: cff
     ! 
+    cff = 1.
+    if(lev==2)cff=0.5
+    !cff = (1.-4./8**lev)
     do i2=1,nx
        i=2*i2-1
        do j2=1,ny
           j=2*j2-1
-          do k2=1,nz
-             k=2*k2-1
-             xf(k  ,j  ,i  ) = xc(k2,j2,i2)
-             xf(k+1,j  ,i  ) = xc(k2,j2,i2)
-             xf(k  ,j+1,i  ) = xc(k2,j2,i2)
-             xf(k+1,j+1,i  ) = xc(k2,j2,i2)
-             xf(k  ,j  ,i+1) = xc(k2,j2,i2)
-             xf(k+1,j  ,i+1) = xc(k2,j2,i2)
-             xf(k  ,j+1,i+1) = xc(k2,j2,i2)
-             xf(k+1,j+1,i+1) = xc(k2,j2,i2)
-          enddo     
-          k2=nz
-          k=2*nz
-          xf(k  ,j  ,i  ) = xc(k2,j2,i2)/2
-          xf(k  ,j+1,i  ) = xc(k2,j2,i2)/2
-          xf(k  ,j  ,i+1) = xc(k2,j2,i2)/2
-          xf(k  ,j+1,i+1) = xc(k2,j2,i2)/2
- 
-          xf(:,j  ,i  ) = xf(:,j  ,i  ) * grid(lev)%rmask(j  ,i  )
-          xf(:,j+1,i  ) = xf(:,j+1,i  ) * grid(lev)%rmask(j+1,i  )
-          xf(:,j  ,i+1) = xf(:,j  ,i+1) * grid(lev)%rmask(j  ,i+1)
-          xf(:,j+1,i+1) = xf(:,j+1,i+1) * grid(lev)%rmask(j+1,i+1)
-      enddo
+
+          if(grid(lev)%rmask(j,i)==1)then
+             do k2=1,nz
+                k=2*k2-1
+                xf(k  ,j  ,i  ) = xc(k2,j2,i2)
+                xf(k+1,j  ,i  ) = xc(k2,j2,i2)
+             enddo
+             k2=nz
+             k=2*nz
+             xf(k  ,j  ,i  ) = xc(k2,j2,i2)*cff
+          else
+             xf(:,j,i)=0.
+          endif
+
+          if(grid(lev)%rmask(j+1,i)==1)then
+             do k2=1,nz
+                k=2*k2-1
+                xf(k  ,j+1,i) = xc(k2,j2,i2)
+                xf(k+1,j+1,i) = xc(k2,j2,i2)
+             enddo
+             k2=nz
+             k=2*nz
+             xf(k  ,j+1,i) = xc(k2,j2,i2)*cff
+          else
+             xf(:,j+1,i)=0.
+          endif
+
+          if(grid(lev)%rmask(j,i+1)==1)then
+             do k2=1,nz
+                k=2*k2-1
+                xf(k  ,j,i+1) = xc(k2,j2,i2)
+                xf(k+1,j,i+1) = xc(k2,j2,i2)
+             enddo
+             k2=nz
+             k=2*nz
+             xf(k  ,j,i+1) = xc(k2,j2,i2)*cff
+          else
+             xf(:,j,i+1)=0.
+          endif
+
+          if(grid(lev)%rmask(j+1,i+1)==1)then
+             do k2=1,nz
+                k=2*k2-1
+                xf(k  ,j+1,i+1) = xc(k2,j2,i2)
+                xf(k+1,j+1,i+1) = xc(k2,j2,i2)
+             enddo
+             k2=nz
+             k=2*nz
+             xf(k  ,j+1,i+1) = xc(k2,j2,i2)*cff
+          else
+             xf(:,j+1,i+1)=0.
+          endif
+
+!!$          do k2=1,nz
+!!$             k=2*k2-1
+!!$             xf(k  ,j  ,i  ) = xc(k2,j2,i2)
+!!$             xf(k+1,j  ,i  ) = xc(k2,j2,i2)
+!!$             xf(k  ,j+1,i  ) = xc(k2,j2,i2)
+!!$             xf(k+1,j+1,i  ) = xc(k2,j2,i2)
+!!$             xf(k  ,j  ,i+1) = xc(k2,j2,i2)
+!!$             xf(k+1,j  ,i+1) = xc(k2,j2,i2)
+!!$             xf(k  ,j+1,i+1) = xc(k2,j2,i2)
+!!$             xf(k+1,j+1,i+1) = xc(k2,j2,i2)
+!!$          enddo
+!!$          k2=nz
+!!$          k=2*nz
+!!$          xf(k  ,j+1,i  ) = xc(k2,j2,i2)/2
+!!$          xf(k  ,j  ,i+1) = xc(k2,j2,i2)/2
+!!$          xf(k  ,j+1,i+1) = xc(k2,j2,i2)/2
+!!$
+!!$          xf(:,j  ,i  ) = xf(:,j  ,i  ) * grid(lev)%rmask(j  ,i  )
+!!$          xf(:,j+1,i  ) = xf(:,j+1,i  ) * grid(lev)%rmask(j+1,i  )
+!!$          xf(:,j  ,i+1) = xf(:,j  ,i+1) * grid(lev)%rmask(j  ,i+1)
+!!$          xf(:,j+1,i+1) = xf(:,j+1,i+1) * grid(lev)%rmask(j+1,i+1)
+       enddo
     enddo
 
   end subroutine coarse2fine_3D_nearest

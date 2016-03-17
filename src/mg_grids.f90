@@ -8,7 +8,7 @@ module mg_grids
 
   type grid_type
      real(kind=rp),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
-     integer(kind=ip),dimension(:,:),pointer :: rmask
+     integer(kind=1),dimension(:,:),pointer :: rmask
 
      real(kind=rp),dimension(:,:,:,:),pointer :: cA,cAdummy
 !!TODO
@@ -83,7 +83,7 @@ contains
        if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
 
           if (nz == 1) then
-             nd = 3
+             nd = 5
           else
              nd = 8
           endif

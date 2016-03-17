@@ -84,11 +84,11 @@ contains
           y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
           
           h(j,i) = Htot
-          h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
-          h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/15._rp)**2._rp -(y-y0)**2._rp/(Ly/15._rp)**2._rp))
+          !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
+          !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
           ! circular slope
           dist = sqrt((x-x0)**2._rp + (y-y0)**2._rp) / Lx
-          h(j,i) = Htot - Htot* ( (tanh( (dist -0.45)*10. )+1.)*0.5 *0.9 )
+          !h(j,i) = Htot - Htot* ( (tanh( (dist -0.45)*10. )+1.)*0.5 *0.9 )
 
        enddo
     enddo
@@ -117,10 +117,10 @@ contains
           dist = sqrt(x*x+y*y) - 0.48
 
           ! for a circular domain
-          if (dist<0.) then
+          !if (dist<0.) then
 
           ! for a square domain
-          !if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
+          if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
              rmask(j,i)  = 1.
           endif
        enddo
@@ -252,6 +252,8 @@ end subroutine setup_rhs
           zw(nz+1,j,i) = 0.0_rp
        enddo
     enddo
+
+    call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
     
   end subroutine setup_scoord
 

@@ -33,6 +33,7 @@ contains
 
     if (grid(lev)%nz == 1) then
        if (nd==3) call relax_2D_3(lev,p,b,cA,nsweeps,nx,ny,nh)
+       if (nd==5) call relax_2D_5(lev,p,b,cA,nsweeps,nx,ny,nh)
        if (nd==9) call relax_2D_9(lev,p,b,cA,nsweeps,nx,ny,nh)
     else
        !- We can add additional 3D relax routines
@@ -78,6 +79,74 @@ contains
     endif
 
   end subroutine relax_2D_3
+  
+  !----------------------------------------
+  subroutine relax_2D_5(lev,p,b,cA,nsweeps,nx,ny,nh)
+    integer(kind=ip)                        , intent(in)   :: lev
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nh
+
+    integer(kind=ip)           :: i,j,k, it,rb
+    integer(kind=ip)            :: ib,ie,jb,je,rbb,rbe,rbi,is,js
+    real(kind=rp) :: z
+
+    k=1
+
+    do it = 1,nsweeps
+       if (mod(it,nh) == 0) then
+          ib = 1 
+          ie = nx
+          jb = 1
+          je = ny
+       else
+          ib = 0
+          ie = nx+1
+          jb = 0
+          je = ny+1
+       endif
+
+       if (red_black) then
+          rbb = 1
+          rbe = 2
+          rbi = 2
+       else
+          rbb = 0
+          rbe = 0
+          rbi = 1
+       endif
+
+       do rb = rbb,rbe
+          do i = ib,ie
+             do j = jb+mod(i+rb,rbi),je,rbi
+
+                z =    b(k,j,i)                                           &
+                     - cA(2,k,j,i)*p(k,j-1,i  ) - cA(2,k,j+1,i  )*p(k,j+1,  i)&
+                     - cA(3,k,j,i)*p(k,j  ,i-1) - cA(3,k,j  ,i+1)*p(k,j  ,i+1)&
+                     - cA(4,k,j,i)*p(k,j-1,i-1) - cA(4,k,j+1,i+1)*p(k,j+1,i+1)&
+                     - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1)
+
+                z = z * grid(lev)%rmask(j,i)
+
+                p(k,j,i) = z / cA(1,k,j,i)
+                
+             enddo
+          enddo
+       enddo
+
+       ! don't call mpi at every pass if nh>1
+       if (mod(it,nh) == 0) then
+          call fill_halo(lev,p)
+       endif
+
+    enddo
+    if (mod(it-1,nh) /= 0) then
+       call fill_halo(lev,p)
+    endif
+
+  end subroutine relax_2D_5
   
   !----------------------------------------
   subroutine relax_2D_9(lev,p,b,cA,nsweeps,nx,ny,nh)
@@ -684,6 +753,7 @@ endif
 
     if (grid(lev)%nz == 1) then
        if (nd==3) call compute_residual_2D_3(lev,res,p,b,r,cA,nx,ny)
+       if (nd==3) call compute_residual_2D_5(lev,res,p,b,r,cA,nx,ny)
        if (nd==9) call compute_residual_2D_9(lev,res,p,b,r,cA,nx,ny)
     else
        call tic(lev,'compute_residual_3D')
@@ -742,6 +812,42 @@ endif
     enddo
 
   end subroutine compute_residual_2D_3
+
+  !----------------------------------------
+  subroutine compute_residual_2D_5(lev,res,p,b,r,cA,nx,ny)
+    integer(kind=ip), intent(in):: lev
+    real(kind=rp)                            , intent(out)  :: res
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout)   :: r
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    integer(kind=ip)                        , intent(in)   :: nx, ny
+
+    integer(kind=ip) :: i,j,k
+    real(kind=rp)  :: z
+
+    res = 0._8
+
+    k=1
+
+    do i = 1,nx
+       do j = 1,ny
+          
+             z = b(k,j,i) - cA(1,k,j,i)*p(k,j,i)                           &
+                  - cA(2,k,j,i)*p(k,j-1,i  ) - cA(2,k,j+1,i  )*p(k,j+1,  i)&
+                  - cA(3,k,j,i)*p(k,j  ,i-1) - cA(3,k,j  ,i+1)*p(k,j  ,i+1)&
+                  - cA(4,k,j,i)*p(k,j-1,i-1) - cA(4,k,j+1,i+1)*p(k,j+1,i+1)&
+                  - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1)
+
+             z = z * grid(lev)%rmask(j,i)
+             r(k,j,i) = z
+             !          res = max(res,abs(r(k,j,i)))
+             res = res+z*z
+
+       enddo
+    enddo
+
+  end subroutine compute_residual_2D_5
 
   !----------------------------------------
   subroutine compute_residual_2D_9(lev,res,p,b,r,cA,nx,ny)

@@ -640,7 +640,7 @@ contains
     integer(kind=ip):: k2, j2, i2
     integer(kind=ip):: d
 
-    real(kind=rp)   :: diag,cff
+    real(kind=rp)   :: diag,cff,cffm
 
     k = 1
     km= 2
@@ -651,7 +651,16 @@ contains
     ! I'm pretty sure it depends on whether d==3 or d==8
 
     if (d ==8) then
-       cff = 1._8/16._8 ! check this value!!!
+
+! -------- 2D ------------ <=  -------- 3D ------------ 
+! cA(1,k,j,i)*p(k,j  ,i  ) <=  cA(1,k,j,i)*p(k,j  ,i  )
+! cA(2,k,j,i)*p(k,j-1,i  ) <=  cA(4,k,j,i)*p(k,j-1,i  )
+! cA(3,k,j,i)*p(k,j  ,i-1) <=  cA(7,k,j,i)*p(k,j  ,i-1)
+! cA(4,k,j,i)*p(k,j-1,i-1) <=  cA(8,k,j,i)*p(k,j-1,i-1)
+! cA(5,k,j,i)*p(k,j+1,i-1) <=  cA(5,k,j,i)*p(k,j+1,i-1)
+
+       cff = 1._8/16._8 
+       cffm=0.5_8
         ! fine matrix was 3D
        do i2 = 1,nx2
           i = 2*i2-1
@@ -659,27 +668,51 @@ contains
           do j2 = 1,ny2
              j = 2*j2-1
              jm = j+1     
-             ! cA2(2,:,:,:) plays the role of cA(4,:,:,:)
-             ! cA2(3,:,:,:) plays the role of cA(7,:,:,:)
-
-             ! TODO: CHECK THESE FORMULA, I'm not completely sure
-
-             cA2(2,k2,j2,i2) = cff*(cA(4,k,j,i)+cA(4,km,j,i)+cA(4,k,j,im)+cA(4,km,j,im))
-             cA2(3,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)+cA(7,k,jm,i)+cA(7,km,jm,i))
-             ! 
-             diag = cA(4,k,jm,i)+cA(4,km,jm,i)+cA(4,k,jm,im)+cA(4,km,jm,im)
-             diag = cA(7,k,j,im)+cA(7,km,j,im)+cA(7,k,jm,im)+cA(7,km,jm,im) + diag
-
-             diag = diag + diag
+             ! ex cA(4,k2,j2,i2)
+             cA2(2,k2,j2,i2) = cff*(cA(4,k,j,i) +cA(4,km,j,i)*cffm &
+                                   +cA(4,k,j,im)+cA(4,km,j,im)*cffm &
+                                   +cA(5,km,j,i)*cffm+cA(5,km,j,im)*cffm & 
+                                   +cA(3,k ,j,i)+cA(3,k ,j,im) ) 
+             ! ex cA2(7,k2,j2,i2)
+             cA2(3,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)*cffm &
+                                   +cA(7,k,jm,i)+cA(7,km,jm,i)*cffm &
+                                   +cA(8,km,j,i)*cffm+cA(8,km,jm,i)*cffm &
+                                   +cA(6,k ,j,i)+cA(6,k ,jm,i) )
+             ! ex cA2(8,k2,j2,i2)
+             cA2(4,k2,j2,i2) = cff*cA(8,k,j,i) 
+             ! ex cA2(5,k2,j2,i2)
+             cA2(5,k2,j2,i2) = cff*cA(5,k,jm,i) 
              !
-             diag = cA(1,k,j,i) +cA(1,km,j,i) +cA(1,k,jm,i) +cA(1,km,jm,i) &
-                  +cA(1,k,j,im)+cA(1,km,j,im)+cA(1,k,jm,im)+cA(1,km,jm,im) + diag
+             diag = 0._8
+             
+             diag = (cA(2,km,j,i)+cA(2,km,jm,i)+cA(2,km,j,im)+cA(2,km,jm,im))*cffm + diag
+             diag = (cA(5,km,jm,i)+cA(5,km,jm,im))*cffm                            + diag
+             diag = (cA(8,km,j,im)+cA(8,km,jm,im))*cffm                            + diag
+             diag = cA(3,k,jm,i)+cA(3,k,jm,im)                              + diag
+             diag = cA(6,k,j,im)+cA(6,k,jm,im)                              + diag
+             diag = cA(4,k,jm,i)+cA(4,km,jm,i)*cffm+cA(4,k,jm,im)+cA(4,km,jm,im)*cffm + diag
+             diag = cA(7,k,j,im)+cA(7,km,j,im)*cffm+cA(7,k,jm,im)+cA(7,km,jm,im)*cffm + diag
 
+             if (k2 == 1) then
+             ! add the horizontal diagonal connections in the bottom level
+             diag = cA(5,k,j,im)  + diag
+             diag = cA(8,k,jm,im) + diag
+             endif
+
+             ! double that to account for symmetry of connections, we've now 40 terms
+             diag = diag+diag
+
+             ! add the 8 self-interacting terms
+             diag = cA(1,k,j,i) +cA(1,km,j,i)*cffm +cA(1,k,jm,i) +cA(1,km,jm,i)*cffm &
+                   +cA(1,k,j,im)+cA(1,km,j,im)*cffm+cA(1,k,jm,im)+cA(1,km,jm,im)*cffm + diag
+
+             ! here we go!
              cA2(1,k2,j2,i2) = cff*diag
+             
           enddo
        enddo
     else
-       cff = 1._8/4._8 ! check this value!!!
+       cff = 1._8/8._8 ! 
        ! fine matrix was already 2D
        do i2 = 1,nx2
           i = 2*i2-1
@@ -687,7 +720,7 @@ contains
           do j2 = 1,ny2
              j = 2*j2-1
              jm = j+1     
-             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,j,im))
+             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,j,im)+cA(4,k,j,i))
              cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,jm,i))
              ! 
              diag = cA(2,k,jm,i)+cA(2,k,jm,im)
@@ -724,7 +757,7 @@ contains
     real(kind=rp)   :: diag,cff,cffm,cffp
     real(kind=rp),dimension(0:4)::c3
 
-    integer(kind=ip),dimension(:,:),pointer::msk
+    integer(kind=1),dimension(:,:),pointer::msk
      
     data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
     msk => grid(lev)%rmask
@@ -751,7 +784,9 @@ contains
              km = k+1
              kp = k-1
              cffm=1.
-             if(k2==nz2)cffm=0.5_8
+             !if(k2==nz2)cffm=0.5!cffm=(1.-4./8**lev)!0.5_8
+             if((lev==2).and.(k2==nz2))cffm=2.
+
 !             cffp = 1._8/16._8
 !             if(k2==nz2)cffp=1._8/12._8
 
@@ -896,7 +931,7 @@ contains
     real(kind=rp) :: cff
     integer(kind=ip):: sm
 
-    integer(kind=ip),dimension(:,:),pointer::msk
+    integer(kind=1),dimension(:,:),pointer::msk
 
     nx = nx2*2
     ny = ny2*2
@@ -1149,7 +1184,7 @@ contains
     real(kind=rp) :: cff
     integer(kind=ip):: sm
 
-    integer(kind=ip),dimension(:,:),pointer::msk
+    integer(kind=1),dimension(:,:),pointer::msk
 
     nx = nx2*2
     ny = ny2*2
