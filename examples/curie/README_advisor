@@ -1,0 +1,69 @@
+Documentation:
+-------------
+https://software.intel.com/en-us/intel-advisor-2016-user-guide-linux
+
+Compilation:
+-----------
+module unload intel
+module load intel/16.0.2.181
+
+"
+Curie login nodes and Curie xlarge nodes use Nehalem-EX processors which do not support AVX. 
+However, AVX codes can be generated on these nodes through cross-compilation by adding -xAVX option. 
+Furthermore, on Nehalem nodes, the -xHost option will not generate AVX code. 
+If you need to compile with -xHost or if the installation requires some tests (like autotools/configure),
+you can submit a job which will compile on the Curie thin nodes.
+"
+
+example:
+ifort -g -O3 -xAVX -ipo prg_relax_perf_eval_vcA8_v3.f90 -o prg_relax_perf_eval_vcA8_v3_avx
+
+Don't do this
+ifort -g -O3 -xHost -ipo prg_relax_perf_eval_vcA8_v3.f90  -o prg_relax_perf_eval_vcA8_v3_host
+
+Curie example:
+-------------
+ssh -X griman@curie-fr.ccc.cea.fr
+
+cd /ccc/cont003/home/gen9178/griman/NH_Multigrid/Perf_eval/Relax
+
+module load advisor/2016.2
+
+module show advisor/2016.2
+
+ls -rtl /ccc/products/advisor-2016.2/default/advisor_xe/bin64
+
+advixe-gui
+
+File > New > project
+
+Give a name to the project
+
+Next window, wait few seconds...
+
+Browse/Enter your application name (executable) + OK
+
+Collect data clicking in the collect button in the left panel (for example 1. Survey target)
+
+Now you can read the profiling information of your code, with source code and intel annotation
+to improve your code performance.
+
+Curie example in batch:
+----------------------
+#!/bin/bash
+#MSUB -n 1
+#MSUB -T 1800
+#MSUB -q standard
+#MSUB -X
+#MSUB -x
+##
+# launch the vtune GUI on a standard node for visualisa tion of a collection
+#
+#
+module unload intel
+module load intel/16.0.2.181
+module load advisor/2016.2
+
+cd ${BRIDGE_MSUB_PWD}
+
+advixe-gui
