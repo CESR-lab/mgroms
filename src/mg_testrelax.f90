@@ -42,11 +42,28 @@ program mg_testrelax
   nyg   = 512
   nzg   = 32
 
+  Lx =  200d3
+  Ly =  200d3
+  Htot = 4d3
+
+!!$  nxg   = 128
+!!$  nyg   = 128
+!!$  nzg   = 128
+!!$
+!!$  Lx =  20d3
+!!$  Ly =  20d3
+!!$  Htot = 4d3
+
+
+  hc      = 100.
+  theta_b = 0.
+  theta_s = 3.
+
   npxg  = 2
   npyg  = 2
 
   nit     = 4
-  nsweeps = 1
+  nsweeps = 2
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
@@ -74,12 +91,6 @@ program mg_testrelax
   call print_grids()
   !!call define_rhs(nxg, nyg, npxg)
 
-  hc      = 100.
-  theta_b = 2.
-  theta_s = 4.
-  Lx =  200d3
-  Ly =  200d3
-  Htot = 4d3
 
   call setup_realistic_matrix()!2d4,2d4,4d3)
   nh = grid(1)%nh
@@ -111,7 +122,7 @@ program mg_testrelax
      call cpu_time(tstart)
      do it=0, nit
         !if(it>0) call Vcycle(lev)
-        !if(it>0) call Vcycle2(lev,lev+3)
+        !if(it>0) call Vcycle2(lev,lev+5)
         if(it>0) call Fcycle()
         !if(it>0)call relax(lev,nsweeps)
         call compute_residual(lev,res)

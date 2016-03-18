@@ -166,7 +166,7 @@ contains
     integer(kind=ip) :: i,j,k,i2,j2,k2,sm
     real(kind=rp):: z1,z2
     real(kind=rp),dimension(0:4)::c3
-    real(kind=rp) :: cff
+    real(kind=rp) :: cff,cffm
 
     integer(kind=1),dimension(:,:),pointer::m
 
@@ -175,6 +175,8 @@ contains
     m => grid(lev)%rmask
 
     ! 
+    cffm=1.
+    if(lev==1) cffm=0.5_8
     do i2=1,nx
        i=2*i2-1
 
@@ -194,7 +196,7 @@ contains
                 z2 = x(k+1,j,  i)+x(k+1,j  ,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
                 y(k2,j2,i2) = (z1+z2) /8!*cff
              enddo
-             y(nz,j2,i2) = (z1+z2/2) /8!*cff
+             y(nz,j2,i2) = (z1+z2*cffm) /8!*cff
           else
              y(:,j2,i2) = 0.
           endif
@@ -392,7 +394,7 @@ contains
     real(kind=rp) :: cff
     ! 
     cff = 1.
-    if(lev==2)cff=0.5
+    if(lev==2)cff=2.
     !cff = (1.-4./8**lev)
     do i2=1,nx
        i=2*i2-1

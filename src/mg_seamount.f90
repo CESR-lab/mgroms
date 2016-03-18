@@ -114,13 +114,13 @@ contains
        x=(1._8*i-0.5+pi*nx)/(npxg*nx) -0.5
        do j=0,ny+1
           y=(1._8*j-0.5+pj*ny)/(npyg*ny)-0.5
-          dist = sqrt(x*x+y*y) - 0.48
+          dist = sqrt(x*x+y*y) - 0.48_8
 
           ! for a circular domain
-          !if (dist<0.) then
+          if (dist<0.) then
 
           ! for a square domain
-          if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
+          !if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
              rmask(j,i)  = 1.
           endif
        enddo
@@ -244,12 +244,12 @@ subroutine setup_scoord(nx,ny,nz,nh)
            hinv = 1. / (h(j,i)+hc)
 
            ! roms sigma coordinates
-           !             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
-           !             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+           zw(k,j,i) = z_w0 * (h(j,i)*hinv)
+           zr(k,j,i) = z_r0 * (h(j,i)*hinv)
 
            ! basic linear sigma coordinates
-           zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
-           zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+           !zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+           !zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
         enddo
         zw(nz+1,j,i) = 0.0_rp
      enddo

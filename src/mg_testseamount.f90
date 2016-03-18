@@ -38,7 +38,7 @@ program mg_testseamount
   ! global domain dimensions
   nxg   = 128
   nyg   = 128
-  nzg   = 8
+  nzg   = 128
 
   npxg  = 4
   npyg  = 2

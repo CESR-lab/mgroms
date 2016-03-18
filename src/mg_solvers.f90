@@ -209,23 +209,25 @@ subroutine solve(tol,maxite)
      write(*,*)'---------------'
   end if
 
-10 format("ite = ",I2,": res = ",E10.3," / conv = ",F7.3)
+10 format("ite = ",I2,": res = ",E10.3," / conv = ",F8.3)
 
 end subroutine solve
 
   !---------------------------------------------------------------------
   subroutine Fcycle()
 
-    integer(kind=ip):: lev
+    integer(kind=ip):: lev,maxlev
 
-    do lev=1,nlevs-1
+    maxlev=nlevs
+
+    do lev=1,maxlev-1
        call fine2coarse(lev)
        grid(lev+1)%r=grid(lev+1)%b
     enddo
 
-    call relax(nlevs, ns_coarsest)
+    call relax(maxlev, ns_coarsest)
 
-    do lev=nlevs-1,1,-1
+    do lev=maxlev-1,1,-1
        call coarse2fine(lev) 
        call Vcycle(lev)
     enddo
@@ -240,6 +242,7 @@ end subroutine solve
     real(kind=rp)                :: rnorm
 
     nlevs0=nlevs
+
 
     do lev=lev1,nlevs0-1
        call relax(lev,ns_pre)
