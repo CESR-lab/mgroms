@@ -120,7 +120,7 @@ contains
        starts                    , & ! [Start indices in NetCDF variable]
        counts                    )   ! [Shape of array extracted from the NetCDF variable]
     !      
- 
+
 
     ! Argument declaration
     character(len=*)                            , intent(in)    :: varname
@@ -199,6 +199,6 @@ contains
     !     
   end subroutine Read_Ncdf_var3d_Real
 
-!******************************************* 
+  !******************************************* 
 end module mg_netcdf_in
 !******************************************* 

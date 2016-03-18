@@ -31,7 +31,7 @@ contains
 
     call print_grids()
 
-!    call define_matrices(dx, dy, zr, zw, umask, vmask)
+    !    call define_matrices(dx, dy, zr, zw, umask, vmask)
 
   end subroutine nhydro_init
 
@@ -67,7 +67,7 @@ contains
   subroutine nhydro_clean()
 
     call grids_dealloc()
-    
+
   end subroutine nhydro_clean
 
 !!$  !-------------------------------------------------------------------------     

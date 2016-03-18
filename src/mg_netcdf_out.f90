@@ -19,7 +19,7 @@ module mg_netcdf_out
           sub_netcdf_write_fast_r3D, &
           sub_netcdf_write_fast_r3D_p, &
           sub_netcdf_write_fast_r4D
-  end interface
+  end interface write_netcdf
 
   integer(kind=4), parameter:: iprec=4, rprec=8
 
@@ -45,7 +45,7 @@ contains
     character(len = *)                , optional, intent(in) :: netcdf_file_name
     integer(kind = iprec)             , optional, intent(in) :: rank
     integer(kind = iprec)             , optional, intent(in) :: iter
- 
+
     !===================================!
     !- DECLARATIONS of LOCAL VARIABLES -!
     !===================================!
@@ -72,7 +72,7 @@ contains
     !- SECTION 1: test optional arguments -!
     !======================================!
 
-   if (present(netcdf_file_name)) then
+    if (present(netcdf_file_name)) then
        final_netcdf_file_name = trim(netcdf_file_name)
     else
        final_netcdf_file_name = 'netcdf_file.nc'
@@ -100,7 +100,7 @@ contains
     if (final_vname /= 'array_r3D') then
        write(cmft, 1001) size_string-3, len_trim(final_vname)
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
     end if
 
 1001 format('(A',I2,',A1,A',I2,',A3)')
@@ -117,7 +117,7 @@ contains
     if (add_rank /= -1) then
        write(cmft, 1002) size_string-3,3,3
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
     end if
 
 1002 format('(A',I2,',A1,I',I2,'.',I2,',A3)')
@@ -209,7 +209,7 @@ contains
          varid  = var_id    , &
          values = array_r2D )
 
-   if (is_err /= nf90_noerr) then
+    if (is_err /= nf90_noerr) then
        stop
     end if
 
@@ -245,7 +245,7 @@ contains
     character(len = *)                  , optional, intent(in) :: netcdf_file_name
     integer(kind = iprec)               , optional, intent(in) :: rank
     integer(kind = iprec)               , optional, intent(in) :: iter
- 
+
     !===================================!
     !- DECLARATIONS of LOCAL VARIABLES -!
     !===================================!
@@ -274,7 +274,7 @@ contains
     !- SECTION 1: test optional arguments -!
     !======================================!
 
-   if (present(netcdf_file_name)) then
+    if (present(netcdf_file_name)) then
        final_netcdf_file_name = trim(netcdf_file_name)
     else
        final_netcdf_file_name = 'netcdf_file.nc'
@@ -302,7 +302,7 @@ contains
     if (final_vname /= 'array_r3D') then
        write(cmft, 1001) size_string-3, len_trim(final_vname)
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
     end if
 
 1001 format('(A',I2,',A1,A',I2,',A3)')
@@ -319,7 +319,7 @@ contains
     if (add_rank /= -1) then
        write(cmft, 1002) size_string-3,3,3
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
     end if
 
 1002 format('(A',I2,',A1,I',I2,'.',I2,',A3)')
@@ -422,7 +422,7 @@ contains
          varid  = var_id    , &
          values = array_r3D )
 
-   if (is_err /= nf90_noerr) then
+    if (is_err /= nf90_noerr) then
        stop
     end if
 
@@ -437,7 +437,7 @@ contains
 
   end subroutine sub_netcdf_write_fast_r3D
 
- !********************************************************************!
+  !********************************************************************!
   !
   ! Create a NetCDF File and store in it a 3D array of reals
   !
@@ -458,7 +458,7 @@ contains
     character(len = *)                  , optional, intent(in) :: netcdf_file_name
     integer(kind = iprec)               , optional, intent(in) :: rank
     integer(kind = iprec)               , optional, intent(in) :: iter
- 
+
     !===================================!
     !- DECLARATIONS of LOCAL VARIABLES -!
     !===================================!
@@ -487,7 +487,7 @@ contains
     !- SECTION 1: test optional arguments -!
     !======================================!
 
-   if (present(netcdf_file_name)) then
+    if (present(netcdf_file_name)) then
        final_netcdf_file_name = trim(netcdf_file_name)
     else
        final_netcdf_file_name = 'netcdf_file.nc'
@@ -515,7 +515,7 @@ contains
     if (final_vname /= 'array_r3D') then
        write(cmft, 1001) size_string-3, len_trim(final_vname)
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
     end if
 
 1001 format('(A',I2,',A1,A',I2,',A3)')
@@ -532,7 +532,7 @@ contains
     if (add_rank /= -1) then
        write(cmft, 1002) size_string-3,3,3
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
     end if
 
 1002 format('(A',I2,',A1,I',I2,'.',I2,',A3)')
@@ -635,7 +635,7 @@ contains
          varid  = var_id    , &
          values = array_r3D )
 
-   if (is_err /= nf90_noerr) then
+    if (is_err /= nf90_noerr) then
        stop
     end if
 
@@ -670,7 +670,7 @@ contains
     character(len = *)                    , optional, intent(in) :: netcdf_file_name
     integer(kind = iprec)                 , optional, intent(in) :: rank
     integer(kind = iprec)                 , optional, intent(in) :: iter
- 
+
     !===================================!
     !- DECLARATIONS of LOCAL VARIABLES -!
     !===================================!
@@ -701,7 +701,7 @@ contains
     !- SECTION 1: test optional arguments -!
     !======================================!
 
-   if (present(netcdf_file_name)) then
+    if (present(netcdf_file_name)) then
        final_netcdf_file_name = trim(netcdf_file_name)
     else
        final_netcdf_file_name = 'netcdf_file.nc'
@@ -729,7 +729,7 @@ contains
     if (final_vname /= 'array_r4D') then
        write(cmft, 1001) size_string-3, len_trim(final_vname)
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',final_vname,'.nc'
     end if
 
 1001 format('(A',I2,',A1,A',I2,',A3)')
@@ -746,7 +746,7 @@ contains
     if (add_rank /= -1) then
        write(cmft, 1002) size_string-3,3,3
        write(final_netcdf_file_name,FMT=trim(cmft)) &
-         final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
+            final_netcdf_file_name(1:size_string-3),'_',add_rank,'.nc'
     end if
 
 1002 format('(A',I2,',A1,I',I2,'.',I2,',A3)')
@@ -860,7 +860,7 @@ contains
          varid  = var_id    , &
          values = array_r4D )
 
-   if (is_err /= nf90_noerr) then
+    if (is_err /= nf90_noerr) then
        stop
     end if
 

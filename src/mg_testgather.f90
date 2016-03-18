@@ -114,7 +114,7 @@ program mg_testgather
         !       write(*,'(A,I2,A,F3.0,A,F3.0)')'rank=',myrank,' / p(1,1,1)=',grid(lev)%p(1,1,1), &
         !            ' / p(1,ny/2,nx/2)=',grid(lev)%p(1,ny/2,nx/2)
 
-!        if(myrank==0)write(*,*)(grid(lev)%p(1,:,:))
+        !        if(myrank==0)write(*,*)(grid(lev)%p(1,:,:))
         write(*,'(A,I2,A,F3.0)')'rank=',myrank,' / dummy3=',grid(lev)%dummy3(1,1,1)
 
      endif

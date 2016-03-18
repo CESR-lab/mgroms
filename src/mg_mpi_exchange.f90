@@ -73,10 +73,10 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-!    !--DEBUG !!!!
-!    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
-!    nprocs = 2
-!    !--DEBUG !!!!
+    !    !--DEBUG !!!!
+    !    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
+    !    nprocs = 2
+    !    !--DEBUG !!!!
 
     if ( nprocs == 1) then
 
@@ -357,7 +357,7 @@ contains
     senwtag = 105
     neswtag = 106
     nwsetag = 107
-    
+
     !-----------------------!
     !- Nonblocking RECEIVE -!
     !-----------------------!
@@ -516,7 +516,7 @@ contains
     enddo
 
     do while (icount > 0)
-  
+
        call MPI_Waitany(icount, req, j, status, ierr)
 
        indx=comm(j)           ! Save directional index for
@@ -568,13 +568,13 @@ contains
 
     nd=size(cA,1)
 
-!    if(lev==2)allocate(halo4D(nlevs))
+    !    if(lev==2)allocate(halo4D(nlevs))
     call alloc_halo4D(lev,nd)
-!    if (flag4D) then
-!       
-!
-!       flag4D = .false.
-!    endif
+    !    if (flag4D) then
+    !       
+    !
+    !       flag4D = .false.
+    !    endif
 
     if (trim(mpiexchange)=='blocking') then
        call fill_halo_4D_b(lev,cA)
@@ -617,29 +617,29 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-!    !--DEBUG !!!!
-!    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
-!    nprocs = 2
-!    !--DEBUG !!!!
+    !    !--DEBUG !!!!
+    !    !! call mpi_comm_size(grid(lev)%localcomm, nprocs, ierr)
+    !    nprocs = 2
+    !    !--DEBUG !!!!
 
     if ( nprocs == 1) then
 
-!       !- Neumann conditions
-!       !- west
+       !       !- Neumann conditions
+       !       !- west
        cA(:,:,1:ny,1-nh:0)           = 0.!cA(:,:,1:ny,nh:1:-1)
-!       !- east
+       !       !- east
        cA(:,:,1:ny,nx+1:nx+nh)       = 0.!cA(:,:,1:ny,nx:nx-nh+1:-1)
-!       !- south
+       !       !- south
        cA(:,:,1-nh:0,1:nx)           = 0.!cA(:,:,nh:1:-1,1:nx)
-!       !- north
+       !       !- north
        cA(:,:,ny+1:ny+nh,1:nx)       = 0.!cA(:,:,ny:ny-nh+1:-1,1:nx)
-!       !- south west
+       !       !- south west
        cA(:,:,1-nh:0,1-nh:0)         = 0.!cA(:,:,nh:1:-1,nh:1:-1)
-!       !- south east
+       !       !- south east
        cA(:,:,1-nh:0,nx+1:nx+nh)     = 0.!cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
-!       !- north west
+       !       !- north west
        cA(:,:,ny+1:ny+nh,1-nh:0)     = 0.!cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
-!       !- north east
+       !       !- north east
        cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = 0.!cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
 
     else
@@ -702,13 +702,13 @@ contains
        if (west.ne.MPI_PROC_NULL) then
           cA(:,:,1:ny,1-nh:0) = recvW
        else !!Homogenous Neumann  
-!          cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
+          !          cA(:,:,1:ny,1-nh:0) = cA(:,:,1:ny,nh:1:-1)
        endif
 
        if (east.ne.MPI_PROC_NULL) then
           cA(:,:,1:ny,nx+1:nx+nh) = recvE
        else !!Homogenous Neumann  
-!          cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
+          !          cA(:,:,1:ny,nx+1:nx+nh) = cA(:,:,1:ny,nx:nx-nh+1:-1)
        end if
        !
 
@@ -737,13 +737,13 @@ contains
        if (south.ne.MPI_PROC_NULL) then
           cA(:,:,1-nh:0,1:nx)  = recvS
        else !!Homogenous Neumann  
-!          cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
+          !          cA(:,:,1-nh:0,1:nx) = cA(:,:,nh:1:-1,1:nx)
        end if
 
        if (north.ne.MPI_PROC_NULL) then
           cA(:,:,ny+1:ny+nh,1:nx)  = recvN
        else !!Homogenous Neumann  
-!          cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
+          !          cA(:,:,ny+1:ny+nh,1:nx) = cA(:,:,ny:ny-nh+1:-1,1:nx)
        end if
        !
        !-----------
@@ -774,13 +774,13 @@ contains
        if (southwest.ne.MPI_PROC_NULL) then
           cA(:,:,1-nh:0,1-nh:0) = recvSW
        else !!Homogenous Neumann  
-!          cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
+          !          cA(:,:,1-nh:0,1-nh:0) = cA(:,:,nh:1:-1,nh:1:-1)
        endif
 
        if (southeast.ne.MPI_PROC_NULL) then
           cA(:,:,1-nh:0,nx+1:nx+nh) = recvSE
        else !!Homogenous Neumann  
-!          cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
+          !          cA(:,:,1-nh:0,nx+1:nx+nh) = cA(:,:,nh:1:-1,nx:nx-nh+1:-1)
        end if
        !
 
@@ -809,13 +809,13 @@ contains
        if (northwest.ne.MPI_PROC_NULL) then
           cA(:,:,ny+1:ny+nh,1-nh:0) = recvNW
        else !!Homogenous Neumann  
-!          cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
+          !          cA(:,:,ny+1:ny+nh,1-nh:0) = cA(:,:,ny:ny-nh+1:-1,nh:1:-1)
        endif
 
        if (northeast.ne.MPI_PROC_NULL) then
           cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = recvNE
        else !!Homogenous Neumann  
-!          cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+          !          cA(:,:,ny+1:ny+nh,nx+1:nx+nh) = cA(:,:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
        end if
 
     endif
@@ -1113,58 +1113,58 @@ contains
     integer(kind=ip) :: lev
 
 
-!    do lev = 1, nlevs
+    !    do lev = 1, nlevs
 
-       nx = grid(lev)%nx
-       ny = grid(lev)%ny
-       nz = grid(lev)%nz
-       nh = grid(lev)%nh
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
 
-       if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
+    if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
 
-          if (nz == 1) then
-             nd = 5
-          else
-             nd = 8
-          endif
-
-       elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
-
-          if (nz == 1) then
-             nd = 9
-          else
-             if (lev == 1) then
-                nd = 8
-             else
-                nd =27
-             endif
-          endif
-
-       elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
-          ! todo 
+       if (nz == 1) then
+          nd = 5
+       else
+          nd = 8
        endif
 
-       allocate(halo4D(lev)%sendS(nd,nz,nh,nx))
-       allocate(halo4D(lev)%recvS(nd,nz,nh,nx))
-       allocate(halo4D(lev)%sendN(nd,nz,nh,nx))
-       allocate(halo4D(lev)%recvN(nd,nz,nh,nx))
+    elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
 
-       allocate(halo4D(lev)%sendE(nd,nz,ny,nh))
-       allocate(halo4D(lev)%recvE(nd,nz,ny,nh))
-       allocate(halo4D(lev)%sendW(nd,nz,ny,nh))
-       allocate(halo4D(lev)%recvW(nd,nz,ny,nh))
+       if (nz == 1) then
+          nd = 9
+       else
+          if (lev == 1) then
+             nd = 8
+          else
+             nd =27
+          endif
+       endif
 
-       allocate(halo4D(lev)%sendSW(nd,nz,nh,nh))
-       allocate(halo4D(lev)%sendSE(nd,nz,nh,nh))
-       allocate(halo4D(lev)%sendNW(nd,nz,nh,nh))
-       allocate(halo4D(lev)%sendNE(nd,nz,nh,nh))
+    elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
+       ! todo 
+    endif
 
-       allocate(halo4D(lev)%recvSW(nd,nz,nh,nh))
-       allocate(halo4D(lev)%recvSE(nd,nz,nh,nh))
-       allocate(halo4D(lev)%recvNW(nd,nz,nh,nh))
-       allocate(halo4D(lev)%recvNE(nd,nz,nh,nh))
+    allocate(halo4D(lev)%sendS(nd,nz,nh,nx))
+    allocate(halo4D(lev)%recvS(nd,nz,nh,nx))
+    allocate(halo4D(lev)%sendN(nd,nz,nh,nx))
+    allocate(halo4D(lev)%recvN(nd,nz,nh,nx))
 
-!    enddo
+    allocate(halo4D(lev)%sendE(nd,nz,ny,nh))
+    allocate(halo4D(lev)%recvE(nd,nz,ny,nh))
+    allocate(halo4D(lev)%sendW(nd,nz,ny,nh))
+    allocate(halo4D(lev)%recvW(nd,nz,ny,nh))
+
+    allocate(halo4D(lev)%sendSW(nd,nz,nh,nh))
+    allocate(halo4D(lev)%sendSE(nd,nz,nh,nh))
+    allocate(halo4D(lev)%sendNW(nd,nz,nh,nh))
+    allocate(halo4D(lev)%sendNE(nd,nz,nh,nh))
+
+    allocate(halo4D(lev)%recvSW(nd,nz,nh,nh))
+    allocate(halo4D(lev)%recvSE(nd,nz,nh,nh))
+    allocate(halo4D(lev)%recvNW(nd,nz,nh,nh))
+    allocate(halo4D(lev)%recvNE(nd,nz,nh,nh))
+
+    !    enddo
 
   end subroutine alloc_halo4D
 
@@ -1231,7 +1231,7 @@ contains
     ! therefore we need to rescale the global sum
     sumglo = sumglo * (grid(lev)%npx*grid(lev)%npy)/(grid(1)%npx*grid(1)%npy)
     N = grid(lev)%npx*grid(lev)%npy*grid(lev)%nx*grid(lev)%ny*grid(lev)%nz
-!    sumglo=sqrt(sumglo/N)
+    !    sumglo=sqrt(sumglo/N)
   end subroutine global_sum
 
 

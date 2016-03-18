@@ -7,7 +7,7 @@ program mg_testnetcdf
   use mg_define_rhs
   use mg_define_matrix
   use mg_relax
-  
+
 
   implicit none
 
@@ -66,8 +66,8 @@ program mg_testnetcdf
   call define_grids(npxg, npyg, nx, ny, nz)
   call define_neighbours()
   !!call define_rhs(nxg, nyg, npxg)
-  
-  
+
+
   nh = grid(1)%nh
   allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
   p0 = 0._8
@@ -89,7 +89,7 @@ program mg_testnetcdf
   !-------------------------------------------------------
 
   call compute_residual(lev,res)
-    if (myrank.eq.0) write(*,1000)"ite=",0," - res=",res
+  if (myrank.eq.0) write(*,1000)"ite=",0," - res=",res
 
   do it=1, nit
      call relax(lev,nsweeps)
@@ -111,7 +111,7 @@ program mg_testnetcdf
   enddo
 1000 format(A,I5,A,F8.3)
 
-!  call check_solution(lev)
+  !  call check_solution(lev)
 
   call mpi_finalize(ierr)
 

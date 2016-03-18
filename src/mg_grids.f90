@@ -464,7 +464,6 @@ contains
   subroutine define_gather_informations()
 
     integer(kind=ip) :: nx, ny, nz, nd
-    integer(kind=ip) :: nx2, ny2, nz2
     integer(kind=ip) :: nh
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy

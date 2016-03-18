@@ -24,7 +24,7 @@ program mg_testrelax
 
   integer(kind=ip):: nsweeps
 
-  integer(kind=ip):: lev,ierr, np, nh, rank,i,j,k
+  integer(kind=ip):: lev,ierr, np, nh, rank,k
   real(kind=rp)    :: res,conv,res0,bnorm
 
   real(kind = lg) :: tstart,tend,perf

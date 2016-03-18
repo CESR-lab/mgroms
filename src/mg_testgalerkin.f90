@@ -9,7 +9,7 @@ program mg_testgalerkin
   use mg_intergrids
 
   implicit none
-  
+
   ! test that <xc,Ac*xc>=<I*xc,Af*(I*xc)>
 
   real(kind=8) :: norm_c,norm_f,dummy

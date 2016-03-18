@@ -5,7 +5,7 @@ module mg_define_rhs
 
   implicit none
 
-   real(kind=rp):: dx, dy, dz
+  real(kind=rp):: dx, dy, dz
 
 contains
 

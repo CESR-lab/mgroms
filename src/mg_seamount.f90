@@ -1,6 +1,5 @@
 module mg_seamount
 
-
   use mg_mpi
   use mg_grids
   use mg_mpi_exchange
@@ -8,27 +7,23 @@ module mg_seamount
 
   implicit none
 
-    real(kind=8), dimension(:,:), pointer   :: dx, dy
-    real(kind=8), dimension(:,:), pointer   :: umask, vmask, rmask
-    real(kind=8), dimension(:,:), pointer   :: h
-    real(kind=8), dimension(:,:,:), pointer :: zr, zw
+  real(kind=8), dimension(:,:), pointer   :: dx, dy
+  real(kind=8), dimension(:,:), pointer   :: umask, vmask, rmask
+  real(kind=8), dimension(:,:), pointer   :: h
+  real(kind=8), dimension(:,:,:), pointer :: zr, zw
 
-    ! MUST BE DEFINED BY THE USER OUTSIDE OF THIS MODULE
-    ! before calling setup_realistic_matrix()
+  ! MUST BE DEFINED BY THE USER OUTSIDE OF THIS MODULE
+  ! before calling setup_realistic_matrix()
 
-    real(kind=8) :: Lx,Ly,Htot
-    real(kind=8) :: hc,theta_s,theta_b
+  real(kind=8) :: Lx,Ly,Htot
+  real(kind=8) :: hc,theta_s,theta_b
 
 contains
 
   subroutine setup_realistic_matrix()
 
-    integer(kind=4):: npxg,npyg,pi,pj
+    integer(kind=4):: npxg,npyg
     integer(kind=4):: nx,ny,nz,nh
-
-    integer(kind=4):: i,j,k
-    real(kind=8) :: x,y,z,dist,x0,y0
-
 
     npxg = grid(1)%npx
     npyg = grid(1)%npy
@@ -55,15 +50,13 @@ contains
     call setup_fine_mask(nx,ny,nz,nh)
 
     call setup_fine_depth(nx,ny,nz,nh)
-    
+
     call setup_scoord(nx,ny,nz,nh)
 
     call define_matrices(dx, dy, zr, zw, umask, vmask, rmask)
 
-
   end subroutine setup_realistic_matrix
 
- 
   !-------------------------------------------------------------------------     
   subroutine setup_fine_depth(nx,ny,nz,nh)
     integer(kind=4):: nx,ny,nz,nh
@@ -82,7 +75,7 @@ contains
        do j = 0,ny+1
           x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
           y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
-          
+
           h(j,i) = Htot
           !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
           h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
@@ -96,13 +89,13 @@ contains
     call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=myrank)
 
   end subroutine setup_fine_depth
+
   !-------------------------------------------------------------------------     
   subroutine setup_fine_mask(nx,ny,nz,nh)
     integer(kind=4):: nx,ny,nz,nh
 
     real(kind=8) :: dist,x,y
     integer(kind=4):: i,j,pi,pj,npxg,npyg
-
 
     npxg = grid(1)%npx
     npyg = grid(1)%npy
@@ -141,7 +134,6 @@ contains
     vmask = grid(1)%p(2,:,:)
     grid(1)%p(:,:,:)=0._8
 
-
     if (netcdf_output) then
        call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
        call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=myrank)
@@ -157,108 +149,105 @@ contains
     integer(kind=4):: i,j,k,pi,pj,npxg,npyg
     real(kind=8) :: x,y,bet,x1,z1,x2,z2,y1,y2
 
-
-
     npxg = grid(1)%npx
     npyg = grid(1)%npy
     pj = myrank/npxg
     pi = mod(myrank,npxg)
 
-  ! rhs definition
-  bet = 1200._8 / (Lx*Lx)
-  x1 = Lx * 0.45_8
-  y1 = Ly * 0.45_8
-  z1 = Htot * (0.75_8 - 1._8)
-  x2 = Lx * 0.75_8
-  y2 = Ly * 0.55_8
-  z2 = Htot * (0.65_8 - 1._8)
+    ! rhs definition
+    bet = 1200._8 / (Lx*Lx)
+    x1 = Lx * 0.45_8
+    y1 = Ly * 0.45_8
+    z1 = Htot * (0.75_8 - 1._8)
+    x2 = Lx * 0.75_8
+    y2 = Ly * 0.55_8
+    z2 = Htot * (0.65_8 - 1._8)
 
-  do i = 1,nx !!!  I need to know my global index range
-     do j = 1,ny 
-        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
-        y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
-        do k = 1,nz
-           rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
-                
-                ! pseudo 2D rhs
-                (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                 exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+    do i = 1,nx !!!  I need to know my global index range
+       do j = 1,ny 
+          x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
+          y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
+          do k = 1,nz
+             rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
+                  
+                                ! pseudo 2D rhs
+                  (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
+                  exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
 
-                ! 3D rhs
-!                (exp(-bet * ((x-x1)**2 + (y-y1)**2 + (zr(k,j,i)-z1)**2)) - &
-!                 exp(-bet * ((x-x2)**2 + (y-y2)**2 + (zr(k,j,i)-z2)**2)))
+             ! 3D rhs
+             !                (exp(-bet * ((x-x1)**2 + (y-y1)**2 + (zr(k,j,i)-z1)**2)) - &
+             !                 exp(-bet * ((x-x2)**2 + (y-y2)**2 + (zr(k,j,i)-z2)**2)))
 
 
-!           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-!                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-!           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)           
-        enddo
-     enddo
-  enddo
+             !           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
+             !                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+             !           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)           
+          enddo
+       enddo
+    enddo
 
-!  call random_number(rhs)
-  do i = 1,nx 
-     do j = 1,ny 
-        do k = 1,nz
-           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
-        enddo
-     enddo
-  enddo
-  call fill_halo(1,rhs)
+    !  call random_number(rhs)
+    do i = 1,nx 
+       do j = 1,ny 
+          do k = 1,nz
+             rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
+          enddo
+       enddo
+    enddo
+    call fill_halo(1,rhs)
 
-end subroutine setup_rhs
-
+  end subroutine setup_rhs
 
   !-------------------------------------------------------------------------     
-subroutine setup_scoord(nx,ny,nz,nh)
-  ! compute zr and zw from h(j,i)
+  subroutine setup_scoord(nx,ny,nz,nh)
+    ! compute zr and zw from h(j,i)
 
-  integer(kind=4):: nx,ny,nz,nh
+    integer(kind=4):: nx,ny,nz,nh
 
 
-  integer(kind=4):: i,j,k
-  real(kind=8) :: cff,cff1,cff2,hinv,sc_w,sc_r,cff_w,cff_r,z_w0,z_r0,cs_r,cs_w
+    integer(kind=4):: i,j,k
+    real(kind=8) :: cff,cff1,cff2,hinv,sc_w,sc_r,cff_w,cff_r,z_w0,z_r0,cs_r,cs_w
 
-  cff  = 1./float(nz)
-  cff1 = 1./sinh(theta_s)
-  cff2 = 0.5/tanh(0.5*theta_s)
+    cff  = 1./float(nz)
+    cff1 = 1./sinh(theta_s)
+    cff2 = 0.5/tanh(0.5*theta_s)
 
-  do i = 0,nx+1
-     do j = 0,ny+1
-        do k = 1,nz
-           sc_w = cff*float(k-nz)
-           sc_r = cff*(float(k-nz)-0.5)
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz
+             sc_w = cff*float(k-nz)
+             sc_r = cff*(float(k-nz)-0.5)
 
-           cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
-                +theta_b*(cff2*tanh(theta_s*(sc_r+0.5))-0.5)
+             cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
+                  +theta_b*(cff2*tanh(theta_s*(sc_r+0.5))-0.5)
 
-           cs_w = (1.-theta_b)*cff1*sinh(theta_s*sc_w) &
-                +theta_b*(cff2*tanh(theta_s*(sc_w+0.5))-0.5)
+             cs_w = (1.-theta_b)*cff1*sinh(theta_s*sc_w) &
+                  +theta_b*(cff2*tanh(theta_s*(sc_w+0.5))-0.5)
 
-           cff_w = hc * sc_w
-           cff_r = hc * sc_r
+             cff_w = hc * sc_w
+             cff_r = hc * sc_r
 
-           z_w0 = cff_w + cs_w*h(j,i) 
-           z_r0 = cff_r + cs_r*h(j,i)  
+             z_w0 = cff_w + cs_w*h(j,i) 
+             z_r0 = cff_r + cs_r*h(j,i)  
 
-           hinv = 1. / (h(j,i)+hc)
+             hinv = 1. / (h(j,i)+hc)
 
-           ! roms sigma coordinates
-           !             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
-           !             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+             ! roms sigma coordinates
+             !             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
+             !             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
 
-           ! basic linear sigma coordinates
-           zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
-           zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
-        enddo
-        zw(nz+1,j,i) = 0.0_rp
-     enddo
-  enddo
+             ! basic linear sigma coordinates
+             zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+             zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+          enddo
+          zw(nz+1,j,i) = 0.0_rp
+       enddo
+    enddo
 
-  if (netcdf_output) then    
-     call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
-  endif
+    if (netcdf_output) then    
+       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+    endif
 
-end subroutine setup_scoord
+  end subroutine setup_scoord
 
 end module mg_seamount

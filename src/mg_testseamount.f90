@@ -30,10 +30,9 @@ program mg_testseamount
   real(kind=8), dimension(:,:,:), pointer :: rhs
 
   integer(kind=4) :: np, ierr, rank
-  integer(kind=4) :: nh, lev
+  integer(kind=4) :: nh
 
   real(kind=8)    :: dist
-  character(len = 16) :: filen
 
   ! global domain dimensions
   nxg   = 128

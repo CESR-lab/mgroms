@@ -1,6 +1,6 @@
 module mg_tictoc
-! intrinsec fortran funciton
-! cpu_time(time)  time in second
+  ! intrinsec fortran funciton
+  ! cpu_time(time)  time in second
 
   implicit none
 
@@ -17,7 +17,7 @@ module mg_tictoc
 
 contains
 
- !------------------------------------------------
+  !------------------------------------------------
   subroutine tic(lev, string)
     integer(kind=st), intent(in) :: lev
     character(len=*), intent(in) :: string
@@ -65,7 +65,7 @@ contains
 
   end subroutine tic
 
- !------------------------------------------------
+  !------------------------------------------------
   subroutine toc(lev, string)
     integer(kind=st), intent(in) :: lev
     character(len=*), intent(in) :: string
@@ -100,7 +100,7 @@ contains
 
   end subroutine toc
 
- !------------------------------------------------
+  !------------------------------------------------
   subroutine print_tictoc(myrank)
     integer(kind=st), optional, intent(in)::myrank
 

@@ -112,13 +112,13 @@ contains
     integer(kind=ip), intent(in) :: nx, ny
 
     integer(kind=ip) :: i,j,i2,j2
-    integer(kind=ip) :: d,sm
-    real(kind=rp),dimension(0:4)::c3
+    integer(kind=ip) :: d
+    !!real(kind=rp),dimension(0:4)::c3
     real(kind=rp) :: cff
 
     integer(kind=1),dimension(:,:),pointer::m
 
-    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+    !!data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
       
     m => grid(lev)%rmask
 
@@ -163,14 +163,14 @@ contains
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip), intent(in) :: nx, ny, nz
     ! local
-    integer(kind=ip) :: i,j,k,i2,j2,k2,sm
+    integer(kind=ip) :: i,j,k,i2,j2,k2
     real(kind=rp):: z1,z2
-    real(kind=rp),dimension(0:4)::c3
+    !!real(kind=rp),dimension(0:4)::c3
     real(kind=rp) :: cff
 
     integer(kind=1),dimension(:,:),pointer::m
 
-    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+    !!data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
 
     m => grid(lev)%rmask
 

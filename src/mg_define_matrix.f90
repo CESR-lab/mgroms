@@ -18,7 +18,7 @@ contains
     real(kind=rp), dimension(:,:)  , pointer, optional, intent(in) :: umask, vmask, rmask
     real(kind=rp), dimension(:,:,:), pointer, optional, intent(in) :: zr, zw
 
-    integer(kind=ip)::  lev,ndf,ndc,i,j,nx,ny,nh,ierr
+    integer(kind=ip)::  lev,ndf,ndc,i,j,nx,ny,nh
     character(len = 16) :: filen
 
     if (myrank==0) write(*,*)'- define matrix:'
@@ -637,7 +637,7 @@ contains
     integer(kind=ip):: k, j, i
     integer(kind=ip):: km, jm, im
     integer(kind=ip):: k2, j2, i2
-    integer(kind=ip):: nd, ierr
+    integer(kind=ip):: nd
 
     real(kind=rp)   :: diag,cff,cffm
 
@@ -757,27 +757,27 @@ contains
     integer(kind=ip),intent(in):: lev
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
     real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
-!    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
+    !    real(kind=rp), dimension(:,:,:) , pointer :: dummy3D
 
     integer(kind=ip):: k, j, i
     integer(kind=ip):: km, jm, im, kp
     integer(kind=ip):: k2, j2, i2, sm
- 
+
     real(kind=rp)   :: diag,cff,cffm,cffp
-    real(kind=rp),dimension(0:4)::c3
+    !!real(kind=rp),dimension(0:4)::c3
 
     integer(kind=1),dimension(:,:),pointer::msk
-     
-    data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
-    msk => grid(lev)%rmask
-!    cA  => grid(lev)%cA
-!    cA2 => grid(lev+1)%cA
-!    nx2 = grid(lev+1)%nx
-!    ny2 = grid(lev+1)%ny
-!    nz2 = grid(lev+1)%nz
-!    nh  = grid(lev+1)%nh
 
-!    write(*,*)'coarsening the matrix'
+    !!data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
+    msk => grid(lev)%rmask
+    !    cA  => grid(lev)%cA
+    !    cA2 => grid(lev+1)%cA
+    !    nx2 = grid(lev+1)%nx
+    !    ny2 = grid(lev+1)%ny
+    !    nz2 = grid(lev+1)%nz
+    !    nh  = grid(lev+1)%nh
+
+    !    write(*,*)'coarsening the matrix'
 
     ! the coefficients should be rescaled with 1/16
     cff = 1._8/16._8
@@ -796,81 +796,81 @@ contains
              !if(k2==nz2)cffm=0.5!cffm=(1.-4./8**lev)!0.5_8
              if((lev==2).and.(k2==nz2))cffm=2.
 
-!             cffp = 1._8/16._8
-!             if(k2==nz2)cffp=1._8/12._8
+             !             cffp = 1._8/16._8
+             !             if(k2==nz2)cffp=1._8/12._8
 
 
-!gr: we may be tempted to not define cA2(2,...) cA2(5,...) and cA2(8,...) at k2=1 
-!    because their fine grid correspond are not defined (they point downward at the bottom level)
-!    it's actually not a pb because these coefficients (at k2=1) are never used
-!
-!    second thought: we can't define cA2(2,1,j2,i2) because cA(3,...) and cA(6,...) ain't defined
+             !gr: we may be tempted to not define cA2(2,...) cA2(5,...) and cA2(8,...) at k2=1 
+             !    because their fine grid correspond are not defined (they point downward at the bottom level)
+             !    it's actually not a pb because these coefficients (at k2=1) are never used
+             !
+             !    second thought: we can't define cA2(2,1,j2,i2) because cA(3,...) and cA(6,...) ain't defined
 
              if(k2.gt.1)then
-             ! cA(2,:,:,:)      -> p(k-1,j,i)
+                ! cA(2,:,:,:)      -> p(k-1,j,i)
                 sm = msk(j,i)+msk(jm,i)+msk(j,im)+msk(jm,im)
-!                cff = c3(sm)/4._8
+                !                cff = c3(sm)/4._8
 
-             cA2(2,k2,j2,i2) = cff*(cA(2,k ,j ,i )+cA(2,k ,jm, i) &
-                                   +cA(2,k ,j ,im)+cA(2,k ,jm,im) &
-                                   +cA(5,k ,jm,i )+cA(5,k ,jm,im) &
-                                   +cA(8,k ,j ,im)+cA(8,k ,jm,im) &
-                                   +cA(3,kp,jm,i )+cA(3,kp,jm,im) &
-                                   +cA(6,kp,j ,im)+cA(6,kp,jm,im) )
+                cA2(2,k2,j2,i2) = cff*(cA(2,k ,j ,i )+cA(2,k ,jm, i) &
+                     +cA(2,k ,j ,im)+cA(2,k ,jm,im) &
+                     +cA(5,k ,jm,i )+cA(5,k ,jm,im) &
+                     +cA(8,k ,j ,im)+cA(8,k ,jm,im) &
+                     +cA(3,kp,jm,i )+cA(3,kp,jm,im) &
+                     +cA(6,kp,j ,im)+cA(6,kp,jm,im) )
 
-             ! cA(5,:,:,:)      -> p(k-1,j-1,i)
+                ! cA(5,:,:,:)      -> p(k-1,j-1,i)
 
                 sm = msk(j,i)+msk(j,im)
-!                cff = c3(sm)/8._8
+                !                cff = c3(sm)/8._8
 
-             cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) 
-             ! cA(8,:,:,:)      -> p(k-1,j,i-1)
+                cA2(5,k2,j2,i2) = cff*(cA(5,k,j,i)+cA(5,k,j,im)) 
+                ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
                 sm = msk(j,i)+msk(jm,i)
-!                cff = c3(sm)/8._8
-             cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) 
+                !                cff = c3(sm)/8._8
+                cA2(8,k2,j2,i2) = cff*(cA(8,k,j,i)+cA(8,k,jm,i)) 
              else ! bottom level = horizontal diagonal cross terms
                 ! cA(5,:,:,:)      -> p(k,j+1,i-1)
                 ! cA(8,:,:,:)      -> p(k,j-1,i-1)
-             cA2(2,k2,j2,i2) = 0._8
-!             cff = c3(msk(jm,i))/16._8
-             cA2(5,k2,j2,i2) = cff*cA(5,k,jm,i) 
-!             cff = c3(msk(j,i))/16._8
-             cA2(8,k2,j2,i2) = cff*cA(8,k,j,i) 
+                cA2(2,k2,j2,i2) = 0._8
+                !             cff = c3(msk(jm,i))/16._8
+                cA2(5,k2,j2,i2) = cff*cA(5,k,jm,i) 
+                !             cff = c3(msk(j,i))/16._8
+                cA2(8,k2,j2,i2) = cff*cA(8,k,j,i) 
              endif
 
              if (k2 < nz2) then
-             ! cA(3,:,:,:)      -> p(k+1,j-1,i)
-                
+                ! cA(3,:,:,:)      -> p(k+1,j-1,i)
+
                 sm = msk(j,i)+msk(j,im)
-!                cff = c3(sm)/8._8
-             cA2(3,k2,j2,i2) = cffp*(cA(3,km,j,i)+cA(3,km,j,im))*cffm
-             ! cA(6,:,:,:)      -> p(k+1,j,i-1)
+                !                cff = c3(sm)/8._8
+                cA2(3,k2,j2,i2) = cffp*(cA(3,km,j,i)+cA(3,km,j,im))*cffm
+                ! cA(6,:,:,:)      -> p(k+1,j,i-1)
 
                 sm = msk(j,i)+msk(jm,i)
-!                cff = c3(sm)/8._8             
-             cA2(6,k2,j2,i2) = cffp*(cA(6,km,j,i)+cA(6,km,jm,i)) *cffm
+                !                cff = c3(sm)/8._8             
+                cA2(6,k2,j2,i2) = cffp*(cA(6,km,j,i)+cA(6,km,jm,i)) *cffm
              else
-             cA2(3,k2,j2,i2) = 0._8
-             cA2(6,k2,j2,i2) = 0._8
+                cA2(3,k2,j2,i2) = 0._8
+                cA2(6,k2,j2,i2) = 0._8
              endif
              ! cA(4,:,:,:)      -> p(k,j-1,i)
 
-                sm = msk(j,i)+msk(j,im)
-!                cff = c3(sm)/8._8
+             sm = msk(j,i)+msk(j,im)
+             !                cff = c3(sm)/8._8
              cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i) +cA(4,km,j,i)*cffm &
-                                   +cA(4,k,j,im)+cA(4,km,j,im)*cffm &
-                                   +cA(5,km,j,i)*cffm+cA(5,km,j,im)*cffm & 
-                                   +cA(3,k ,j,i)+cA(3,k ,j,im) )              
+                  +cA(4,k,j,im)+cA(4,km,j,im)*cffm &
+                  +cA(5,km,j,i)*cffm+cA(5,km,j,im)*cffm & 
+                  +cA(3,k ,j,i)+cA(3,k ,j,im) )              
 
              ! cA(7,:,:,:)      -> p(k,j,i-1)
 
-                sm = msk(j,i)+msk(jm,i)
-!                cff = c3(sm)/8._8             
+             sm = msk(j,i)+msk(jm,i)
+             !                cff = c3(sm)/8._8             
              cA2(7,k2,j2,i2) = cff*(cA(7,k,j,i)+cA(7,km,j,i)*cffm &
-                                   +cA(7,k,jm,i)+cA(7,km,jm,i)*cffm &
-                                   +cA(8,km,j,i)*cffm+cA(8,km,jm,i)*cffm &
-                                   +cA(6,k ,j,i)+cA(6,k ,jm,i) )
+                  +cA(7,k,jm,i)+cA(7,km,jm,i)*cffm &
+                  +cA(8,km,j,i)*cffm+cA(8,km,jm,i)*cffm &
+                  +cA(6,k ,j,i)+cA(6,k ,jm,i) )
 
              if(k2==1)then
                 cA2(4,k2,j2,i2) = cA2(4,k2,j2,i2) &
@@ -889,9 +889,9 @@ contains
              ! multifly that by the number of fine cells
 
              ! here is the first 20
-            
+
              diag = 0._8
-             
+
              diag = (cA(2,km,j,i)+cA(2,km,jm,i)+cA(2,km,j,im)+cA(2,km,jm,im))*cffm + diag
              diag = (cA(5,km,jm,i)+cA(5,km,jm,im))*cffm                            + diag!bug fixed in cA5
              diag = (cA(8,km,j,im)+cA(8,km,jm,im))*cffm                            + diag
@@ -901,20 +901,20 @@ contains
              diag = cA(7,k,j,im)+cA(7,km,j,im)*cffm+cA(7,k,jm,im)+cA(7,km,jm,im)*cffm + diag
 
              if (k2 == 1) then
-             ! add the horizontal diagonal connections in the bottom level
-             diag = cA(5,k,j,im)  + diag
-             diag = cA(8,k,jm,im) + diag
+                ! add the horizontal diagonal connections in the bottom level
+                diag = cA(5,k,j,im)  + diag
+                diag = cA(8,k,jm,im) + diag
              endif
 
              ! double that to account for symmetry of connections, we've now 40 terms
              diag = diag+diag
 
-             
+
              sm = msk(j,i)+msk(jm,i)+msk(j,im)+msk(jm,im)
-!             cff = c3(sm)/4._8
+             !             cff = c3(sm)/4._8
              ! add the 8 self-interacting terms
              diag = cA(1,k,j,i) +cA(1,km,j,i)*cffm +cA(1,k,jm,i) +cA(1,km,jm,i)*cffm &
-                   +cA(1,k,j,im)+cA(1,km,j,im)*cffm+cA(1,k,jm,im)+cA(1,km,jm,im)*cffm + diag
+                  +cA(1,k,j,im)+cA(1,km,j,im)*cffm+cA(1,k,jm,im)+cA(1,km,jm,im)*cffm + diag
 
              ! here we go!
              cA2(1,k2,j2,i2) = cff*diag
@@ -1185,7 +1185,6 @@ contains
     integer(kind=ip):: m, l
     integer(kind=ip):: k2, j2, i2
     integer(kind=ip):: k1, j1, i1
-    integer(kind=ip):: k0, j0, i0
     integer(kind=ip):: k, j, i
     integer(kind=ip):: kx, jx, ix
     integer(kind=ip):: ky, jy, iy

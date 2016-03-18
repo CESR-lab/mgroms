@@ -16,7 +16,7 @@ program mg_testintergrids
   integer(kind=ip):: nit    ! number of iterations
   integer(kind=ip):: ngx,ngy
   integer(kind=ip):: nsweeps
-  integer(kind=ip):: nx,ny,nz,nh
+  integer(kind=ip):: nx,ny,nz
   integer(kind=ip):: lev, ierr, np, rank
   character(len = 16) :: filen
   real(kind=rp) :: x

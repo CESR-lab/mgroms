@@ -44,18 +44,18 @@ contains
           do k=1,nz
              z=(1._8*k-0.5)/nz-0.2
              cff = exp( - (x*x+y*y+z*z)*30 )
-!             grid(lev)%p(k,j,i)= cff
+             !             grid(lev)%p(k,j,i)= cff
              grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
-!             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
-!             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
+             !             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
+             !             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
           enddo
        enddo
     enddo
     !    grid(lev)%p(2,:,:)=0._8
     call fill_halo(lev,grid(lev)%p)
 
-!    write(filen,'("p_",i1,".nc")') lev
-!    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+    !    write(filen,'("p_",i1,".nc")') lev
+    !    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
 
 
     grid(lev)%b = 0._8
@@ -97,121 +97,121 @@ contains
 
 
   !---------------------------------------------------------------------
-subroutine norm(lev,x,y,nx,ny,nz,res)
-  use mg_mpi_exchange
-  integer(kind=4) :: lev,i,j,k
-  integer(kind=4) :: nx,ny,nz
-  real(kind=8) :: r,res
-  real(kind=8),dimension(:,:,:)  , pointer :: x,y
+  subroutine norm(lev,x,y,nx,ny,nz,res)
+    use mg_mpi_exchange
+    integer(kind=4) :: lev,i,j,k
+    integer(kind=4) :: nx,ny,nz
+    real(kind=8) :: r,res
+    real(kind=8),dimension(:,:,:)  , pointer :: x,y
 
-  r=0._8
-  do i=1,nx
-     do j=1,ny
-        if(grid(lev)%rmask(j,i)==1)then
-           do k=1,nz
-              r=r+x(k,j,i)*y(k,j,i)
-           enddo
-        endif
-     enddo
-  enddo
-  call global_sum(lev,r,res)
-end subroutine norm
+    r=0._8
+    do i=1,nx
+       do j=1,ny
+          if(grid(lev)%rmask(j,i)==1)then
+             do k=1,nz
+                r=r+x(k,j,i)*y(k,j,i)
+             enddo
+          endif
+       enddo
+    enddo
+    call global_sum(lev,r,res)
+  end subroutine norm
 
   !---------------------------------------------------------------------
-subroutine solve(tol,maxite)
+  subroutine solve(tol,maxite)
 
-  real(kind=rp)   , intent(in) :: tol
-  integer(kind=ip), intent(in) :: maxite
+    real(kind=rp)   , intent(in) :: tol
+    integer(kind=ip), intent(in) :: maxite
 
-  ! local
-  real(kind=rp)    :: rnorm,bnorm,res0,conv,rnorm0
-  integer(kind=ip) :: nite
+    ! local
+    real(kind=rp)    :: rnorm,bnorm,res0,conv,rnorm0
+    integer(kind=ip) :: nite
 
-  integer(kind=ip) :: nx,ny,nz,nh
-  real(kind=rp), dimension(:,:,:), allocatable :: p0,b0
-  real(kind=rp), dimension(:,:,:), pointer :: p,b,r
+    integer(kind=ip) :: nx,ny,nz,nh
+    real(kind=rp), dimension(:,:,:), allocatable :: p0,b0
+    real(kind=rp), dimension(:,:,:), pointer :: p,b,r
 
-  real(kind = lg) :: tstart,tend,perf
-  real(kind=rp) :: rnxg,rnyg,rnzg
-  real(kind=rp) :: rnpxg,rnpyg
-  character(len = 16) :: filen
+    real(kind = lg) :: tstart,tend,perf
+    real(kind=rp) :: rnxg,rnyg,rnzg
+    real(kind=rp) :: rnpxg,rnpyg
+    character(len = 16) :: filen
 
-  p  => grid(1)%p
-  b  => grid(1)%b
-  r  => grid(1)%r
+    p  => grid(1)%p
+    b  => grid(1)%b
+    r  => grid(1)%r
 
-  nx = grid(1)%nx
-  ny = grid(1)%ny
-  nz = grid(1)%nz
-  nh = grid(1)%nh
+    nx = grid(1)%nx
+    ny = grid(1)%ny
+    nz = grid(1)%nz
+    nh = grid(1)%nh
 
-  allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
-  allocate(b0(nz,1-nh:ny+nh,1-nh:nx+nh))
+    allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
+    allocate(b0(nz,1-nh:ny+nh,1-nh:nx+nh))
 
-  p0 = p
-  b0 = b
+    p0 = p
+    b0 = b
 
-  call tic(1,'solve')
-  call cpu_time(tstart)
+    call tic(1,'solve')
+    call cpu_time(tstart)
 
-  !    bnorm = maxval(abs(grid(1)%b))
-  !    call global_max(bnorm)
+    !    bnorm = maxval(abs(grid(1)%b))
+    !    call global_max(bnorm)
 
-  res0 = sum(grid(1)%b(1:nz,1:ny,1:nx)**2)
-  call global_sum(1,res0,bnorm)
+    res0 = sum(grid(1)%b(1:nz,1:ny,1:nx)**2)
+    call global_sum(1,res0,bnorm)
 
-  call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
+    call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
 
-  if (myrank == 0) write(*,*)'rnom:', rnorm,' bnorm:', bnorm
+    if (myrank == 0) write(*,*)'rnom:', rnorm,' bnorm:', bnorm
 
-  res0 = sqrt(rnorm/bnorm)
-  rnorm0 = res0
+    res0 = sqrt(rnorm/bnorm)
+    rnorm0 = res0
 
-  nite=0
-  do while ((nite < maxite).and.(res0 > tol))
+    nite=0
+    do while ((nite < maxite).and.(res0 > tol))
 
-     !call Vcycle(1)
-     call Fcycle()
+       !call Vcycle(1)
+       call Fcycle()
 
-     call compute_residual(1,rnorm)
+       call compute_residual(1,rnorm)
 
-     if (netcdf_output) then
-        write(filen,'("r_",i1,".nc")') nite
-        call write_netcdf(grid(1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
-        write(filen,'("p_",i1,".nc")') nite
-        call write_netcdf(grid(1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
-     endif
+       if (netcdf_output) then
+          write(filen,'("r_",i1,".nc")') nite
+          call write_netcdf(grid(1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+          write(filen,'("p_",i1,".nc")') nite
+          call write_netcdf(grid(1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+       endif
 
-     rnorm = sqrt(rnorm/bnorm)
-     conv = res0/rnorm ! error reduction after this iteration
-     res0 = rnorm
+       rnorm = sqrt(rnorm/bnorm)
+       conv = res0/rnorm ! error reduction after this iteration
+       res0 = rnorm
 
-     nite = nite+1
-     if (myrank == 0) write(*,10) nite, rnorm, conv
-     if (myrank == 0) write(100,*) rnorm, conv
-  enddo
+       nite = nite+1
+       if (myrank == 0) write(*,10) nite, rnorm, conv
+       if (myrank == 0) write(100,*) rnorm, conv
+    enddo
 
-  call cpu_time(tend)
-  call toc(1,'solve')
+    call cpu_time(tend)
+    call toc(1,'solve')
 
-  if (myrank == 0) then
-     rnpxg=real(grid(1)%npx,kind=rp)
-     rnpyg=real(grid(1)%npy,kind=rp)
-     rnxg=real(grid(1)%nx,kind=rp)*rnpxg
-     rnyg=real(grid(1)%ny,kind=rp)*rnpyg
-     rnzg=real(grid(1)%nz,kind=rp)
-     ! the rescaled time should be expressed in terms of error reduction,
-     ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
-     perf = (tend-tstart)*(rnpxg*rnpyg)/(-log(rnorm/rnorm0)/log(10._8))/(rnxg*rnyg*rnzg)
-     write(*,*)'--- summary ---'
-     write(*,'(A,F8.3,A)')"time spent to solve :",tend-tstart," s"
-     write(*,'(A,E10.3)')"rescaled performance:",perf
-     write(*,*)'---------------'
-  end if
+    if (myrank == 0) then
+       rnpxg=real(grid(1)%npx,kind=rp)
+       rnpyg=real(grid(1)%npy,kind=rp)
+       rnxg=real(grid(1)%nx,kind=rp)*rnpxg
+       rnyg=real(grid(1)%ny,kind=rp)*rnpyg
+       rnzg=real(grid(1)%nz,kind=rp)
+       ! the rescaled time should be expressed in terms of error reduction,
+       ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
+       perf = (tend-tstart)*(rnpxg*rnpyg)/(-log(rnorm/rnorm0)/log(10._8))/(rnxg*rnyg*rnzg)
+       write(*,*)'--- summary ---'
+       write(*,'(A,F8.3,A)')"time spent to solve :",tend-tstart," s"
+       write(*,'(A,E10.3)')"rescaled performance:",perf
+       write(*,*)'---------------'
+    end if
 
-10 format("ite = ",I2,": res = ",E10.3," / conv = ",F7.3)
+10  format("ite = ",I2,": res = ",E10.3," / conv = ",F7.3)
 
-end subroutine solve
+  end subroutine solve
 
   !---------------------------------------------------------------------
   subroutine Fcycle()
