@@ -39,7 +39,7 @@ program mg_testseamount
   nyg   = 128
   nzg   = 8
 
-  npxg  = 4
+  npxg  = 2
   npyg  = 2
 
   call mpi_init(ierr)

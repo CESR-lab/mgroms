@@ -86,7 +86,9 @@ contains
        enddo
     enddo
 
-    call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=myrank)
+    if (netcdf_output) then
+       call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=myrank)
+    endif
 
   end subroutine setup_fine_depth
 

@@ -209,7 +209,7 @@ contains
        write(*,*)'---------------'
     end if
 
-10  format("ite = ",I2,": res = ",E10.3," / conv = ",F7.3)
+10  format("ite = ",I2,": res = ",E10.3," / conv = ",F10.3)
 
   end subroutine solve
 
