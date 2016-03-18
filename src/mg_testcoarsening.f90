@@ -17,7 +17,7 @@ program mg_testcoarsening
   integer(kind=ip):: npxg   ! number of processes in x
   integer(kind=ip):: npyg   ! number of processes in y
   integer(kind=ip):: it     ! iteration loop number
-  integer(kind=ip):: nit    ! number of iterations
+  integer(kind=ip):: nit    ! number of iterationsg
 
   integer(kind=ip):: nsweeps
 

@@ -44,7 +44,7 @@ contains
        ny=grid(lev)%ny
        do i=1-nh,nx+nh
           do j=1-nh,ny+nh
-             if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12 ) then 
+             if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12*(4**(lev-1)) ) then 
                 grid(lev)%rmask(j,i)=0
                 grid(lev)%cA(:,:,j,i)=0.
              else
@@ -89,13 +89,12 @@ contains
 !!$    enddo
 
     if (netcdf_output) then
-       do lev=1,nlevs
-          write(filen,'("cA_",i1,".nc")') lev
-          call write_netcdf(grid(lev)%cA,vname='cA',netcdf_file_name=filen,rank=myrank)
-          write(filen,'("msk_",i1,".nc")') lev
-          call write_netcdf(grid(lev)%rmask*1._8,vname='msk',netcdf_file_name=filen,rank=myrank)
-
-       enddo
+!       do lev=1,nlevs
+!          write(filen,'("cA_",i1,".nc")') lev
+!          call write_netcdf(grid(lev)%cA,vname='cA',netcdf_file_name=filen,rank=myrank)
+!          write(filen,'("msk_",i1,".nc")') lev
+!          call write_netcdf(grid(lev)%rmask*1._8,vname='msk',netcdf_file_name=filen,rank=myrank)
+!       enddo
     endif
 
   end subroutine define_matrices
@@ -245,9 +244,9 @@ contains
        enddo
     enddo
 
-    if (netcdf_output) then
-       call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
-    endif
+!    if (netcdf_output) then
+!       call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+!    endif
 
   end subroutine define_matrix_simple
 

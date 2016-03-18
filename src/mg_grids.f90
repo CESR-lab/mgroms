@@ -147,7 +147,7 @@ contains
 
     integer(kind=ip) :: nxg, nyg, nzg
 
-    integer(kind=ip) :: ncoarsest,nhoriz
+    integer(kind=ip) :: ncoarsest,nhoriz,nzmin, nl1,nl2
     
     nxg = npxg * nx
     nyg = npyg * ny
@@ -156,13 +156,19 @@ contains
     ! smallest horizontal dimension of the coarsest grid
     ncoarsest = 4 ! TODO: put it into the namelist
 
+    nzmin = 2
+
     ! smallest horizontal dimension of the finest grid
     nhoriz = min(nxg,nyg)
 
     ! we have 
     ! nhoriz = ncoarsest * 2^(nlevs-1)
     ! thus nlevs = ...
-    nlevs = 1+floor( log( nhoriz*1._8 / ncoarsest*1._8) / log(2._8) )
+    nl1 = 1+floor( log( nhoriz*1._8 / ncoarsest*1._8) / log(2._8) )
+
+    nl2 = 1+floor( log( nzg*1._8 / nzmin*1._8) / log(2._8) )
+
+    nlevs=min(nl1,nl2)
 
     return
     ! the code below can be removed

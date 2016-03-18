@@ -41,7 +41,7 @@ contains
     real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
 
     integer(kind=ip) :: nx, ny, nz
-    real(kind=rp)    :: tol = 1.e-12
+    real(kind=rp)    :: tol = 2.e-12
     integer(kind=ip) :: maxite = 10
 
     nz = size(u,dim=1)
