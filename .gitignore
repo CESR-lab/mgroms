@@ -24,6 +24,7 @@ confdb/
 config.status
 # Ignore executable file starting by test*:
 test*
+mainmodel
 # Ignore files starting with fort.*
 fort.*
 # Ignore profiling files
@@ -37,4 +38,6 @@ gmon.out
 *.dump
 # Ignore all files *.xml
 *.xml
+# Ignore COMPILER-GENERATED INTERFACE MODULE
+*__genmod*
 # script end #
