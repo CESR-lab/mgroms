@@ -91,7 +91,11 @@ contains
 
     integer(kind=ip)           :: i,j,k, it,rb
     integer(kind=ip)            :: ib,ie,jb,je,rbb,rbe,rbi,is,js
-    real(kind=rp) :: z
+    real(kind=rp) :: z,gamma,g1,g2
+
+    gamma = 1._8
+    g1 = gamma
+    g2 = 1._8 - gamma
 
     k=1
 
@@ -117,6 +121,9 @@ contains
           rbe = 0
           rbi = 1
        endif
+          rbb = 0
+          rbe = 0
+          rbi = 1
 
        do rb = rbb,rbe
           do i = ib,ie
@@ -137,14 +144,14 @@ contains
        enddo
 
        ! don't call mpi at every pass if nh>1
-       if (mod(it,nh) == 0) then
+!       if (mod(it,nh) == 0) then
           call fill_halo(lev,p)
-       endif
+!       endif
 
     enddo
-    if (mod(it-1,nh) /= 0) then
-       call fill_halo(lev,p)
-    endif
+!    if (mod(it-1,nh) /= 0) then
+!       call fill_halo(lev,p)
+!    endif
 
   end subroutine relax_2D_5
   

@@ -17,13 +17,13 @@ program main_model
   integer(kind=4), dimension(4) :: neighb ! S, E, N, W
   integer(kind=4) :: nx, ny, nz  ! local dimensions
 
-  real(kind=8), dimension(:,:), allocatable   :: dx, dy
-  real(kind=8), dimension(:,:,:), allocatable :: zr, zw
+  real(kind=8), dimension(:,:), pointer   :: dx, dy
+  real(kind=8), dimension(:,:,:), pointer :: zr, zw
 
-  real(kind=8), dimension(:,:,:), allocatable :: u,v,w
-  real(kind=8), dimension(:,:), allocatable :: h
+  real(kind=8), dimension(:,:,:), pointer :: u,v,w
+  real(kind=8), dimension(:,:), pointer :: h
 
-  real(kind=8), dimension(:,:), allocatable   :: umask, vmask
+  real(kind=8), dimension(:,:), pointer   :: umask, vmask
 
   integer(kind=4) :: k
   integer(kind=4) :: np, ierr, rank

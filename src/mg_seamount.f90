@@ -80,12 +80,12 @@ contains
     y0 = Ly * 0.5_rp
     do i = 0,nx+1 !!!  I need to know my global index range
        do j = 0,ny+1
-          x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
-          y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
+          x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
+          y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
           
           h(j,i) = Htot
           !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
-          !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
+          h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
           ! circular slope
           dist = sqrt((x-x0)**2._rp + (y-y0)**2._rp) / Lx
           !h(j,i) = Htot - Htot* ( (tanh( (dist -0.45)*10. )+1.)*0.5 *0.9 )
@@ -108,7 +108,7 @@ contains
     npyg = grid(1)%npy
     pj = myrank/npxg
     pi = mod(myrank,npxg)
-    
+
     rmask(:,:) = 0.
     do i=0,nx+1
        x=(1._8*i-0.5+pi*nx)/(npxg*nx) -0.5
@@ -140,11 +140,13 @@ contains
     umask = grid(1)%p(1,:,:)
     vmask = grid(1)%p(2,:,:)
     grid(1)%p(:,:,:)=0._8
-    
-    call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
-    call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=myrank)
-    
-    
+
+
+    if (netcdf_output) then
+       call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
+       call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=myrank)
+    endif
+
   end subroutine setup_fine_mask
 
   !-------------------------------------------------------------------------     
@@ -171,15 +173,15 @@ contains
   y2 = Ly * 0.55_8
   z2 = Htot * (0.65_8 - 1._8)
 
-  do i = 0,nx+1 !!!  I need to know my global index range
-     do j = 0,ny+1 
-        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
-        y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
+  do i = 1,nx !!!  I need to know my global index range
+     do j = 1,ny 
+        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
+        y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
         do k = 1,nz
            rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
                 
                 ! pseudo 2D rhs
-                (exp(-bet * ((x-x1)**2 +(zr(k,j,i)-z1)**2)) - &
+                (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
                  exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
 
                 ! 3D rhs
@@ -195,8 +197,8 @@ contains
   enddo
 
 !  call random_number(rhs)
-  do i = 0,nx+1 
-     do j = 0,ny+1 
+  do i = 1,nx 
+     do j = 1,ny 
         do k = 1,nz
            rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
         enddo
@@ -208,53 +210,55 @@ end subroutine setup_rhs
 
 
   !-------------------------------------------------------------------------     
-  subroutine setup_scoord(nx,ny,nz,nh)
-    ! compute zr and zw from h(j,i)
+subroutine setup_scoord(nx,ny,nz,nh)
+  ! compute zr and zw from h(j,i)
 
-    integer(kind=4):: nx,ny,nz,nh
+  integer(kind=4):: nx,ny,nz,nh
 
 
-    integer(kind=4):: i,j,k
-    real(kind=8) :: cff,cff1,cff2,hinv,sc_w,sc_r,cff_w,cff_r,z_w0,z_r0,cs_r,cs_w
+  integer(kind=4):: i,j,k
+  real(kind=8) :: cff,cff1,cff2,hinv,sc_w,sc_r,cff_w,cff_r,z_w0,z_r0,cs_r,cs_w
 
-    cff  = 1./float(nz)
-    cff1 = 1./sinh(theta_s)
-    cff2 = 0.5/tanh(0.5*theta_s)
+  cff  = 1./float(nz)
+  cff1 = 1./sinh(theta_s)
+  cff2 = 0.5/tanh(0.5*theta_s)
 
-    do i = 0,nx+1
-       do j = 0,ny+1
-          do k = 1,nz
-             sc_w = cff*float(k-nz)
-             sc_r = cff*(float(k-nz)-0.5)
+  do i = 0,nx+1
+     do j = 0,ny+1
+        do k = 1,nz
+           sc_w = cff*float(k-nz)
+           sc_r = cff*(float(k-nz)-0.5)
 
-             cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
-                  +theta_b*(cff2*tanh(theta_s*(sc_r+0.5))-0.5)
+           cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
+                +theta_b*(cff2*tanh(theta_s*(sc_r+0.5))-0.5)
 
-             cs_w = (1.-theta_b)*cff1*sinh(theta_s*sc_w) &
-                  +theta_b*(cff2*tanh(theta_s*(sc_w+0.5))-0.5)
-             
-             cff_w = hc * sc_w
-             cff_r = hc * sc_r
+           cs_w = (1.-theta_b)*cff1*sinh(theta_s*sc_w) &
+                +theta_b*(cff2*tanh(theta_s*(sc_w+0.5))-0.5)
 
-             z_w0 = cff_w + cs_w*h(j,i) 
-             z_r0 = cff_r + cs_r*h(j,i)  
- 
-             hinv = 1. / (h(j,i)+hc)
+           cff_w = hc * sc_w
+           cff_r = hc * sc_r
 
-             ! roms sigma coordinates
-!             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
-!             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+           z_w0 = cff_w + cs_w*h(j,i) 
+           z_r0 = cff_r + cs_r*h(j,i)  
 
-             ! basic linear sigma coordinates
-             zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
-             zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
-          enddo
-          zw(nz+1,j,i) = 0.0_rp
-       enddo
-    enddo
+           hinv = 1. / (h(j,i)+hc)
 
-    call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
-    
-  end subroutine setup_scoord
+           ! roms sigma coordinates
+           !             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
+           !             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+
+           ! basic linear sigma coordinates
+           zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+           zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+        enddo
+        zw(nz+1,j,i) = 0.0_rp
+     enddo
+  enddo
+
+  if (netcdf_output) then    
+     call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+  endif
+
+end subroutine setup_scoord
 
 end module mg_seamount

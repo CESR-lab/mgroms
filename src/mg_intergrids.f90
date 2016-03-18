@@ -124,25 +124,28 @@ contains
 
     d = size(x,1) ! vertical dimension of the fine level, can 2 or 1
 
-    if(d==1)then
+
+   if(d==1)then
+          cff=0.25_8
        ! x was already 2D
        do i2=1,nx
           i=2*i2-1
           do j2=1,ny
              j=2*j2-1      
-             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
-             cff = c3(sm)
+!             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
+!             cff = c3(sm)
              y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*cff
           enddo
        enddo
     else
        ! x was 3D
+          cff=0.125_8
        do i2=1,nx
           i=2*i2-1
           do j2=1,ny
              j=2*j2-1     
-             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
-             cff = c3(sm)*0.5_8
+!             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
+!             cff = c3(sm)*0.5_8
              y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1)&
                           +x(2,j,i)+x(2,j,i+1)+x(2,j+1,i)+x(2,j+1,i+1))*cff
           enddo
@@ -323,13 +326,13 @@ contains
           do j2=1,ny
              j=2*j2-1
              xf(1,j  ,i  ) = xc(1,j2,i2)
+             xf(2,j  ,i  ) = xc(1,j2,i2)
              xf(1,j+1,i  ) = xc(1,j2,i2)
+             xf(2,j+1,i  ) = xc(1,j2,i2)
              xf(1,j  ,i+1) = xc(1,j2,i2)
+             xf(2,j  ,i+1) = xc(1,j2,i2)
              xf(1,j+1,i+1) = xc(1,j2,i2)
-             xf(2,j  ,i  ) = xc(1,j2,i2)/2
-             xf(2,j+1,i  ) = xc(1,j2,i2)/2
-             xf(2,j  ,i+1) = xc(1,j2,i2)/2
-             xf(2,j+1,i+1) = xc(1,j2,i2)/2
+             xf(2,j+1,i+1) = xc(1,j2,i2)
           enddo
        enddo
     endif
@@ -395,7 +398,7 @@ contains
        i=2*i2-1
        do j2=1,ny
           j=2*j2-1
-
+          
           if(grid(lev)%rmask(j,i)==1)then
              do k2=1,nz
                 k=2*k2-1
@@ -461,9 +464,10 @@ contains
 !!$          enddo
 !!$          k2=nz
 !!$          k=2*nz
-!!$          xf(k  ,j+1,i  ) = xc(k2,j2,i2)/2
-!!$          xf(k  ,j  ,i+1) = xc(k2,j2,i2)/2
-!!$          xf(k  ,j+1,i+1) = xc(k2,j2,i2)/2
+!!$          xf(k  ,j  ,i  ) = xc(k2,j2,i2)*cff
+!!$          xf(k  ,j+1,i  ) = xc(k2,j2,i2)*cff
+!!$          xf(k  ,j  ,i+1) = xc(k2,j2,i2)*cff
+!!$          xf(k  ,j+1,i+1) = xc(k2,j2,i2)*cff
 !!$
 !!$          xf(:,j  ,i  ) = xf(:,j  ,i  ) * grid(lev)%rmask(j  ,i  )
 !!$          xf(:,j+1,i  ) = xf(:,j+1,i  ) * grid(lev)%rmask(j+1,i  )

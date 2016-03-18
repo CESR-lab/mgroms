@@ -404,7 +404,7 @@ contains
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     else !!Homogenous Neumann  
-       p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
+       p(:,1-nh:0,1-nh:0) = 0.!p(:,nh:1:-1,nh:1:-1)
     endif
 
     if (southeast.ne.MPI_PROC_NULL) then
@@ -422,7 +422,7 @@ contains
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
     else !!Homogenous Neumann  
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0.!p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     endif
 
     if (northwest.ne.MPI_PROC_NULL) then
@@ -1123,7 +1123,7 @@ contains
        if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
 
           if (nz == 1) then
-             nd = 3
+             nd = 5
           else
              nd = 8
           endif

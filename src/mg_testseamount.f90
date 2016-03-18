@@ -33,14 +33,14 @@ program mg_testseamount
   integer(kind=4) :: nh, lev
 
   real(kind=8)    :: dist
-    character(len = 16) :: filen
-  
+  character(len = 16) :: filen
+
   ! global domain dimensions
   nxg   = 128
   nyg   = 128
-  nzg   = 128
+  nzg   = 8
 
-  npxg  = 2
+  npxg  = 4
   npyg  = 2
 
   call mpi_init(ierr)
@@ -91,6 +91,9 @@ program mg_testseamount
   Lx = 2.e4_rp
   Ly = 2.e4_rp
   Hc = 4.e3_rp
+  Lx =  32d3
+  Ly =  32d3
+  Hc =   4d2
 
   dx(:,:) = Lx/real(nxg,kind=rp)
   dy(:,:) = Ly/real(nyg,kind=rp)
@@ -105,9 +108,9 @@ program mg_testseamount
      do j=0,ny+1
         y=(1._8*j-0.5+pj*ny)/(npyg*ny)-0.5
         dist = sqrt(x*x+y*y) - 0.48
-!        if ((x>-0.45).and.(x<0.45).and.(y>-0.45).and.(y<0.45)) then
-!        if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
-        if (dist<0) then
+        !        if ((x>-0.45).and.(x<0.45).and.(y>-0.45).and.(y<0.45)) then
+        if ((x>-0.5).and.(x<0.5).and.(y>-0.5).and.(y<0.5)) then
+           !if (dist<0) then
            rmask(j,i)  = 1.
         endif
      enddo
@@ -119,7 +122,7 @@ program mg_testseamount
         vmask(j,i)=rmask(j,i)*rmask(j-1,i)
      enddo
   enddo
-  
+
   ! unpleasant cooking to fill_halo umask and vmask (no 2D wrapper)
   grid(1)%p(1,:,:)=umask
   grid(1)%p(2,:,:)=vmask
@@ -148,10 +151,12 @@ program mg_testseamount
 !!$     umask(ny:ny+1,:) = 0._rp
 !!$     vmask(ny:ny+1,:) = 0._rp
 !!$  endif
+  if (netcdf_output) then
 
-  call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
-  call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
-  call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=rank)
+     call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=rank)
+     call write_netcdf(vmask,vname='vmask',netcdf_file_name='vmask.nc',rank=rank)
+     call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=rank)
+  endif
 
   pj = rank/npxg   
   pi = rank-pj*npxg
@@ -160,8 +165,8 @@ program mg_testseamount
   y0 = Ly * 0.5_rp
   do i = 0,nx+1 !!!  I need to know my global index range
      do j = 0,ny+1
-        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
-        y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(i,j)
+        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
+        y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
         !h(j,i) = Hc
         !h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
         h(j,i) = Hc * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
@@ -183,8 +188,8 @@ program mg_testseamount
   ! Everything above this point mimics the calling ocean model 
   !-----------------------------------------------------------
 
-!  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
-  
+  !  call nhydro_init(nx, ny, nz, npxg, npyg, neighb, dx, dy, zr, zw, umask, vmask)
+
   call define_matrices(dx, dy, zr, zw, umask, vmask, rmask)
 
   ! rhs definition
@@ -198,19 +203,19 @@ program mg_testseamount
 
   do i = 0,nx+1 !!!  I need to know my global index range
      do j = 0,ny+1 
-        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(i,j)
+        x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
         do k = 1,nz
            rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
                 (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                 exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-!           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-!                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-!           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
+                exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+           !           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
+           !                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+           !           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
         enddo
      enddo
   enddo
 
-!  call random_number(rhs)
+  !  call random_number(rhs)
   do i = 0,nx+1 !!!  I need to know my global index range
      do j = 0,ny+1 
         do k = 1,nz
@@ -220,25 +225,26 @@ program mg_testseamount
   enddo
   call fill_halo(1,rhs)
 
-  call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+  if (netcdf_output) then
+     call write_netcdf(rhs,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+  endif
 
-  
 
-! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
-!  do lev=2,2
-!     call testgalerkin(lev)
-!  end do
-!  stop
+  ! UNCOMMENT LINES BELOW TO ACTIVATE THE GALERKIN TEST
+  !  do lev=2,2
+  !     call testgalerkin(lev)
+  !  end do
+  !  stop
 
-!  do lev=1,nlevs-1
-!     grid(lev)%r = grid(lev)%b
-!     call fine2coarse(lev)     
-!  end do
-!  do lev=1,nlevs
-!    write(filen,'("b_",i1,".nc")') lev
-!    call write_netcdf(grid(lev)%b,vname='b',netcdf_file_name=filen,rank=myrank)
-! enddo
-!  stop
+  !  do lev=1,nlevs-1
+  !     grid(lev)%r = grid(lev)%b
+  !     call fine2coarse(lev)     
+  !  end do
+  !  do lev=1,nlevs
+  !    write(filen,'("b_",i1,".nc")') lev
+  !    call write_netcdf(grid(lev)%b,vname='b',netcdf_file_name=filen,rank=myrank)
+  ! enddo
+  !  stop
 
 
 

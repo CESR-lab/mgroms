@@ -464,6 +464,7 @@ contains
   subroutine define_gather_informations()
 
     integer(kind=ip) :: nx, ny, nz, nd
+    integer(kind=ip) :: nx2, ny2, nz2
     integer(kind=ip) :: nh
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy
@@ -491,6 +492,7 @@ contains
           ny = grid(lev)%ny
           nz = grid(lev)%nz
           nh = grid(lev)%nh
+          nd = size(grid(lev)%cA,1)
           incx=grid(lev)%incx / 2
           incy=grid(lev)%incy / 2          
           ngx=grid(lev)%ngx
@@ -526,7 +528,7 @@ contains
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
           allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
 
-          nd = size(grid(lev)%cA,1)
+
 
           !          if(nz.eq.1)then
           allocate(grid(lev)%cAdummy(nd,nz,1-nh:ny+nh,1-nh:nx+nh))

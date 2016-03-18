@@ -18,7 +18,7 @@ contains
     real(kind=rp), dimension(:,:)  , pointer, optional, intent(in) :: umask, vmask, rmask
     real(kind=rp), dimension(:,:,:), pointer, optional, intent(in) :: zr, zw
 
-    integer(kind=ip)::  lev,ndf,ndc,i,j,nx,ny,nh
+    integer(kind=ip)::  lev,ndf,ndc,i,j,nx,ny,nh,ierr
     character(len = 16) :: filen
 
     if (myrank==0) write(*,*)'- define matrix:'
@@ -37,7 +37,7 @@ contains
     do lev = 1,nlevs-1
        ndf = size(grid(lev)%cA,1)
        ndc = size(grid(lev+1)%cA,1)
-       if(myrank==0)write(*,'(A,I2,A,I2,A,I2)')'coarsening matrix lev=',lev,' / nd fine=',ndf,' => nd coarse=',ndc
+       if(myrank==0)write(*,'(A,I2,A,I2,A,I2)')'coarsening matrix from lev=',lev,' / nd fine=',ndf,' => nd coarse=',ndc
 
        nh=grid(lev)%nh
        nx=grid(lev)%nx
@@ -53,6 +53,8 @@ contains
           enddo
        enddo
        call coarsen_matrix(lev)
+!       if(myrank==0)write(*,*)"  / done"
+!       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
     enddo
     lev=nlevs
     nh=grid(lev)%nh
@@ -544,6 +546,7 @@ contains
     nx = grid(lev+1)%nx
     ny = grid(lev+1)%ny
     nz = grid(lev+1)%nz
+    nd = size(grid(lev)%cA,1) 
 
     ! the matrix on the fine grid
     Af => grid(lev)%cA
@@ -564,8 +567,7 @@ contains
           !       call coarsen_matrix_aggressive(lev)
 
        elseif (grid(lev+1)%nz == 1) then
-
-          call coarsen_matrix_2D_nearest_avg(Af,Ac,nx,ny,nz)
+          call coarsen_matrix_2D_nearest_avg(lev,Af,Ac,nx,ny,nz)
 
        else
           call tic(lev,'coarsen_matrix_3D')
@@ -600,7 +602,7 @@ contains
 
     if (grid(lev+1)%gather == 1) then
        !ND
-       nd = size(Ac,1)       
+!       nd = size(Ac,1)       
        do l=1,nd
           grid(lev+1)%dummy3 = Ac(l,:,:,:)
           call gather(lev+1,grid(lev+1)%dummy3,grid(lev+1)%r)
@@ -608,13 +610,9 @@ contains
           !          call fill_halo(lev+1,grid(lev+1)%r)
           grid(lev+1)%cA(l,:,:,:) = grid(lev+1)%r
        enddo
-       call fill_halo(lev+1,grid(lev+1)%cA)
-       !
-    else
-
-       call fill_halo(lev+1,grid(lev+1)%cA)
-
     endif
+
+    call fill_halo(lev+1,grid(lev+1)%cA)
 
   end subroutine coarsen_matrix
 
@@ -630,15 +628,16 @@ contains
   end subroutine coarsen_matrix_aggressive
 
   !-------------------------------------------------------------------------     
-  subroutine coarsen_matrix_2D_nearest_avg(cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
+  subroutine coarsen_matrix_2D_nearest_avg(lev,cA,cA2,nx2,ny2,nz2) ! from lev to lev+1
 
+    integer(kind=ip),intent(in):: lev
     integer(kind=ip):: nx2, ny2, nz2! on lev+1
     real(kind=rp), dimension(:,:,:,:), pointer :: cA,cA2
 
     integer(kind=ip):: k, j, i
     integer(kind=ip):: km, jm, im
     integer(kind=ip):: k2, j2, i2
-    integer(kind=ip):: d
+    integer(kind=ip):: nd, ierr
 
     real(kind=rp)   :: diag,cff,cffm
 
@@ -646,11 +645,12 @@ contains
     km= 2
     k2= 1
     ! how many diagonal in the fine matrix? 3 or 8 ?
-    d = size(cA,1) 
+    nd = size(cA,1) 
 
-    ! I'm pretty sure it depends on whether d==3 or d==8
+!    if(myrank>=0)write(*,*)"nd=",nd
+!       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
-    if (d ==8) then
+    if (nd ==8) then
 
 ! -------- 2D ------------ <=  -------- 3D ------------ 
 ! cA(1,k,j,i)*p(k,j  ,i  ) <=  cA(1,k,j,i)*p(k,j  ,i  )
@@ -660,7 +660,7 @@ contains
 ! cA(5,k,j,i)*p(k,j+1,i-1) <=  cA(5,k,j,i)*p(k,j+1,i-1)
 
        cff = 1._8/16._8 
-       cffm=0.5_8
+       cffm= 1.
         ! fine matrix was 3D
        do i2 = 1,nx2
           i = 2*i2-1
@@ -693,11 +693,11 @@ contains
              diag = cA(4,k,jm,i)+cA(4,km,jm,i)*cffm+cA(4,k,jm,im)+cA(4,km,jm,im)*cffm + diag
              diag = cA(7,k,j,im)+cA(7,km,j,im)*cffm+cA(7,k,jm,im)+cA(7,km,jm,im)*cffm + diag
 
-             if (k2 == 1) then
+!             if (k2 == 1) then
              ! add the horizontal diagonal connections in the bottom level
              diag = cA(5,k,j,im)  + diag
              diag = cA(8,k,jm,im) + diag
-             endif
+!             endif
 
              ! double that to account for symmetry of connections, we've now 40 terms
              diag = diag+diag
@@ -711,7 +711,10 @@ contains
              
           enddo
        enddo
-    else
+    elseif(nd==5)then
+!       write(*,*)"coarsening 5 diags => 5 diags"
+!       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
        cff = 1._8/8._8 ! 
        ! fine matrix was already 2D
        do i2 = 1,nx2
@@ -720,16 +723,22 @@ contains
           do j2 = 1,ny2
              j = 2*j2-1
              jm = j+1     
-             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,j,im)+cA(4,k,j,i))
-             cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,jm,i))
+             cA2(2,k2,j2,i2) = cff*(cA(2,k,j,i)+cA(2,k,j,im)+cA(4,k,j,im)+cA(5,k,j-1,im))
+             cA2(3,k2,j2,i2) = cff*(cA(3,k,j,i)+cA(3,k,jm,i)+cA(4,k,jm,i)+cA(5,k,j,i))
+             cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i))
+             cA2(5,k2,j2,i2) = cff*(cA(5,k,jm,i))
              ! 
              diag = cA(2,k,jm,i)+cA(2,k,jm,im)
              diag = cA(3,k,jm,i)+cA(3,k,jm,im) + diag
+             diag = cA(4,k,jm,im)+cA(5,k,j,im) + diag
              diag = diag + diag
              diag = cA(1,k,j,i) + cA(1,k,jm,i) + cA(1,k,j,im) + cA(1,k,jm,im) + diag
              cA2(1,k2,j2,i2) = cff*diag
           enddo
        enddo
+    else
+       write(*,*)"2D matrix is supposed to have 5 diagonals, not 3"
+       stop -1
     endif
 
   end subroutine coarsen_matrix_2D_nearest_avg
@@ -852,7 +861,7 @@ contains
              cA2(4,k2,j2,i2) = cff*(cA(4,k,j,i) +cA(4,km,j,i)*cffm &
                                    +cA(4,k,j,im)+cA(4,km,j,im)*cffm &
                                    +cA(5,km,j,i)*cffm+cA(5,km,j,im)*cffm & 
-                                   +cA(3,k ,j,i)+cA(3,k ,j,im) ) 
+                                   +cA(3,k ,j,i)+cA(3,k ,j,im) )              
 
              ! cA(7,:,:,:)      -> p(k,j,i-1)
 
@@ -862,6 +871,13 @@ contains
                                    +cA(7,k,jm,i)+cA(7,km,jm,i)*cffm &
                                    +cA(8,km,j,i)*cffm+cA(8,km,jm,i)*cffm &
                                    +cA(6,k ,j,i)+cA(6,k ,jm,i) )
+
+             if(k2==1)then
+                cA2(4,k2,j2,i2) = cA2(4,k2,j2,i2) &
+                     +cff*( cA(5,k,jm,i) +cA(8,k,j,i) )
+                cA2(7,k2,j2,i2) = cA2(7,k2,j2,i2)&
+                     +cff*( cA(5,k,j-1,im) +cA(8,k,j,im) )
+             endif
 
 
              ! the diagonal term is the sum of 48 terms ...             
