@@ -20,6 +20,7 @@ contains
 
     integer(kind=ip)::  lev,ndf,ndc,i,j,nx,ny,nh
     character(len = 16) :: filen
+    real(kind=rp) :: cff
 
     if (myrank==0) write(*,*)'- define matrix:'
 
@@ -31,8 +32,10 @@ contains
     else
        stop
     endif
-
+    
     call define_loc()
+
+    cff=1.d-2
 
     do lev = 1,nlevs-1
        ndf = size(grid(lev)%cA,1)
@@ -44,17 +47,27 @@ contains
        ny=grid(lev)%ny
        do i=1-nh,nx+nh
           do j=1-nh,ny+nh
-             if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12*(4**(lev-1)) ) then 
+!!$             if((lev==1).and.(rmask(j,i)<0.1)) then 
+!!$                grid(lev)%rmask(j,i)=0
+!!$                grid(lev)%cA(:,:,j,i)=0.
+!!$                !write(*,*)"land on fine"
+!!$             else
+!!$                grid(lev)%rmask(j,i)=1
+!!$             endif
+             if((lev>=1).and.(abs(grid(lev)%cA(1,1,j,i)) < cff )) then 
                 grid(lev)%rmask(j,i)=0
                 grid(lev)%cA(:,:,j,i)=0.
              else
                 grid(lev)%rmask(j,i)=1
              endif
+
           enddo
        enddo
        call coarsen_matrix(lev)
 !       if(myrank==0)write(*,*)"  / done"
 !       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+       cff = cff/4.
     enddo
     lev=nlevs
     nh=grid(lev)%nh
@@ -62,7 +75,7 @@ contains
     ny=grid(lev)%ny
     do i=1-nh,nx+nh
        do j=1-nh,ny+nh
-          if ( abs(grid(lev)%cA(1,1,j,i)) < 1d-12 ) then 
+          if ( abs(grid(lev)%cA(1,1,j,i)) < cff ) then 
              grid(lev)%rmask(j,i)=0
              grid(lev)%cA(:,:,j,i)=0.
           else
@@ -89,12 +102,12 @@ contains
 !!$    enddo
 
     if (netcdf_output) then
-!       do lev=1,nlevs
+       do lev=1,nlevs
 !          write(filen,'("cA_",i1,".nc")') lev
 !          call write_netcdf(grid(lev)%cA,vname='cA',netcdf_file_name=filen,rank=myrank)
-!          write(filen,'("msk_",i1,".nc")') lev
-!          call write_netcdf(grid(lev)%rmask*1._8,vname='msk',netcdf_file_name=filen,rank=myrank)
-!       enddo
+          write(filen,'("msk_",i1,".nc")') lev
+          call write_netcdf(grid(lev)%rmask*1._8,vname='msk',netcdf_file_name=filen,rank=myrank)
+       enddo
     endif
 
   end subroutine define_matrices
@@ -296,10 +309,10 @@ contains
     cA => grid(1)%cA 
 
     !ND
-    if (netcdf_output) then
-       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
-       call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
-    endif
+!    if (netcdf_output) then
+!       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+!       call write_netcdf(zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank)
+!    endif
 
     !! Cell heights
     allocate(dz(nz,0:ny+1,0:nx+1))
@@ -518,9 +531,9 @@ contains
 
     call fill_halo(lev,cA)
 
-    if (netcdf_output) then
-       call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
-    endif
+!    if (netcdf_output) then
+!       call write_netcdf(cA,vname='cA',netcdf_file_name='cA.nc',rank=myrank)
+!    endif
     
 
     deallocate(Arx)
