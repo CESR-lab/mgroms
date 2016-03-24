@@ -62,23 +62,30 @@ contains
     call compute_residual(lev,dummy)    
     call norm(lev,grid(lev)%p,grid(lev)%r,nx,ny,nz,norm_c)
 
-    write(filen,'("p_",i1,".nc")') lev
-    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+    if (netcdf_output) then
+       write(filen,'("p_",i1,".nc")') lev
+       call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
 
-    write(filen,'("r_",i1,".nc")') lev
-    call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+       write(filen,'("r_",i1,".nc")') lev
+       call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+    endif
 
     grid(lev-1)%p = 0._8 
     call coarse2fine(lev-1) ! interpolate p to r and add r to p
 
-    write(filen,'("p_",i1,".nc")') lev-1
-    call write_netcdf(grid(lev-1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+    if (netcdf_output) then
+       write(filen,'("p_",i1,".nc")') lev-1
+       call write_netcdf(grid(lev-1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+    endif
 
     !    grid(lev-1)%p(:,:,:)= 1._8
     grid(lev-1)%b = 0._8
     call compute_residual(lev-1,dummy)
-    write(filen,'("r_",i1,".nc")') lev-1
-    call write_netcdf(grid(lev-1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+
+    if (netcdf_output) then
+       write(filen,'("r_",i1,".nc")') lev-1
+       call write_netcdf(grid(lev-1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+    endif
 
     nx = grid(lev-1)%nx
     ny = grid(lev-1)%ny

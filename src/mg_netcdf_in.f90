@@ -116,7 +116,6 @@ contains
        tabvar                    , & ! Array to store NetCDF variable
        file                      , & ! [NetCDF file name]
        ncid                      , & ! [NetCDF file Id]
-       alloctab                  , & ! [Allocate or not the array tabvar]
        starts                    , & ! [Start indices in NetCDF variable]
        counts                    )   ! [Shape of array extracted from the NetCDF variable]
     !      

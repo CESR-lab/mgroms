@@ -85,7 +85,9 @@ program mg_testnetcdf
 
   !-------------------------------------------------------
   !- Writing a 4D array in a netcdf file
-  call write_netcdf(grid(lev)%cA,vname='cA1',rank=myrank)
+  if (netcdf_output) then
+     call write_netcdf(grid(lev)%cA,vname='cA1',rank=myrank)
+  endif
   !-------------------------------------------------------
 
   call compute_residual(lev,res)
@@ -97,7 +99,9 @@ program mg_testnetcdf
 
      !-------------------------------------------------------------------------------
      !- Writing a 3D array in a netcdf file
-     call write_netcdf(grid(lev)%r,vname='r',rank=myrank,iter=it)
+     if (netcdf_output) then
+        call write_netcdf(grid(lev)%r,vname='r',rank=myrank,iter=it)
+     endif
      !- NCO commands to sublit after the run !
      !- ncecat netcdf_file_r_000_*.nc netcdf_file_r_000.nc; \rm netcdf_file_r_000_*.nc
      !- ncecat netcdf_file_r_001_*.nc netcdf_file_r_001.nc; \rm netcdf_file_r_001_*.nc

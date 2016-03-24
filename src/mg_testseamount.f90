@@ -39,8 +39,8 @@ program mg_testseamount
   nyg   = 128
   nzg   = 128
 
-  npxg  = 2
-  npyg  = 2
+  npxg  = 8
+  npyg  = 9
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
