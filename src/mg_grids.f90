@@ -490,7 +490,7 @@ contains
     pj = myrank/npx
     pi = mod(myrank,npx)
 
-    do lev=2,nlevs-1
+    do lev=2,nlevs
        if(grid(lev)%gather.eq.1)then
 
           nx = grid(lev)%nx
