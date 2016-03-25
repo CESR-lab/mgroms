@@ -85,6 +85,16 @@ AC_ARG_ENABLE(
     ,
     enable_optimization=normal
              )
+
+## Specific Intel processor Sandy Bridge architecture -xAVX compiler option
+#
+AC_ARG_ENABLE(
+    avx,
+    [  --enable-avx - Turn on profiling compiler options.],
+    enable_avx=yes,
+    enable_avx=no
+             )
+
 #
 ## PROFILING (if it is available)
 ##
@@ -310,14 +320,14 @@ if test -n "$FC" ; then
 	      debug)
             AC_MSG_NOTICE([ifort -> DEBUGGING OPTIONS are SELECTED])
 	        CFLAGS="-g -O0"
-            	FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
+            FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
 	        LDFLAGS="-g -O0 -check all -traceback -auto"
           ;;
           aggressive)
             AC_MSG_NOTICE([ifort -> AGGRESSIVE COMPILER OPTIONS are SELECTED])
-	        CFLAGS=" -g -O3 -xHost -ipo"
-    	   	FCFLAGS="-g -O3 -xHost -ipo"
-            	LDFLAGS="-g -O3 -xHost -ipo"
+	        CFLAGS=" -g -O3 -ipo"
+    	   	FCFLAGS="-g -O3 -ipo"
+            LDFLAGS="-g -O3 -ipo"
           ;;
           normal|*)
             AC_MSG_NOTICE([ifort -> NORMAL MODE])
@@ -325,11 +335,18 @@ if test -n "$FC" ; then
 	        FCFLAGS="-g -O2"
 	      ;;
 	    esac
+        if test "$enable_avx" = "yes" ; then
+              FCFLAGS="$FCFLAGS -xAVX"
+              LDFLAGS="$LDFLAGS -xAVX"
+        else
+              FCFLAGS="$FCFLAGS -xHost"
+              LDFLAGS="$LDFLAGS -xHost"
+        fi
 	    if test "$enable_prof" = "yes" ; then
           AC_MSG_NOTICE([      -> PROFILING is SELECTED (gprof and intel report)])
 	      CFLAGS="-pg $CFLAGS"
-              FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all -profile-functions -profile-loops=all -profile-loops-report=2 $FCFLAGS"
-              LDFLAGS="-pg $LDFLAGS"
+          FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all -profile-functions -profile-loops=all -profile-loops-report=2 $FCFLAGS"
+          LDFLAGS="-pg $LDFLAGS"
         fi
      	if test "$enable_openmp" = "yes" ; then
           AC_MSG_NOTICE([      -> OpenMP PARALLELISATION IS SELECTED])
@@ -430,6 +447,10 @@ if test -n "$FC" ; then
             LDFLAGS="-g -O2 -frecord-marker=4"
 	      ;;
 	    esac
+        if test "$enable_avx" = "yes" ; then
+              FCFLAGS="$FCFLAGS -mavx"
+              LDFLAGS="$LDFLAGS -mavx"
+        fi
 	    if test "$enable_prof" = "yes" ; then
           AC_MSG_NOTICE([  -> PROFILING is SELECTED (gprof)])
 	      CFLAGS="-pg $CFLAGS"

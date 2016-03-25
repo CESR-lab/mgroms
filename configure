@@ -682,6 +682,7 @@ ac_user_opts='
 enable_option_checking
 enable_silent_rules
 enable_optimization
+enable_avx
 enable_profiling
 enable_traceanalyser
 enable_mpt
@@ -1328,6 +1329,7 @@ Optional Features:
        debug     - debugging compiler options will be selected.
        normal    - soft optimization (default).
        aggressive - aggressive optimization (YOU HAVE TO VERIFY YOUR RESULTS!).
+  --enable-avx - Turn on profiling compiler options.
   --enable-profiling - Turn on profiling compiler options.
   --enable-traceanalyser - Intel traceanalyser (in mpi mode only !).
   --enable-mpi_mpt - MPT library and includes (caparmor!).
@@ -2537,6 +2539,18 @@ else
 
 fi
 
+
+## Specific Intel processor Sandy Bridge architecture -xAVX compiler option
+#
+# Check whether --enable-avx was given.
+if test "${enable_avx+set}" = set; then :
+  enableval=$enable_avx; enable_avx=yes
+else
+  enable_avx=no
+
+fi
+
+
 #
 ## PROFILING (if it is available)
 ##
@@ -3245,15 +3259,15 @@ $as_echo "$as_me: WARNING: mgroms MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host
             { $as_echo "$as_me:${as_lineno-$LINENO}: ifort -> DEBUGGING OPTIONS are SELECTED" >&5
 $as_echo "$as_me: ifort -> DEBUGGING OPTIONS are SELECTED" >&6;}
 	        CFLAGS="-g -O0"
-            	FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
+            FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
 	        LDFLAGS="-g -O0 -check all -traceback -auto"
           ;;
           aggressive)
             { $as_echo "$as_me:${as_lineno-$LINENO}: ifort -> AGGRESSIVE COMPILER OPTIONS are SELECTED" >&5
 $as_echo "$as_me: ifort -> AGGRESSIVE COMPILER OPTIONS are SELECTED" >&6;}
-	        CFLAGS=" -g -O3 -xHost -ipo"
-    	   	FCFLAGS="-g -O3 -xHost -ipo"
-            	LDFLAGS="-g -O3 -xHost -ipo"
+	        CFLAGS=" -g -O3 -ipo"
+    	   	FCFLAGS="-g -O3 -ipo"
+            LDFLAGS="-g -O3 -ipo"
           ;;
           normal|*)
             { $as_echo "$as_me:${as_lineno-$LINENO}: ifort -> NORMAL MODE" >&5
@@ -3262,12 +3276,19 @@ $as_echo "$as_me: ifort -> NORMAL MODE" >&6;}
 	        FCFLAGS="-g -O2"
 	      ;;
 	    esac
+        if test "$enable_avx" = "yes" ; then
+              FCFLAGS="$FCFLAGS -xAVX"
+              LDFLAGS="$LDFLAGS -xAVX"
+        else
+              FCFLAGS="$FCFLAGS -xHost"
+              LDFLAGS="$LDFLAGS -xHost"
+        fi
 	    if test "$enable_prof" = "yes" ; then
           { $as_echo "$as_me:${as_lineno-$LINENO}:       -> PROFILING is SELECTED (gprof and intel report)" >&5
 $as_echo "$as_me:       -> PROFILING is SELECTED (gprof and intel report)" >&6;}
 	      CFLAGS="-pg $CFLAGS"
-              FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all -profile-functions -profile-loops=all -profile-loops-report=2 $FCFLAGS"
-              LDFLAGS="-pg $LDFLAGS"
+          FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all -profile-functions -profile-loops=all -profile-loops-report=2 $FCFLAGS"
+          LDFLAGS="-pg $LDFLAGS"
         fi
      	if test "$enable_openmp" = "yes" ; then
           { $as_echo "$as_me:${as_lineno-$LINENO}:       -> OpenMP PARALLELISATION IS SELECTED" >&5
@@ -3378,6 +3399,10 @@ $as_echo "$as_me:   -> NORMAL MODE" >&6;}
             LDFLAGS="-g -O2 -frecord-marker=4"
 	      ;;
 	    esac
+        if test "$enable_avx" = "yes" ; then
+              FCFLAGS="$FCFLAGS -mavx"
+              LDFLAGS="$LDFLAGS -mavx"
+        fi
 	    if test "$enable_prof" = "yes" ; then
           { $as_echo "$as_me:${as_lineno-$LINENO}:   -> PROFILING is SELECTED (gprof)" >&5
 $as_echo "$as_me:   -> PROFILING is SELECTED (gprof)" >&6;}

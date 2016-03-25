@@ -16,7 +16,9 @@ export MPI_LIB=/opt/mpi/bullxmpi/1.2.8.4/lib
 export NETCDF_INC=/ccc/products/netcdf-4.2/default/include
 export NETCDF_LIB=/ccc/products/netcdf-4.2/default/lib
 
-./configure --prefix=/ccc/cont003/home/gen9178/griman/NH_Multigrid --enable-openmpi --enable-netcdf
+(Avx option only on Curie thin nodes !)
+It's a cross compilation configuration:
+./configure --prefix=/ccc/cont003/home/gen9178/griman/NH_Multigrid --enable-openmpi --enable-netcdf --enable-optimization=aggressive --enable-avx
 make clean
 make 
 make install
