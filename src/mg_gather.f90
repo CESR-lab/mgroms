@@ -10,7 +10,7 @@ module mg_gather
 contains
 
   !----------------------------------------
-  subroutine gather(lev,x,y)
+  subroutine gather(lev,x,y,nzi)
 
     ! lev is the level of y, after the gathering
 
@@ -20,6 +20,7 @@ contains
     integer(kind=ip),intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
+    integer(kind=ip), optional, intent(in) :: nzi
 
     integer(kind=ip):: nx,ny,nz,nh
     integer(kind=ip):: ngx,ngy,Ng
@@ -28,16 +29,21 @@ contains
     integer(kind=ip):: ierr
     real(kind=rp),dimension(:,:,:,:,:),pointer :: buffer
 
-    buffer => grid(lev)%gatherbuffer
-
     ! number of cores per direction involved in this gathering (1 or 2)
     ngx = grid(lev)%ngx
     ngy = grid(lev)%ngy
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
-    nz = grid(lev)%nz
     nh = grid(lev)%nh
+
+    if (present(nzi)) then
+       nz = nzi
+       buffer => grid(lev)%gatherbufferp
+    else
+       nz = grid(lev)%nz
+       buffer => grid(lev)%gatherbuffer
+    endif
 
     ! numel(x)
     Ng = grid(lev)%Ng

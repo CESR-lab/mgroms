@@ -57,7 +57,7 @@ contains
 
     call setup_scoord(nx,ny,nz,nh)
 
-    call define_matrices(dx, dy, zr, zw, umask, vmask, rmask)
+    call define_matrices(dx, dy, zr, zw)
 
   end subroutine setup_realistic_matrix
 
@@ -220,7 +220,7 @@ contains
 
     call setup_scoord(nx,ny,nz,nh)
 
-    call define_matrices(dx, dy, zr, zw, umask, vmask, rmask)
+    call define_matrices(dx, dy, zr, zw)
 
 
     if (netcdf_output) then
