@@ -46,7 +46,8 @@ contains
     endif
 
     ! numel(x)
-    Ng = grid(lev)%Ng
+    !NG: 21 april 2106: Ng = grid(lev)%Ng
+    Ng = (nx+2*nh)*(ny+2*nh)*nz
 
     call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
     !       if(myrank==0)write(*,*)'gather lev, Ng=',lev,Ng,ngx,ngy,nx,ny

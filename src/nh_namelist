@@ -11,5 +11,5 @@
        aggressive    = .false.,       !- .false. or .true.
        interp_type   ='nearest',       !- linear or nearest
        restrict_type ='avg',          !- linear or avg
-       netcdf_output =.true.,        !- .false. or .true.
+       netcdf_output =.false.,        !- .false. or .true.
 /

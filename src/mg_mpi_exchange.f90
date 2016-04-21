@@ -331,24 +331,40 @@ contains
     northeast = grid(lev)%neighb(7)
     northwest = grid(lev)%neighb(8)
 
+    call verify_array_shape_3D(grid(lev)%sendS,nz,nh,nx)
     sendS => grid(lev)%sendS
+    call verify_array_shape_3D(grid(lev)%recvS,nz,nh,nx)
     recvS => grid(lev)%recvS
+    call verify_array_shape_3D(grid(lev)%sendN,nz,nh,nx)
     sendN => grid(lev)%sendN
+    call verify_array_shape_3D(grid(lev)%recvN,nz,nh,nx)
     recvN => grid(lev)%recvN
 
+    call verify_array_shape_3D(grid(lev)%sendE,nz,ny,nh)
     sendE => grid(lev)%sendE
+    call verify_array_shape_3D(grid(lev)%recvE,nz,ny,nh)
     recvE => grid(lev)%recvE
+    call verify_array_shape_3D(grid(lev)%sendW,nz,ny,nh)
     sendW => grid(lev)%sendW
+    call verify_array_shape_3D(grid(lev)%recvW,nz,ny,nh)
     recvW => grid(lev)%recvW
 
+    call verify_array_shape_3D(grid(lev)%sendSW,nz,nh,nh)
     sendSW => grid(lev)%sendSW
+    call verify_array_shape_3D(grid(lev)%sendSE,nz,nh,nh)
     sendSE => grid(lev)%sendSE
+    call verify_array_shape_3D(grid(lev)%sendNW,nz,nh,nh)
     sendNW => grid(lev)%sendNW
+    call verify_array_shape_3D(grid(lev)%sendNE,nz,nh,nh)
     sendNE => grid(lev)%sendNE
 
+    call verify_array_shape_3D(grid(lev)%recvSW,nz,nh,nh)
     recvSW => grid(lev)%recvSW
+    call verify_array_shape_3D(grid(lev)%recvSE,nz,nh,nh)
     recvSE => grid(lev)%recvSE
+    call verify_array_shape_3D(grid(lev)%recvNW,nz,nh,nh)
     recvNW => grid(lev)%recvNW
+    call verify_array_shape_3D(grid(lev)%recvNE,nz,nh,nh)
     recvNE => grid(lev)%recvNE
 
     comm(:) = 0
@@ -563,6 +579,27 @@ contains
     call toc(lev,'fill_halo_3D_nb')
 
   end subroutine fill_halo_3D_nb
+
+!----------------------------------------
+  subroutine verify_array_shape_3D(pt,dim1,dim2, dim3)
+
+    real(kind=rp), dimension(:,:,:), allocatable, pointer , intent(inout):: pt
+    integer(kind=ip), intent(in) :: dim1
+    integer(kind=ip), intent(in) :: dim2
+    integer(kind=ip), intent(in) :: dim3
+    
+    if (allocated(pt)) then
+       if (all(shape(pt) == [dim1,dim2,dim3])) then
+       ! nothing todo
+       else
+          deallocate(pt)
+          allocate(pt(dim1,dim2,dim3))
+       endif
+    else
+       allocate(pt(dim1,dim2,dim3))
+    endif
+
+  end subroutine verify_array_shape_3D
 
   !----------------------------------------
   subroutine fill_halo_4D(lev,cA)

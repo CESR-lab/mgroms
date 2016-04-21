@@ -23,8 +23,6 @@ contains
     real(kind=rp), dimension(:,:,:), pointer, optional, intent(in) :: zr, zw
 
     integer(kind=ip)::  lev
-    character(len = 16) :: filen
-    real(kind=rp) :: cff
 
     real(kind=rp), dimension(:,:,:), pointer :: zrf
     real(kind=rp), dimension(:,:,:), pointer :: zwf
@@ -34,8 +32,7 @@ contains
 
     integer(kind=ip) :: nz,ny,nx
     integer(kind=ip) :: nzf,nyf,nxf
-    integer(kind=ip) :: nzc,nyc,nxc
-
+    integer(kind=ip) :: nyc,nxc
 
     if (myrank==0) write(*,*)'- define matrix:'
 
@@ -75,31 +72,31 @@ contains
 
           elseif (grid(lev)%nz == 1) then
 
-             zrc(1,1:nyc+1,1:nxc+1) = qrt         * ( &
-                  zrf(1,0:nyf:2,0:nxf:2)          + &
-                  zrf(1,1:nyf+1:2,0:nxf:2)        + &
-                  zrf(1,0:nyf:2,1:nxf+1:2)        + &
-                  zrf(1,1:nyf+1:2,1:nxf+1:2)      )
+             zrc(1,1:nyc+1,1:nxc+1) = qrt  * ( &
+                  zrf(1,0:nyf:2,0:nxf:2)     + &
+                  zrf(1,1:nyf+1:2,0:nxf:2)   + &
+                  zrf(1,0:nyf:2,1:nxf+1:2)   + &
+                  zrf(1,1:nyf+1:2,1:nxf+1:2) )
 
-             zwc(:,1:nyc+1,1:nxc+1) = qrt            * ( &
-                  zwf(:,0:nyf:2,0:nxf:2)             + &
-                  zwf(:,1:nyf+1:2,0:nxf:2)           + &
-                  zwf(:,0:nyf:2,1:nxf+1:2)           + &
-                  zwf(:,1:nyf+1:2,1:nxf+1:2)         )
+             zwc(:,1:nyc+1,1:nxc+1) = qrt  * ( &
+                  zwf(:,0:nyf:2,0:nxf:2)     + &
+                  zwf(:,1:nyf+1:2,0:nxf:2)   + &
+                  zwf(:,0:nyf:2,1:nxf+1:2)   + &
+                  zwf(:,1:nyf+1:2,1:nxf+1:2) )
 
           else
 
-             zrc(:,1:nyf+1,1:nxf+1) = eigh * ( &
+             zrc(:,1:nyc+1,1:nxc+1) = eigh                                          * ( &
                   zrf(1:nz-1:2,0:nyf:2,0:nxf:2)     + zrf(2:nz:2,0:nyf:2,0:nxf:2)     + &
                   zrf(1:nz-1:2,1:nyf+1:2,0:nxf:2)   + zrf(2:nz:2,1:nyf+1:2,0:nxf:2)   + &
                   zrf(1:nz-1:2,0:nyf:2,1:nxf+1:2)   + zrf(2:nz:2,0:nyf:2,1:nxf+1:2)   + &
                   zrf(1:nz-1:2,1:nyf+1:2,1:nxf+1:2) + zrf(2:nz:2,1:nyf+1:2,1:nxf+1:2) )
 
-             zwc(:,1:ny+1,1:nx+1) = qrt * ( &
-                  zwf(0:nz:2,0:nyf:2,0:nxf:2)       + &
-                  zwf(0:nz:2,1:nyf+1:2,0:nxf:2)     + &
-                  zwf(0:nz:2,0:nyf:2,1:nxf+1:2)     + &
-                  zwf(0:nz:2,1:nyf+1:2,1:nxf+1:2)   )
+             zwc(:,1:nyc+1,1:nxc+1) = qrt           * ( &
+                  zwf(1:nz+1:2,0:nyf:2,0:nxf:2)     + &
+                  zwf(1:nz+1:2,1:nyf+1:2,0:nxf:2)   + &
+                  zwf(1:nz+1:2,0:nyf:2,1:nxf+1:2)   + &
+                  zwf(1:nz+1:2,1:nyf+1:2,1:nxf+1:2) )
 
           end if
 
@@ -113,22 +110,18 @@ contains
 
        endif
 
-
        call fill_halo_3D_nb(lev,grid(lev)%zr,nhi=2)
+
        call fill_halo_3D_nb(lev,grid(lev)%zw,nhi=2)
+
+       if (netcdf_output) then
+          call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
+       endif
 
        call define_matrix(lev, dx, dy, grid(lev)%zr, grid(lev)%zw)
 
     enddo
-
-    if (netcdf_output) then
-       do lev=1,nlevs
-          !          write(filen,'("cA_",i1,".nc")') lev
-          !          call write_netcdf(grid(lev)%cA,vname='cA',netcdf_file_name=filen,rank=myrank)
-          write(filen,'("msk_",i1,".nc")') lev
-          call write_netcdf(grid(lev)%rmask*one,vname='msk',netcdf_file_name=filen,rank=myrank)
-       enddo
-    endif
 
   end subroutine define_matrices
 
@@ -150,7 +143,7 @@ contains
     ! cA(7,:,:,:)      -> p(k,j,i-1)xd
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
-    integer(kind=ip):: l, k, j, i
+    integer(kind=ip):: k, j, i
     integer(kind=ip):: nx, ny, nz
     integer(kind=ip):: nh
 

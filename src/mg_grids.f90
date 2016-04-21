@@ -14,15 +14,15 @@ module mg_grids
      real(kind=rp),dimension(:,:,:),pointer :: zw
      integer(kind=ip) :: nx,ny, nz
      integer(kind=ip) :: npx, npy, incx, incy
-     integer(kind=ip) :: nh                 ! number of points in halo
+     integer(kind=ip) :: nh                    ! number of points in halo
      integer(kind=ip) :: gather
      integer(kind=ip) :: Ng, ngx, ngy
      integer(kind=4) :: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=ip) :: coarsening_method, smoothing_method
      integer(kind=ip) :: color,family,key
      integer(kind=ip),dimension(8)::neighb
-     real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbufferp
      real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbuffer
+     real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbufferp
      real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
      real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
      real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
@@ -108,7 +108,7 @@ contains
        allocate(grid(lev)%cA(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(grid(lev)%zr(nz,-1:ny+2,-1:nx+2))
-       allocate(grid(lev)%zw(nz,-1:ny+2,-1:nx+2))
+       allocate(grid(lev)%zw(nz+1,-1:ny+2,-1:nx+2))
 
        allocate(grid(lev)%rmask(1-nh:ny+nh,1-nh:nx+nh))
 

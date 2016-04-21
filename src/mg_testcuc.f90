@@ -93,7 +93,6 @@ program mg_testcuc
   call print_grids()
   !!call define_rhs(nxg, nyg, npxg)
 
-
   call setup_cuc(inc)
 
   nh = grid(1)%nh

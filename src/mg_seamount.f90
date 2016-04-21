@@ -66,14 +66,13 @@ contains
     integer(kind=4):: npxg,npyg
     integer(kind=4):: nx,ny,nz,nh
 
-    
+
     integer(kind=4):: is_err,nc_id,varid
     integer(kind=4):: i,j,i0,j0,pi,pj,inc
     real(kind=8), dimension(:,:), allocatable   :: dummy2d
     integer(kind=4), dimension(2)   :: starts,counts
 
     character*80 :: file,varname
-
 
     npxg = grid(1)%npx
     npyg = grid(1)%npy
@@ -98,7 +97,6 @@ contains
     ! dummy 2D to read from netcdf
     allocate(dummy2d(1:nx*inc,1:ny*inc))
 
-
     i0=1+pi*nx*inc
     j0=1+pj*ny*inc
 
@@ -111,6 +109,11 @@ contains
 
     is_err = nf90_open( trim(file), NF90_NOWRITE ,nc_id  )
 
+    if (is_err /= nf90_noerr) then
+       write(*,*)'Error: problem to open file: ', trim(file)
+       stop
+    end if
+
     ! --- read h ---
     varname='h'
     is_err = nf90_inq_varid(nc_id,trim(varname),varid)
@@ -121,7 +124,7 @@ contains
           h(j,i)=dummy2d((i-1)*inc+1,(j-1)*inc+1)
        enddo
     enddo
-    
+
     ! --- read pn ---
     varname='pn'
     is_err = nf90_inq_varid(nc_id,trim(varname),varid)
@@ -132,7 +135,7 @@ contains
           dy(j,i)=1._8/dummy2d((i-1)*inc+1,(j-1)*inc+1)
        enddo
     enddo
-    
+
     ! --- read pm ---
     varname='pm'
     is_err = nf90_inq_varid(nc_id,trim(varname),varid)
@@ -143,7 +146,7 @@ contains
           dx(j,i)=1._8/dummy2d((i-1)*inc+1,(j-1)*inc+1)
        enddo
     enddo
-    
+
     ! --- read pm ---
     varname='mask_rho'
     is_err = nf90_inq_varid(nc_id,trim(varname),varid)
@@ -152,16 +155,14 @@ contains
     do i=1,nx
        do j=1,ny
           if(h(j,i)<=21._8)then
-          rmask(j,i)=0._8
+             rmask(j,i)=0._8
           else
              rmask(j,i)=1._8
-             endif
-!             rmask(j,i)=dummy2d(i,j)
+          endif
+          !             rmask(j,i)=dummy2d(i,j)
        enddo
     enddo
 
-
-    
     is_err = nf90_close(nc_id)
 
 !!$    if(pi==0)rmask(:,0:4)=0._8
@@ -174,7 +175,6 @@ contains
     grid(1)%p(2,:,:)=dx
     grid(1)%p(3,:,:)=dy
     grid(1)%p(4,:,:)=rmask
-
 
     call fill_halo(1,grid(1)%p)
 
@@ -189,16 +189,14 @@ contains
           dy(j,i)=max(1.,dy(j,i))
        enddo
     enddo
-    
-!    dx = 146.4772*inc
-!    dy = dx
 
+    !    dx = 146.4772*inc
+    !    dy = dx
 
-!    if(pi==0)rmask(:,0:2)=0._8
-!    if(pi==npxg-1)rmask(:,nx-1:nx+1)=0._8
-!    if(pj==0)rmask(0:2,:)=0._8
-!    if(pj==npyg-1)rmask(ny-1:ny+1,:)=0._8
-
+    !    if(pi==0)rmask(:,0:2)=0._8
+    !    if(pi==npxg-1)rmask(:,nx-1:nx+1)=0._8
+    !    if(pj==0)rmask(0:2,:)=0._8
+    !    if(pj==npyg-1)rmask(ny-1:ny+1,:)=0._8
 
     do i=1,nx     
        do j=1,ny
@@ -214,24 +212,21 @@ contains
     umask = grid(1)%p(1,:,:)
     vmask = grid(1)%p(2,:,:)
 
-
     grid(1)%p(:,:,:)=0._8
-
 
     call setup_scoord(nx,ny,nz,nh)
 
     call define_matrices(dx, dy, zr, zw)
 
-
     if (netcdf_output) then
-!     call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=myrank)
-!     call write_netcdf(dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank)
-!     call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=myrank)
-!     call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
-  endif
-  
+       !     call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=myrank)
+       !     call write_netcdf(dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank)
+       !     call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=myrank)
+       !     call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
+    endif
 
-  end subroutine 
+
+  end subroutine setup_cuc
   !-------------------------------------------------------------------------     
   subroutine setup_fine_depth(nx,ny,nz,nh)
     integer(kind=4):: nx,ny,nz,nh
@@ -384,7 +379,7 @@ contains
     ! you get a smooth random field, at the scale
     ! of 2*dx(lev)
     !
-    integer(kind=4):: i,j,l,lev
+    integer(kind=4):: l,lev
 
     call random_number(grid(lev)%p)
     grid(lev)%p = 2.*grid(lev)%p-1.
@@ -456,7 +451,7 @@ contains
        i0=1+floor(x0*npxg*nx)
        j0=1+floor(y0*npyg*ny)
        k0 = 1+floor(z0*nz)
-       if(myrank==0)write(*,10)i0,j0,k0,sign,sqrt(sigh2),sqrt(sigv2)
+       !!if(myrank==0)write(*,10)i0,j0,k0,sign,sqrt(sigh2),sqrt(sigv2)
        do i = 0,nx+1
           do j = 0,ny+1 
              do k = 1,nz
@@ -492,7 +487,7 @@ contains
     do i = 0,nx+1
        do j = 0,ny+1
           do k = 1,nz
-             sc_w = cff*float(k-nz)
+             sc_w = cff*float(k-1-nz)   !!sc_w = cff*float(k-nz)
              sc_r = cff*(float(k-nz)-0.5)
 
              cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
@@ -509,19 +504,6 @@ contains
 
              hinv = 1. / (h(j,i)+hc)
 
-!!$<<<<<<< HEAD
-!!$             ! roms sigma coordinates
-!!$             !             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
-!!$             !             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
-!!$
-!!$             ! basic linear sigma coordinates
-!!$             zr(k,j,i) = (real(k,kind=8)-0.5_8)*h(j,i)/real(nz,kind=8) - h(j,i)
-!!$             zw(k,j,i) = (real(k,kind=8)-1.0_8)*h(j,i)/real(nz,kind=8) - h(j,i)
-!!$          enddo
-!!$          zw(nz+1,j,i) = 0.0_8
-!!$       enddo
-!!$    enddo
-!!$=======
              ! roms sigma coordinates
              zw(k,j,i) = z_w0 * (h(j,i)*hinv)
              zr(k,j,i) = z_r0 * (h(j,i)*hinv)
@@ -533,7 +515,6 @@ contains
           zw(nz+1,j,i) = 0.0_8
        enddo
     enddo
-
 
 !    if (netcdf_output) then    
 !       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
