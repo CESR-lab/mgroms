@@ -24,14 +24,20 @@ contains
 
     integer(kind=ip)::  lev
 
-    real(kind=rp), dimension(:,:,:), pointer :: zrf
-    real(kind=rp), dimension(:,:,:), pointer :: zwf
+    real(kind=rp), dimension(:,:), pointer :: dxf
+    real(kind=rp), dimension(:,:), pointer :: dxc
 
+    real(kind=rp), dimension(:,:), pointer :: dyf
+    real(kind=rp), dimension(:,:), pointer :: dyc
+
+    real(kind=rp), dimension(:,:,:), pointer :: zrf
     real(kind=rp), dimension(:,:,:), pointer :: zrc
+
+    real(kind=rp), dimension(:,:,:), pointer :: zwf
     real(kind=rp), dimension(:,:,:), pointer :: zwc
 
-    integer(kind=ip) :: nz,ny,nx
-    integer(kind=ip) :: nzf,nyf,nxf
+    integer(kind=ip) :: nz,ny,nx,nh,nht
+    integer(kind=ip) :: nzf,nyf,nxf,nhf,nhtf
     integer(kind=ip) :: nyc,nxc
 
     if (myrank==0) write(*,*)'- define matrix:'
@@ -41,14 +47,24 @@ contains
        nx=grid(lev)%nx
        ny=grid(lev)%ny
        nz=grid(lev)%nz
+       nh=grid(lev)%nh
+       nht=grid(lev)%nht
 
        if (lev == 1) then
-          grid(lev)%zr(:,0:ny+1,0:nx+1) = zr
-          grid(lev)%zw(:,0:ny+1,0:nx+1) = zw
+          grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh) = dx
+          grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh) = dy
+
+          grid(lev)%zr(:,1-nht:ny+nht,1-nht:nx+nht) = zr
+          grid(lev)%zw(:,1-nht:ny+nht,1-nht:nx+nht) = zw
        else
           nxf=grid(lev-1)%nx
           nyf=grid(lev-1)%ny
           nzf=grid(lev-1)%nz
+          nhf=grid(lev-1)%nh
+          nhtf=grid(lev-1)%nht
+
+          dxf => grid(lev-1)%dx
+          dyf => grid(lev-1)%dy
 
           zrf => grid(lev-1)%zr
           zwf => grid(lev-1)%zw
@@ -56,11 +72,17 @@ contains
           if (grid(lev)%gather == 1) then
              nxc= nx/grid(lev)%ngx
              nyc= ny/grid(lev)%ngy
-             allocate(zrc(nz,-1:nyc+2,-1:nxc+2))
-             allocate(zwc(nz+1,-1:nyc+2,-1:nxc+2))
+
+             allocate(dxc(1-nh:nyc+nh,1-nh:nxc+nh))
+             allocate(dyc(1-nh:nyc+nh,1-nh:nxc+nh))
+
+             allocate(zrc(  nz,1-nht:nyc+nht,1-nht:nxc+nht))
+             allocate(zwc(nz+1,1-nht:nyc+nht,1-nht:nxc+nht))
           else
              nxc=nx
              nyc=ny
+             dxc => grid(lev)%dx
+             dyc => grid(lev)%dy
              zrc => grid(lev)%zr
              zwc => grid(lev)%zw
           endif
@@ -71,6 +93,12 @@ contains
              STOP
 
           elseif (grid(lev)%nz == 1) then
+
+             !! TODO
+             !! dx 2D
+             !! dy 2D
+             write(*,*)'Todo dx 2D, dy 2D'
+             STOP
 
              zrc(1,1:nyc+1,1:nxc+1) = qrt  * ( &
                   zrf(1,0:nyf:2,0:nxf:2)     + &
@@ -86,21 +114,37 @@ contains
 
           else
 
-             zrc(:,1:nyc+1,1:nxc+1) = eigh                                          * ( &
-                  zrf(1:nz-1:2,0:nyf:2,0:nxf:2)     + zrf(2:nz:2,0:nyf:2,0:nxf:2)     + &
-                  zrf(1:nz-1:2,1:nyf+1:2,0:nxf:2)   + zrf(2:nz:2,1:nyf+1:2,0:nxf:2)   + &
-                  zrf(1:nz-1:2,0:nyf:2,1:nxf+1:2)   + zrf(2:nz:2,0:nyf:2,1:nxf+1:2)   + &
-                  zrf(1:nz-1:2,1:nyf+1:2,1:nxf+1:2) + zrf(2:nz:2,1:nyf+1:2,1:nxf+1:2) )
+             dxc(1:nyc,1:nxc) = hlf *      ( &
+                  dxf(1:nyf  :2,1:nxf  :2) + &
+                  dxf(2:nyf+1:2,1:nxf  :2) + &
+                  dxf(1:nyf  :2,2:nxf+1:2) + &
+                  dxf(2:nyf+1:2,1:nxf+1:2) )
 
-             zwc(:,1:nyc+1,1:nxc+1) = qrt           * ( &
-                  zwf(1:nz+1:2,0:nyf:2,0:nxf:2)     + &
-                  zwf(1:nz+1:2,1:nyf+1:2,0:nxf:2)   + &
-                  zwf(1:nz+1:2,0:nyf:2,1:nxf+1:2)   + &
-                  zwf(1:nz+1:2,1:nyf+1:2,1:nxf+1:2) )
+             dyc(1:nyc,1:nxc) = hlf *      ( &
+                  dyf(1:nyf  :2,1:nxf  :2) + &
+                  dyf(2:nyf+1:2,1:nxf  :2) + &
+                  dyf(1:nyf  :2,2:nxf+1:2) + &
+                  dyf(2:nyf+1:2,1:nxf+1:2) )
+
+             zrc(:,1:nyc,1:nxc) = eigh                                              * ( &
+                  zrf(1:nz-1:2,1:nyf-1:2,1:nxf-1:2) + zrf(2:nz:2,1:nyf-1:2,1:nxf-1:2) + &
+                  zrf(1:nz-1:2,2:nyf  :2,1:nxf-1:2) + zrf(2:nz:2,2:nyf  :2,1:nxf-1:2) + &
+                  zrf(1:nz-1:2,1:nyf-1:2,2:nxf  :2) + zrf(2:nz:2,1:nyf-1:2,2:nxf  :2) + &
+                  zrf(1:nz-1:2,2:nyf  :2,2:nxf  :2) + zrf(2:nz:2,2:nyf  :2,2:nxf  :2) )
+
+             zwc(:,1:nyc,1:nxc) = qrt             * ( &
+                  zwf(1:nz+1:2,1:nyf-1:2,1:nxf-1:2) + &
+                  zwf(1:nz+1:2,2:nyf:  2,1:nxf-1:2) + &
+                  zwf(1:nz+1:2,1:nyf-1:2,2:nxf  :2) + &
+                  zwf(1:nz+1:2,2:nyf  :2,2:nxf  :2) )
 
           end if
 
           if (grid(lev)%gather == 1) then
+
+             call gather(lev,dxc,grid(lev)%dx)
+             call gather(lev,dyc,grid(lev)%dy)
+             
              call gather(lev,zrc,grid(lev)%zr,nzi=nz)
              call gather(lev,zwc,grid(lev)%zw,nzi=nz+1)
 
@@ -110,16 +154,21 @@ contains
 
        endif
 
-       call fill_halo_3D_nb(lev,grid(lev)%zr,nhi=2)
+       call fill_halo(lev, grid(lev)%dx)
+       call fill_halo(lev, grid(lev)%dy)
 
-       call fill_halo_3D_nb(lev,grid(lev)%zw,nhi=2)
+       call fill_halo_3D_nb(lev,grid(lev)%zr,nhi=nht)
+
+       call fill_halo_3D_nb(lev,grid(lev)%zw,nhi=nht)
 
        if (netcdf_output) then
+          call write_netcdf(grid(lev)%zr,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%zw,vname='dy',netcdf_file_name='dy.nc',rank=myrank,iter=lev)
           call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
           call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
        endif
 
-       call define_matrix(lev, dx, dy, grid(lev)%zr, grid(lev)%zw)
+       call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw)
 
     enddo
 

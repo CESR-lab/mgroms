@@ -9,6 +9,7 @@ module mg_mpi_exchange
 
   interface fill_halo
      module procedure   &
+          fill_halo_2D, &
           fill_halo_3D, &
           fill_halo_4D
   end interface fill_halo
@@ -25,6 +26,318 @@ module mg_mpi_exchange
   logical :: flag4D = .true.
 
 contains
+ !----------------------------------------
+  subroutine fill_halo_2D(lev,a2D)
+
+    integer(kind=ip), intent(in):: lev
+    real(kind=rp), dimension(:,:), pointer, intent(inout):: a2D
+
+    if (trim(mpiexchange)=='blocking') then
+       write(*,*)'Todo: fill_halo_2D_b'
+       STOP
+    elseif (trim(mpiexchange)=='nonblocking') then
+       call fill_halo_2D_nb(lev,a2D)
+    else
+       write(*,*)'Error: mg_mpi_exchange: mpiexchange value is not correct !'
+       write(*,*)'Error: mg_mpi_exchange: mpiexchange =', trim(mpiexchange)
+       stop -1
+    end if
+
+  end subroutine fill_halo_2D
+
+ !----------------------------------------------------------------------------
+  !- Nonblocking MPI exchanges -!
+  !-----------------------------!
+  subroutine fill_halo_2D_nb(lev,a2D)
+
+    integer(kind=ip), intent(in):: lev
+    real(kind=rp), dimension(:,:), pointer, intent(inout)::a2D
+
+    integer(kind=ip) :: nx, ny, nz
+    integer(kind=ip) :: nh
+    integer(kind=ip) :: south, east, north, west
+    integer(kind=ip) :: southwest, southeast, northeast, northwest
+
+    integer(kind=ip) :: sntag, ewtag, nstag, wetag
+    integer(kind=ip) :: swnetag, senwtag, nwsetag, neswtag
+
+    integer(kind=ip) :: i, j
+    integer(kind=ip) :: icount
+    integer(kind=ip) :: indx
+    integer(kind=ip),dimension(16) :: req
+    integer(kind=ip),dimension(16) :: comm
+    integer(kind=ip),dimension(MPI_STATUS_SIZE) :: status
+    integer(kind=ip) :: ierr
+
+    real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+    real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+    real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+    real(kind=rp), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
+
+    call tic(lev,'fill_halo_2D_nb')
+
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = 1
+    nh = grid(lev)%nh
+
+    south     = grid(lev)%neighb(1)
+    east      = grid(lev)%neighb(2)
+    north     = grid(lev)%neighb(3)
+    west      = grid(lev)%neighb(4)
+    southwest = grid(lev)%neighb(5)
+    southeast = grid(lev)%neighb(6)
+    northeast = grid(lev)%neighb(7)
+    northwest = grid(lev)%neighb(8)
+
+    call verify_array_shape_3D(grid(lev)%sendS,nz,nh,nx)
+    sendS => grid(lev)%sendS
+    call verify_array_shape_3D(grid(lev)%recvS,nz,nh,nx)
+    recvS => grid(lev)%recvS
+    call verify_array_shape_3D(grid(lev)%sendN,nz,nh,nx)
+    sendN => grid(lev)%sendN
+    call verify_array_shape_3D(grid(lev)%recvN,nz,nh,nx)
+    recvN => grid(lev)%recvN
+
+    call verify_array_shape_3D(grid(lev)%sendE,nz,ny,nh)
+    sendE => grid(lev)%sendE
+    call verify_array_shape_3D(grid(lev)%recvE,nz,ny,nh)
+    recvE => grid(lev)%recvE
+    call verify_array_shape_3D(grid(lev)%sendW,nz,ny,nh)
+    sendW => grid(lev)%sendW
+    call verify_array_shape_3D(grid(lev)%recvW,nz,ny,nh)
+    recvW => grid(lev)%recvW
+
+    call verify_array_shape_3D(grid(lev)%sendSW,nz,nh,nh)
+    sendSW => grid(lev)%sendSW
+    call verify_array_shape_3D(grid(lev)%sendSE,nz,nh,nh)
+    sendSE => grid(lev)%sendSE
+    call verify_array_shape_3D(grid(lev)%sendNW,nz,nh,nh)
+    sendNW => grid(lev)%sendNW
+    call verify_array_shape_3D(grid(lev)%sendNE,nz,nh,nh)
+    sendNE => grid(lev)%sendNE
+
+    call verify_array_shape_3D(grid(lev)%recvSW,nz,nh,nh)
+    recvSW => grid(lev)%recvSW
+    call verify_array_shape_3D(grid(lev)%recvSE,nz,nh,nh)
+    recvSE => grid(lev)%recvSE
+    call verify_array_shape_3D(grid(lev)%recvNW,nz,nh,nh)
+    recvNW => grid(lev)%recvNW
+    call verify_array_shape_3D(grid(lev)%recvNE,nz,nh,nh)
+    recvNE => grid(lev)%recvNE
+
+    comm(:) = 0
+    req(:)  = MPI_REQUEST_NULL
+
+    !- Tag coherency is very important between isend and irecv -!
+    sntag   = 100
+    ewtag   = 101
+    nstag   = 102
+    wetag   = 103
+    swnetag = 104
+    senwtag = 105
+    neswtag = 106
+    nwsetag = 107
+
+    !-----------------------!
+    !- Nonblocking RECEIVE -!
+    !-----------------------!
+
+    if (south.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                 &
+            recvS,nz*nx*nh,MPI_DOUBLE_PRECISION,south, &
+            nstag,MPI_COMM_WORLD,req(1),ierr)
+       comm(1)=1
+    else !!Homogenous Neumann  
+       a2D(1-nh:0,1:nx) = a2D(nh:1:-1,1:nx)
+    endif
+
+    if (east.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                &
+            recvE,nz*ny*nh,MPI_DOUBLE_PRECISION,east, &
+            wetag,MPI_COMM_WORLD,req(2),ierr)
+       comm(2)=2
+    else !!Homogenous Neumann
+       a2D(1:ny,nx+1:nx+nh) = a2D(1:ny,nx:nx-nh+1:-1)
+    endif
+
+    if (north.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                 &
+            recvN,nz*nx*nh,MPI_DOUBLE_PRECISION,north, &
+            sntag,MPI_COMM_WORLD,req(3),ierr)
+       comm(3)=3
+    else !!Homogenous Neumann  
+       a2D(ny+1:ny+nh,1:nx) = a2D(ny:ny-nh+1:-1,1:nx)
+    endif
+
+    if (west.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                &
+            recvW,nz*ny*nh,MPI_DOUBLE_PRECISION,west, &
+            ewtag,MPI_COMM_WORLD,req(4),ierr)
+       comm(4)=4
+    else !!Homogenous Neumann
+       a2D(1:ny,1-nh:0) = a2D(1:ny,nh:1:-1)
+    endif
+
+    if (southwest.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                      &
+            recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest, &
+            neswtag,MPI_COMM_WORLD,req(5),ierr)
+       comm(5)=5
+    else !!Homogenous Neumann  
+       a2D(1-nh:0,1-nh:0) = a2D(nh:1:-1,nh:1:-1)
+    endif
+
+    if (southeast.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                       &
+            recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast, &
+            nwsetag,MPI_COMM_WORLD,req(6),ierr)
+       comm(6)=6
+    else !!Homogenous Neumann  
+       a2D(1-nh:0,nx+1:nx+nh) = a2D(nh:1:-1,nx:nx-nh+1:-1)
+    endif
+
+    if (northeast.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                      &
+            recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast, &
+            swnetag,MPI_COMM_WORLD,req(7),ierr)
+       comm(7)=7
+    else !!Homogenous Neumann  
+       a2D(ny+1:ny+nh,nx+1:nx+nh) = a2D(ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+    endif
+
+    if (northwest.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                                      &
+            recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest, &
+            senwtag,MPI_COMM_WORLD,req(8),ierr)
+       comm(8)=8
+    else !!Homogenous Neumann  
+       a2D(ny+1:ny+nh,1-nh:0) = a2D(ny:ny-nh+1:-1,nh:1:-1)
+    endif
+
+    !--------------------!
+    !- Nonblocking SEND -!
+    !--------------------!
+
+    if (south.ne.MPI_PROC_NULL) then
+       sendS(1,:,:) = a2D(1:nh,1:nx)  
+       call MPI_ISend(                                 &
+            sendS,nz*nx*nh,MPI_DOUBLE_PRECISION,south, &
+            sntag,MPI_COMM_WORLD,req(9),ierr)
+       comm(9)=9
+    endif
+
+    if (east.ne.MPI_PROC_NULL) then
+       sendE(1,:,:) = a2D(1:ny,nx-nh+1:nx) 
+       call MPI_ISend(                                &
+            sendE,nz*ny*nh,MPI_DOUBLE_PRECISION,east, &
+            ewtag,MPI_COMM_WORLD,req(10),ierr)
+       comm(10)=10
+    endif
+
+    if (north.ne.MPI_PROC_NULL) then
+       sendN(1,:,:) = a2D(ny-nh+1:ny,1:nx)
+       call MPI_ISend(                                 &
+            sendN,nz*nx*nh,MPI_DOUBLE_PRECISION,north, &
+            nstag,MPI_COMM_WORLD,req(11),ierr)
+       comm(11)=11
+    endif
+
+    if (west.ne.MPI_PROC_NULL) then
+       sendW(1,:,:) = a2D(1:ny,1:nh)  
+       call MPI_ISend(                                &
+            sendW,nz*ny*nh,MPI_DOUBLE_PRECISION,west, &
+            wetag,MPI_COMM_WORLD,req(12),ierr)
+       comm(12)=12
+    endif
+
+    if (southwest.ne.MPI_PROC_NULL) then
+       sendSW(1,:,:) = a2D(1:nh,1:nh)  
+       call MPI_ISend(                                      &
+            sendSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest, &
+            swnetag,MPI_COMM_WORLD,req(13),ierr)
+       comm(13)=13
+    endif
+
+    if (southeast.ne.MPI_PROC_NULL) then
+       sendSE(1,:,:) = a2D(1:nh,nx-nh+1:nx)  
+       call MPI_ISend(                                      &
+            sendSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast, &
+            senwtag,MPI_COMM_WORLD,req(14),ierr)
+       comm(14)=14
+    endif
+
+    if (northeast.ne.MPI_PROC_NULL) then
+       sendNE(1,:,:) = a2D(ny-nh+1:ny,nx-nh+1:nx) 
+       call MPI_ISend(                                      &
+            sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast, &
+            neswtag,MPI_COMM_WORLD,req(15),ierr)
+       comm(15)=15
+    endif
+
+    if (northwest.ne.MPI_PROC_NULL) then
+       sendNW(1,:,:) = a2D(ny-nh+1:ny,1:nh)
+       call MPI_ISend(                                      &
+            sendNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest, &
+            nwsetag,MPI_COMM_WORLD,req(16),ierr)
+       comm(16)=16
+    endif
+
+    !- Wait for completion of receive and fill ghost points
+
+    icount=0                       ! Compress arrays "comm" and
+    do i=1,16                      ! "req" to disregard directions
+       if (comm(i).gt.0) then      ! in which no message was sent
+          icount=icount+1          ! or is expected from.  At the
+          if (icount.lt.i) then    ! end of this segment icount
+             comm(icount)=comm(i)  ! is equal to the actual number
+             req(icount)=req(i)    ! of messages sent and received, 
+          endif                    ! arrays comm,req(1:icount)
+       endif                       ! store directional indices
+    enddo
+
+    do while (icount > 0)
+
+       call MPI_Waitany(icount, req, j, status, ierr)
+
+       indx=comm(j)           ! Save directional index for
+       icount=icount-1        ! message received and ready to
+       do i=j,icount          ! unpack, then erase its "req"
+          req(i)=req(i+1)     ! and "comm" and "req" by 
+          comm(i)=comm(i+1)   ! by compressing the arrays, so
+       enddo                  ! that the same message will 
+
+       ! be unpacked only once.
+       if (indx.eq.1) then ! south
+          a2D(1-nh:0,1:nx)  = recvS(1,:,:)
+
+       elseif (indx.eq.2) then ! east
+          a2D(1:ny,nx+1:nx+nh) = recvE(1,:,:)
+
+       elseif (indx.eq.3) then ! north
+          a2D(ny+1:ny+nh,1:nx)  = recvN (1,:,:)
+
+       elseif (indx.eq.4) then ! west
+          a2D(1:ny,1-nh:0) = recvW(1,:,:)
+
+       elseif (indx.eq.5) then ! southwest
+          a2D(1-nh:0,1-nh:0) = recvSW(1,:,:)
+
+       elseif (indx.eq.6) then ! southeast
+          a2D(1-nh:0,nx+1:nx+nh) = recvSE(1,:,:)
+
+       elseif (indx.eq.7) then ! northeast
+          a2D(ny+1:ny+nh,nx+1:nx+nh) = recvNE(1,:,:)
+
+       elseif (indx.eq.8) then ! northwest
+          a2D(ny+1:ny+nh,1-nh:0) = recvNW(1,:,:)
+       endif
+
+    enddo      !<-- while  
+
+    call toc(lev,'fill_halo_2D_nb')
+
+  end subroutine fill_halo_2D_nb
 
   !----------------------------------------
   subroutine fill_halo_3D(lev,p)

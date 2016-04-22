@@ -7,10 +7,94 @@ module mg_gather
 
   implicit none
 
-contains
+  interface gather
+     module procedure &
+          gather_2D,  &
+          gather_3D
+  end interface gather
 
+contains
   !----------------------------------------
-  subroutine gather(lev,x,y,nzi)
+  subroutine gather_2D(lev,x,y)
+
+    ! lev is the level of y, after the gathering
+    ! the grid information for x is not available because x does not belong to a grid
+    ! x is a temporary array (see mg_intergrids.f90)
+
+    integer(kind=ip),intent(in) :: lev
+    real(kind=rp),dimension(:,:),pointer,intent(in) :: x
+    real(kind=rp),dimension(:,:),pointer,intent(out) :: y
+
+    integer(kind=ip):: nx,ny,nz,nh
+    integer(kind=ip):: ngx,ngy,Ng
+    integer(kind=ip):: i,j,k,l,m,ii,jj
+    integer(kind=ip):: i0,i1
+    integer(kind=ip):: ierr
+    real(kind=rp),dimension(:,:,:,:),pointer :: buffer
+
+    ! number of cores per direction involved in this gathering (1 or 2)
+    ngx = grid(lev)%ngx
+    ngy = grid(lev)%ngy
+
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nh = grid(lev)%nh
+
+    buffer => grid(lev)%gatherbuffer2D
+
+    ! numel(x)
+    !NG: 21 april 2106: Ng = grid(lev)%Ng
+    Ng = (nx+2*nh)*(ny+2*nh)
+
+    call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
+    !       if(myrank==0)write(*,*)'gather lev, Ng=',lev,Ng,ngx,ngy,nx,ny
+    !       if(myrank==0)write(*,*)buffer(1,1,1),buffer(1,1,1),buffer(1,1,1),buffer(1,1,1,1,1)
+
+    ! I can see two possibilities to copy the 4 buffers into y
+    !
+    ! 1/ either sweep across each buffer and copy it to y
+    !
+    ! 2/ sweep across y and pick the value from the proper buffer
+    !
+    ! what's the fastest???
+    !
+    nx = nx / ngx
+    ny = ny / ngy
+    do m=0,ngy-1
+       ! copy only the inner points of x into y because 
+       ! the halo of x is corrupted
+       ! Indeed, x comes from the coarsening
+       ! after which we didn't update the halo
+       ! because fill_halo is not available for the intermediate grid...
+       !
+       do l=0,ngx-1
+          !
+          if(l==0)then
+             i0=1-nh
+          else
+             i0=1
+          endif
+          if(l==ngx-1)then
+             i1=nx+nh
+          else
+             i1=nx
+          endif
+          !
+          ii = 1+l*nx
+          do i=1,nx
+             jj = 1+m*ny
+             do j=1,ny
+                y(jj,ii) = buffer(j,i,l,m)
+                jj=jj+1
+             enddo
+             ii=ii+1
+          enddo
+       enddo
+    enddo
+
+  end subroutine gather_2D
+  !----------------------------------------
+  subroutine gather_3D(lev,x,y,nzi)
 
     ! lev is the level of y, after the gathering
 
@@ -97,7 +181,7 @@ contains
        enddo
     enddo
 
-  end subroutine gather
+  end subroutine gather_3D
 
   !----------------------------------------
   subroutine split(lev,x,y)
