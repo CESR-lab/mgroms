@@ -110,12 +110,12 @@ am_testcoarsening_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 testcoarsening_OBJECTS = $(am_testcoarsening_OBJECTS)
 testcoarsening_LDADD = $(LDADD)
 am_testcuc_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
-	mg_namelist.$(OBJEXT) mg_netcdf_out.$(OBJEXT) \
-	mg_grids.$(OBJEXT) mg_mpi_exchange.$(OBJEXT) \
-	mg_gather.$(OBJEXT) mg_define_rhs.$(OBJEXT) \
-	mg_define_matrix.$(OBJEXT) mg_relax.$(OBJEXT) \
-	mg_intergrids.$(OBJEXT) mg_solvers.$(OBJEXT) \
-	mg_netcdf_in.$(OBJEXT) mg_seamount.$(OBJEXT) nhydro.$(OBJEXT) \
+	mg_s_coord.$(OBJEXT) mg_namelist.$(OBJEXT) \
+	mg_netcdf_out.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_gather.$(OBJEXT) \
+	mg_define_rhs.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
+	mg_cuc.$(OBJEXT) mg_relax.$(OBJEXT) mg_intergrids.$(OBJEXT) \
+	mg_solvers.$(OBJEXT) mg_netcdf_in.$(OBJEXT) nhydro.$(OBJEXT) \
 	mg_testcuc.$(OBJEXT)
 testcuc_OBJECTS = $(am_testcuc_OBJECTS)
 testcuc_LDADD = $(LDADD)
@@ -422,6 +422,7 @@ testrelax_SOURCES = \
 testcuc_SOURCES = \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_s_coord.f90       \
 	mg_namelist.f90      \
 	mg_netcdf_out.f90    \
 	mg_grids.f90         \
@@ -429,11 +430,11 @@ testcuc_SOURCES = \
 	mg_gather.f90        \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
+	mg_cuc.f90           \
 	mg_relax.f90         \
 	mg_intergrids.f90    \
 	mg_solvers.f90       \
 	mg_netcdf_in.f90     \
-	mg_seamount.f90      \
 	nhydro.f90           \
 	mg_testcuc.f90
 

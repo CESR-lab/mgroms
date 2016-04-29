@@ -112,16 +112,17 @@ contains
     real(kind=8),dimension(:,:,:)  , pointer :: x,y
 
     r=0._8
+
     do i=1,nx
        do j=1,ny
-          if(grid(lev)%rmask(j,i)==1)then
-             do k=1,nz
-                r=r+x(k,j,i)*y(k,j,i)
-             enddo
-          endif
+          do k=1,nz
+             r=r+x(k,j,i)*y(k,j,i)
+          enddo
        enddo
     enddo
+
     call global_sum(lev,r,res)
+
   end subroutine norm
 
   !---------------------------------------------------------------------

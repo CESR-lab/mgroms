@@ -6,6 +6,7 @@ module mg_seamount
   use mg_define_matrix
   use mg_intergrids
   use mg_relax
+  use mg_s_coord
 !  use mg_netcdf_in
 
   implicit none
@@ -19,7 +20,7 @@ module mg_seamount
   ! before calling setup_realistic_matrix()
 
   real(kind=8) :: Lx,Ly,Htot
-  real(kind=8) :: hc,theta_s,theta_b
+  !!NG real(kind=8) :: hc,theta_s,theta_b
 
 contains
 
@@ -55,7 +56,11 @@ contains
 
     call setup_fine_depth(nx,ny,nz,nh)
 
-    call setup_scoord(nx,ny,nz,nh)
+    !call setup_scoord(nx,ny,nz,nh)
+    call setup_scoord_gene           ( &  ! Compuet zr and zw
+            hlim,theta_b,theta_s,h   , &  ! input args
+            zr,zw                    , &  ! output args
+            coord_type='new_s_coord' )  ! optional
 
     call define_matrices(dx, dy, zr, zw)
 
@@ -97,8 +102,8 @@ contains
     ! dummy 2D to read from netcdf
     allocate(dummy2d(1:nx*inc,1:ny*inc))
 
-    i0=1+pi*nx*inc
-    j0=1+pj*ny*inc
+    i0=2+pi*nx*inc
+    j0=2+pj*ny*inc
 
     starts(1)=i0
     starts(2)=j0
@@ -214,17 +219,27 @@ contains
 
     grid(1)%p(:,:,:)=0._8
 
-    call setup_scoord(nx,ny,nz,nh)
+    if (trim(vgrid) == 'topo') then
+       call define_matrices(dx, dy, h)
+    else
+       !call setup_scoord(nx,ny,nz,nh)
+       call setup_scoord_gene        ( &  ! Compuet zr and zw
+            hlim,theta_b,theta_s,h   , &  ! input args
+            zr,zw                    , &  ! output args
+            coord_type='new_s_coord' )  ! optional
 
-    call define_matrices(dx, dy, zr, zw)
+       call define_matrices(dx, dy, zr, zw)
+    endif
 
     if (netcdf_output) then
        !     call write_netcdf(h,vname='h',netcdf_file_name='h.nc',rank=myrank)
        !     call write_netcdf(dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank)
-       !     call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=myrank)
-       !     call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
+       call write_netcdf(rmask,vname='rmask',netcdf_file_name='rmask.nc',rank=myrank)
+       call write_netcdf(umask,vname='umask',netcdf_file_name='umask.nc',rank=myrank)
+       call write_netcdf(    h,vname=    'h',netcdf_file_name=    'h.nc',rank=myrank)
+       call write_netcdf(   dx,vname=   'dx',netcdf_file_name=   'dx.nc',rank=myrank)
+       call write_netcdf(   dy,vname=   'dy',netcdf_file_name=   'dy.nc',rank=myrank)
     endif
-
 
   end subroutine setup_cuc
   !-------------------------------------------------------------------------     
@@ -470,56 +485,102 @@ contains
 
   end subroutine setup_random_patches
 
-  !-------------------------------------------------------------------------     
-  subroutine setup_scoord(nx,ny,nz,nh)
-    ! compute zr and zw from h(j,i)
-
-    integer(kind=4):: nx,ny,nz,nh
-
-
-    integer(kind=4):: i,j,k
-    real(kind=8) :: cff,cff1,cff2,hinv,sc_w,sc_r,cff_w,cff_r,z_w0,z_r0,cs_r,cs_w
-
-    cff  = 1./float(nz)
-    cff1 = 1./sinh(theta_s)
-    cff2 = 0.5/tanh(0.5*theta_s)
-
-    do i = 0,nx+1
-       do j = 0,ny+1
-          do k = 1,nz
-             sc_w = cff*float(k-1-nz)   !!sc_w = cff*float(k-nz)
-             sc_r = cff*(float(k-nz)-0.5)
-
-             cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
-                  +theta_b*(cff2*tanh(theta_s*(sc_r+0.5))-0.5)
-
-             cs_w = (1.-theta_b)*cff1*sinh(theta_s*sc_w) &
-                  +theta_b*(cff2*tanh(theta_s*(sc_w+0.5))-0.5)
-
-             cff_w = hc * sc_w
-             cff_r = hc * sc_r
-
-             z_w0 = cff_w + cs_w*h(j,i) 
-             z_r0 = cff_r + cs_r*h(j,i)  
-
-             hinv = 1. / (h(j,i)+hc)
-
-             ! roms sigma coordinates
-             zw(k,j,i) = z_w0 * (h(j,i)*hinv)
-             zr(k,j,i) = z_r0 * (h(j,i)*hinv)
-
-             ! basic linear sigma coordinates
-!             zr(k,j,i) = (real(k,kind=8)-0.5_8)*h(j,i)/real(nz,kind=8) - h(j,i)
-!             zw(k,j,i) = (real(k,kind=8)-1.0_8)*h(j,i)/real(nz,kind=8) - h(j,i)
-          enddo
-          zw(nz+1,j,i) = 0.0_8
-       enddo
-    enddo
-
-!    if (netcdf_output) then    
-!       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
-!    endif
-
-  end subroutine setup_scoord
+!!$  !-------------------------------------------------------------------------     
+!!$  subroutine setup_scoord(nx,ny,nz,nh)
+!!$    ! compute zr and zw from h(j,i)
+!!$
+!!$    integer(kind=4):: nx,ny,nz,nh
+!!$
+!!$    integer(kind=4):: i,j,k
+!!$    real(kind=8) :: cff,cff1,cff2,hinv,sc_w,sc_r,cff_w,cff_r,z_w0,z_r0,cs_r,cs_w
+!!$    real(kind=8) :: csrf, cswf
+!!$
+!!$    if (trim(coord) == 'new_s_coord') then
+!!$
+!!$       ! vertical coordinate
+!!$       do i = 0,nx+1
+!!$          do j = 0,ny+1
+!!$             ! new s-coord
+!!$             cff=1./float(nz)
+!!$             do k = 1,nz
+!!$                sc_r = cff*(float(k-nz)-0.5_8)
+!!$                if (theta_s.gt.0._8) then
+!!$                   csrf=(1._8-cosh(theta_s*sc_r))/(cosh(theta_s)-1._8)
+!!$                else
+!!$                   csrf=-sc_r**2
+!!$                endif
+!!$                if (theta_b.gt.0._8) then
+!!$                   cs_r=(exp(theta_b*csrf)-1._8)/(1._8-exp(-theta_b))
+!!$                else
+!!$                   cs_r=csrf
+!!$                endif
+!!$                sc_w = cff*float(k-1-nz)
+!!$                if (theta_s.gt.0._8) then
+!!$                   cswf=(1.D0-cosh(theta_s*sc_w))/(cosh(theta_s)-1._8)
+!!$                else
+!!$                   cswf=-sc_w**2
+!!$                endif
+!!$                if (theta_b.gt.0._8) then
+!!$                   cs_w=(exp(theta_b*cswf)-1._8)/(1._8-exp(-theta_b))
+!!$                else
+!!$                   cs_w=cswf
+!!$                endif
+!!$                cff_w = hlim * sc_w
+!!$                cff_r = hlim * sc_r
+!!$                z_w0 = cff_w + cs_w*h(j,i)
+!!$                z_r0 = cff_r + cs_r*h(j,i)
+!!$                hinv = 1._8 / (h(j,i)+hlim)
+!!$                zw(k,j,i) = z_w0 * (h(j,i)*hinv)
+!!$                zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+!!$             enddo
+!!$             zw(nz+1,j,i) = 0._8
+!!$          enddo
+!!$       enddo
+!!$
+!!$    else
+!!$
+!!$       cff  = 1./float(nz)
+!!$       cff1 = 1./sinh(theta_s)
+!!$       cff2 = 0.5/tanh(0.5*theta_s)
+!!$
+!!$       do i = 0,nx+1
+!!$          do j = 0,ny+1
+!!$             do k = 1,nz
+!!$                sc_w = cff*float(k-1-nz)   !!sc_w = cff*float(k-nz)
+!!$                sc_r = cff*(float(k-nz)-0.5)
+!!$
+!!$                cs_r = (1.-theta_b)*cff1*sinh(theta_s*sc_r) &
+!!$                     +theta_b*(cff2*tanh(theta_s*(sc_r+0.5))-0.5)
+!!$
+!!$                cs_w = (1.-theta_b)*cff1*sinh(theta_s*sc_w) &
+!!$                     +theta_b*(cff2*tanh(theta_s*(sc_w+0.5))-0.5)
+!!$
+!!$                cff_w = hlim * sc_w
+!!$                cff_r = hlim * sc_r
+!!$
+!!$                z_w0 = cff_w + cs_w*h(j,i) 
+!!$                z_r0 = cff_r + cs_r*h(j,i)  
+!!$
+!!$                hinv = 1. / (h(j,i)+hlim)
+!!$
+!!$                ! roms sigma coordinates
+!!$                zw(k,j,i) = z_w0 * (h(j,i)*hinv)
+!!$                zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+!!$
+!!$                ! basic linear sigma coordinates
+!!$                !             zr(k,j,i) = (real(k,kind=8)-0.5_8)*h(j,i)/real(nz,kind=8) - h(j,i)
+!!$                !             zw(k,j,i) = (real(k,kind=8)-1.0_8)*h(j,i)/real(nz,kind=8) - h(j,i)
+!!$             enddo
+!!$             zw(nz+1,j,i) = 0.0_8
+!!$          enddo
+!!$       enddo
+!!$
+!!$    endif
+!!$
+!!$    !    if (netcdf_output) then    
+!!$    !       call write_netcdf(zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank)
+!!$    !    endif
+!!$
+!!$  end subroutine setup_scoord
 
 end module mg_seamount

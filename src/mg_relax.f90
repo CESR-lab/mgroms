@@ -135,8 +135,6 @@ contains
                      - cA(4,k,j,i)*p(k,j-1,i-1) - cA(4,k,j+1,i+1)*p(k,j+1,i+1)&
                      - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1)
 
-                z = z * grid(lev)%rmask(j,i)
-
                 p(k,j,i) = z / cA(1,k,j,i)
                 
              enddo
@@ -289,7 +287,6 @@ contains
           do i = ib,ie
              do j = jb+mod(i+rb,rbi),je,rbi
                 !                if( abs(cA(1,1,j,i))>1d-12)then
-                if( grid(lev)%rmask(j,i)==1 ) then
                    k=1 !lower level
                    rhs(k) = b(k,j,i)                                              &
                         - cA(3,k,j,i)*p(k+1,j-1,i)                                &
@@ -345,22 +342,6 @@ contains
                    ! the other hand, worse convergence rate. Overall the rescaled convergence time
                    ! seems to be the same
                    ! obviously, this residual is only an estimate, it is not the correct one
-!!$             k=1
-!!$             grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
-!!$                   - cA(2,k+1,j,i)*p(k+1,j,i)
-!!$             do k = 2,nz-1!interior levels
-!!$                grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
-!!$                     - cA(2,k,j,i)*p(k-1,j,i) - cA(2,k+1,j,i)*p(k+1,j,i)
-!!$             enddo
-!!$             k=nz
-!!$             grid(lev)%r(k,j,i) = rhs(k) -cA(1,k,j,i)*p(k,j,i) &
-!!$                  - cA(2,k,j,i)*p(k-1,j,i) 
-
-                   !p(:,j,i) = rhs(:)
-
-                else
-                   p(:,j,i)=0._8
-                endif
 
              enddo
           enddo
@@ -476,7 +457,7 @@ contains
           do i = ib,ie
              do j = jb+mod(i+rb,rbi),je,rbi
 !                if( abs(cA(1,1,j,i))>1d-12)then
-                if( grid(lev)%rmask(j,i)==1 ) then
+
 
                    k=1 !lower level
                    rhs(k) = b(k,j,i)
@@ -520,9 +501,7 @@ contains
                    !rhs(k)=rhs(k)-ld(k)*p(k-1,j,i)-ud(k)*p(k+1,j,i)
 
                    !call tridiag_nonsymm(nz,d,ud,ld,rhs,p(:,j,i)) !solve for vertical_coeff_matrix
-                else
-                   p(:,j,i)=0._8
-                endif
+ 
              enddo
           enddo
 
@@ -736,12 +715,12 @@ endif
 
   !----------------------------------------
   subroutine compute_residual(lev,res)
-    integer(kind=ip), intent(in):: lev
-    real(kind=rp), intent(out):: res
+    integer(kind=ip), intent(in) :: lev
+    real(kind=rp)   , intent(out):: res
 
-    real(kind=rp),dimension(:,:,:), pointer:: p
-    real(kind=rp),dimension(:,:,:), pointer:: b
-    real(kind=rp),dimension(:,:,:), pointer:: r
+    real(kind=rp),dimension(:,:,:)  , pointer:: p
+    real(kind=rp),dimension(:,:,:)  , pointer:: b
+    real(kind=rp),dimension(:,:,:)  , pointer:: r
     real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
     integer(kind=ip) :: nx, ny, nz, nh, nd
@@ -803,7 +782,6 @@ endif
     do i = 1,nx
        do j = 1,ny
 
-          if(grid(lev)%rmask(j,i)==1)then
              r(k,j,i) = b(k,j,i)                                           &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
                   - cA(2,k,j,i)*p(k  ,j-1,i) - cA(2,k  ,j+1,i)*p(k  ,j+1,i)&
@@ -811,9 +789,6 @@ endif
 
              !          res = max(res,abs(r(k,j,i)))
              res = res+r(k,j,i)*r(k,j,i)
-          else
-             r(:,j,i)=0._8
-          endif
 
        enddo
     enddo
@@ -846,7 +821,6 @@ endif
                   - cA(4,k,j,i)*p(k,j-1,i-1) - cA(4,k,j+1,i+1)*p(k,j+1,i+1)&
                   - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1)
 
-             z = z * grid(lev)%rmask(j,i)
              r(k,j,i) = z
              !          res = max(res,abs(r(k,j,i)))
              res = res+z*z
@@ -878,7 +852,6 @@ endif
     do i = 1,nx
        do j = 1,ny
 
-          if(grid(lev)%rmask(j,i)==1)then
              rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i)    
              do l=4,11
                 dj=loc(l,2) ! we use loc(4:11)
@@ -888,9 +861,6 @@ endif
              r(k,j,i) = rr
              !          res = max(res,abs(r(k,j,i)))
              res = res+rr*rr
-          else
-             r(:,j,i)=0._8
-          endif
 
        enddo
     enddo
@@ -923,60 +893,56 @@ endif
 
     do i = 1,nx
        do j = 1,ny
-          if(grid(lev)%rmask(j,i)==1)then
-
-          k=1 !lower level
-          r(k,j,i) = b(k,j,i)                                           &
-               - cA(1,k,j,i)*p(k,j,i)                                   &
-                                          - cA(2,k+1,j,i)*p(k+1,j,i)    &
-               - cA(3,k,j,i)*p(k+1,j-1,i)                               &
-               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                                          - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-               - cA(6,k,j,i)*p(k+1,j,i-1)                               &
-               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                                          - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
-          if (cmatrix == 'real') then
-          !- Exception for the redefinition of the coef for the bottom level
-          r(k,j,i) = r(k,j,i) &
-               - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
-               - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
-          endif
-
-!          res = max(res,abs(r(k,j,i)))
-          res = res+r(k,j,i)*r(k,j,i)
-
-          do k = 2,nz-1 !interior levels
+ 
+             k=1 !lower level
              r(k,j,i) = b(k,j,i)                                           &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
-                  - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
-                  - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+                  - cA(2,k+1,j,i)*p(k+1,j,i)    &
+                  - cA(3,k,j,i)*p(k+1,j-1,i)                               &
                   - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                  - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-                  - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+                  - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                  - cA(6,k,j,i)*p(k+1,j,i-1)                               &
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                  - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+                  - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+             if (cmatrix == 'real') then
+                !- Exception for the redefinition of the coef for the bottom level
+                r(k,j,i) = r(k,j,i) &
+                     - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
+                     - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
+             endif
 
-!             res = max(res,abs(r(k,j,i)))
+             !          res = max(res,abs(r(k,j,i)))
              res = res+r(k,j,i)*r(k,j,i)
-          enddo
 
-          k=nz !upper level
-          r(k,j,i) = b(k,j,i)                                           &
-               - cA(1,k,j,i)*p(k,j,i)                                   &
-               - cA(2,k,j,i)*p(k-1,j,i)                                 &
-                                          - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
-               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-               - cA(5,k,j,i)*p(k-1,j-1,i)                               &
-                                          - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
-               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-               - cA(8,k,j,i)*p(k-1,j,i-1)
+             do k = 2,nz-1 !interior levels
+                r(k,j,i) = b(k,j,i)                                           &
+                     - cA(1,k,j,i)*p(k,j,i)                                   &
+                     - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
+                     - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+                     - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+                     - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                     - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+                     - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                     - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
-!          res = max(res,abs(r(k,j,i)))
-          res = res+r(k,j,i)*r(k,j,i)
-          else
-             r(:,j,i)=0._8
-          endif
-   
+                !             res = max(res,abs(r(k,j,i)))
+                res = res+r(k,j,i)*r(k,j,i)
+             enddo
+
+             k=nz !upper level
+             r(k,j,i) = b(k,j,i)                                           &
+                  - cA(1,k,j,i)*p(k,j,i)                                   &
+                  - cA(2,k,j,i)*p(k-1,j,i)                                 &
+                  - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+                  - cA(5,k,j,i)*p(k-1,j-1,i)                               &
+                  - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                  - cA(8,k,j,i)*p(k-1,j,i-1)
+
+             !          res = max(res,abs(r(k,j,i)))
+             res = res+r(k,j,i)*r(k,j,i)
+
        enddo
     enddo
 
@@ -1000,10 +966,23 @@ endif
 
     do i = 1,nx
        do j = 1,ny
-          if(grid(lev)%rmask(j,i)==1)then
-             k=1 !lower level
-             rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(2,k,j,i)*p(k+1,j,i) 
-             do l=4,19
+
+          k=1 !lower level
+          rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(2,k,j,i)*p(k+1,j,i) 
+          do l=4,19
+             dk=loc(l,1)
+             dj=loc(l,2)
+             di=loc(l,3)
+             rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
+          enddo
+          r(k,j,i) = rr
+
+          !          res = max(res,abs(r(k,j,i)))
+          res = res+rr*rr
+
+          do k = 2,nz-1 !interior levels
+             rr = b(k,j,i)
+             do l=1,27
                 dk=loc(l,1)
                 dj=loc(l,2)
                 di=loc(l,3)
@@ -1011,38 +990,23 @@ endif
              enddo
              r(k,j,i) = rr
 
-             !          res = max(res,abs(r(k,j,i)))
+             !             res = max(res,abs(r(k,j,i)))
              res = res+rr*rr
+          enddo
 
-             do k = 2,nz-1 !interior levels
-                rr = b(k,j,i)
-                do l=1,27
-                   dk=loc(l,1)
-                   dj=loc(l,2)
-                   di=loc(l,3)
-                   rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
-                enddo
-                r(k,j,i) = rr
+          k=nz !upper level
+          rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(3,k,j,i)*p(k-1,j,i)
+          do l=12,27
+             dk=loc(l,1)
+             dj=loc(l,2)
+             di=loc(l,3)
+             rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
+          enddo
+          r(k,j,i) = rr
 
-                !             res = max(res,abs(r(k,j,i)))
-                res = res+rr*rr
-             enddo
+          !          res = max(res,abs(r(k,j,i)))
+          res = res+rr*rr
 
-             k=nz !upper level
-             rr = b(k,j,i) - cA(1,k,j,i)*p(k,j,i) - cA(3,k,j,i)*p(k-1,j,i)
-             do l=12,27
-                dk=loc(l,1)
-                dj=loc(l,2)
-                di=loc(l,3)
-                rr = rr - cA(l,k,j,i) * p(k+dk,j+dj,i+di)
-             enddo
-             r(k,j,i) = rr
-
-             !          res = max(res,abs(r(k,j,i)))
-             res = res+rr*rr
-          else
-             r(:,j,i)=0._8
-          endif
        enddo
     enddo
 

@@ -2,12 +2,12 @@ program mg_testcuc
 
   use mg_mpi 
   use mg_tictoc
-    use mg_grids
+  use mg_grids
   !  use mg_define_rhs
-    use mg_define_matrix
+  use mg_define_matrix
   !  use mg_relax
   !  use mg_intergrids
-  use mg_seamount
+  use mg_cuc
   !  use mg_solvers
   use nhydro
 
@@ -33,36 +33,27 @@ program mg_testcuc
 
   character(len = 16) :: filen
 
-  call tic(1,'mg_testrelax')
+  call tic(1,'mg_testcuc')
 
   !---------------!
   !- Ocean model -!
   !---------------!
+  inc  = 1
+  nxg  = 1024/inc
+  nyg  = 1024/inc
+  nzg  =   64/inc
 
-  inc = 1
-  nxg   = 1024/inc
-  nyg   = 1024/inc
-  nzg   = 64/inc
-
-  Lx =  200d3
-  Ly =  200d3
+  Lx   =  200d3
+  Ly   =  200d3
   Htot = 4d3
 
-!!$  nxg   = 128
-!!$  nyg   = 128
-!!$  nzg   = 128
-!!$
-!!$  Lx =  20d3
-!!$  Ly =  20d3
-!!$  Htot = 4d3
+  ! global variables define in mg_grids 
+  hlim    = 250._8
+  theta_b =   6._8
+  theta_s =   6._8
 
-
-  hc      = 100.
-  theta_b = 0.
-  theta_s = 3.
-
-  npxg  = 4
-  npyg  = 4
+  npxg  = 2
+  npyg  = 2
 
   nit     = 8
   nsweeps = 100
@@ -100,22 +91,16 @@ program mg_testcuc
   do lev=1,1!nlevs
      if (myrank.eq.0)write(*,*)'----------------------------------------'
 
-
+     !--------------------!
+     !- P initialisation -!
+     !--------------------!
      grid(lev)%p = 0._8
-     !     grid(lev)%b = 0._8
-     !     call random_number(grid(lev)%p)
-     !     call random_number(grid(lev)%b)
-     !     grid(lev)%b(grid(lev)%nz,:,:)= 0.
-     do k=1,grid(lev)%nz
-        grid(lev)%p(k,:,:)= grid(lev)%p(k,:,:)*grid(lev)%rmask
-        !        grid(lev)%b(k,:,:)= (2*grid(lev)%b(k,:,:)-1.)*grid(lev)%rmask
-     enddo
-     call fill_halo(lev,grid(lev)%p)
-     !     call fill_halo(lev,grid(lev)%b)
-!     call setup_rhs(nx,ny,nz,nh,grid(lev)%b)
 
-!     call setup_smooth_rhs(4)
-
+     !--------------------------!
+     !- RHS initialisation (b) -!
+     !--------------------------!
+     ! call setup_rhs(nx,ny,nz,nh,grid(lev)%b)
+     ! call setup_smooth_rhs(4)
      call setup_random_patches()
 
      if (netcdf_output) then
@@ -128,12 +113,11 @@ program mg_testcuc
      call cpu_time(tstart)
 
      do it=0, nit
-        !if(it>0) call Vcycle(lev)
-        !if(it>0) call Vcycle2(lev,lev+5)
-        if(it>0) call Fcycle()
-        !if(it>0)call relax(lev,nsweeps)
+
+        if (it > 0) call Fcycle()
+
         call compute_residual(lev,res)
-!        call norm(lev,grid(lev)%r,grid(lev)%r,nx,ny,nz,res)
+
         res=sqrt(res/bnorm)
 
         if (netcdf_output) then
@@ -172,11 +156,9 @@ program mg_testcuc
      write(*,*)'---------------'
   end if
 
-
-
   call mpi_finalize(ierr)
 
-  call toc(1,'mg_testrelax')
+  call toc(1,'mg_testcuc')
   if(myrank == 0) call print_tictoc(myrank)
 
 end program mg_testcuc

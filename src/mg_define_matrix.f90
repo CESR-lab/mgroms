@@ -4,23 +4,172 @@ module mg_define_matrix
   use mg_tictoc
   use mg_namelist
   use mg_grids
+  use mg_s_coord
   use mg_mpi_exchange
   use mg_gather
   use mg_netcdf_out
 
   implicit none
 
-    real(kind=rp), parameter :: one=1._rp
-    real(kind=rp), parameter :: eigh=one/8._8
-    real(kind=rp), parameter :: qrt=0.25_rp
-    real(kind=rp), parameter :: hlf=0.5_rp
+  interface define_matrices
+     module procedure           &
+          define_matrices_topo, &
+          define_matrices_grid
+  end interface define_matrices
+
+  real(kind=rp), parameter :: one  = 1._rp
+  real(kind=rp), parameter :: eigh = one/8._8
+  real(kind=rp), parameter :: qrt  = 0.25_rp
+  real(kind=rp), parameter :: hlf  = 0.5_rp
 
 contains
-  !-------------------------------------------------------------------------     
-  subroutine define_matrices(dx, dy, zr, zw)
+  !-------------------------------------------------------------------------  
+  subroutine define_matrices_topo(dx, dy, h)
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: dx
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: dy
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: h
 
-    real(kind=rp), dimension(:,:)  , pointer, optional, intent(in) :: dx, dy
-    real(kind=rp), dimension(:,:,:), pointer, optional, intent(in) :: zr, zw
+    integer(kind=ip)::  lev
+
+    real(kind=rp), dimension(:,:), pointer :: dxf
+    real(kind=rp), dimension(:,:), pointer :: dxc
+
+    real(kind=rp), dimension(:,:), pointer :: dyf
+    real(kind=rp), dimension(:,:), pointer :: dyc
+
+    real(kind=rp), dimension(:,:), pointer :: hf
+    real(kind=rp), dimension(:,:), pointer :: hc
+
+    real(kind=rp), dimension(:,:,:), pointer :: zrc
+    real(kind=rp), dimension(:,:,:), pointer :: zwc
+
+    integer(kind=ip) :: nz,ny,nx,nh,nht
+    integer(kind=ip) :: nzf,nyf,nxf,nhf,nhtf
+    integer(kind=ip) :: nyc,nxc
+
+    if (myrank==0) write(*,*)'- define matrix from topography (h):'
+
+    do lev = 1, nlevs
+
+       if (myrank==0) write(*,*)'   lev=',lev
+
+       nx=grid(lev)%nx
+       ny=grid(lev)%ny
+       nz=grid(lev)%nz
+       nh=grid(lev)%nh
+       nht=grid(lev)%nht
+
+       if (lev == 1) then
+          grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh) = dx
+          grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh) = dy
+          grid(lev)%h (1-nh:ny+nh,1-nh:nx+nh) =  h
+
+       else
+          nxf =grid(lev-1)%nx
+          nyf =grid(lev-1)%ny
+          nzf =grid(lev-1)%nz
+          nhf =grid(lev-1)%nh
+          nhtf=grid(lev-1)%nht
+
+          dxf => grid(lev-1)%dx
+          dyf => grid(lev-1)%dy
+          hf  => grid(lev-1)%h
+
+          if (grid(lev)%gather == 1) then
+             nxc= nx/grid(lev)%ngx
+             nyc= ny/grid(lev)%ngy
+
+             allocate(dxc(1-nh:nyc+nh,1-nh:nxc+nh))
+             allocate(dyc(1-nh:nyc+nh,1-nh:nxc+nh))
+             allocate( hc(1-nh:nyc+nh,1-nh:nxc+nh))
+          else
+             nxc = nx
+             nyc = ny
+             dxc => grid(lev)%dx
+             dyc => grid(lev)%dy
+             hc  => grid(lev)%h
+          endif
+
+          if ((aggressive).and.(lev==1)) then
+
+             write(*,*) ' define matrices (aggressive).and.(lev==1) not available !'
+             STOP
+
+          else
+
+             dxc(1:nyc,1:nxc) = hlf      * ( &
+                  dxf(1:nyf  :2,1:nxf  :2) + &
+                  dxf(2:nyf+1:2,1:nxf  :2) + &
+                  dxf(1:nyf  :2,2:nxf+1:2) + &
+                  dxf(2:nyf+1:2,2:nxf+1:2) )
+
+             dyc(1:nyc,1:nxc) = hlf      * ( &
+                  dyf(1:nyf  :2,1:nxf  :2) + &
+                  dyf(2:nyf+1:2,1:nxf  :2) + &
+                  dyf(1:nyf  :2,2:nxf+1:2) + &
+                  dyf(2:nyf+1:2,2:nxf+1:2) )
+
+             hc(1:nyc,1:nxc)  = qrt      * ( &
+                  hf(1:nyf  :2,1:nxf  :2)  + &
+                  hf(2:nyf+1:2,1:nxf  :2)  + &
+                  hf(1:nyf  :2,2:nxf+1:2)  + &
+                  hf(2:nyf+1:2,2:nxf+1:2)  )
+
+          endif ! aggressive
+
+          if (grid(lev)%gather == 1) then
+
+             call gather(lev,dxc,grid(lev)%dx)
+             call gather(lev,dyc,grid(lev)%dy)
+             call gather(lev, hc,grid(lev)%h)
+
+             deallocate(dxc)
+             deallocate(dyc)
+             deallocate( hc)
+          endif
+
+       endif ! lev == 1
+
+       call fill_halo(lev, grid(lev)%dx)
+       call fill_halo(lev, grid(lev)%dy)
+       call fill_halo(lev,  grid(lev)%h)
+
+       zrc => grid(lev)%zr
+       zwc => grid(lev)%zw
+
+       call setup_scoord_gene               ( &  ! Compuet zr and zw
+            hlim,theta_b,theta_s,grid(lev)%h, &  ! input args
+            grid(lev)%zr, grid(lev)%zw      , &  ! output args
+            coord_type='new_s_coord'        )    ! optional
+
+       if (netcdf_output) then
+          if (lev > 1) then
+             call write_netcdf(grid(lev)%dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
+             call write_netcdf(grid(lev)%dy,vname='dy',netcdf_file_name='dy.nc',rank=myrank,iter=lev)
+             call write_netcdf(grid(lev)%h ,vname='h' ,netcdf_file_name='h.nc' ,rank=myrank,iter=lev)
+             call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
+             call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
+          endif
+       endif
+
+       if (myrank==0) then
+          write(*,*)'     call define matrix'
+          write(*,*)'         dx bounds:',lbound(grid(lev)%dx), ubound(grid(lev)%dx)
+          write(*,*)'         dy bounds:',lbound(grid(lev)%dy), ubound(grid(lev)%dy)
+          write(*,*)'         zr bounds:',lbound(grid(lev)%zr), ubound(grid(lev)%zr)
+          write(*,*)'         zw bounds:',lbound(grid(lev)%zw), ubound(grid(lev)%zw)
+       endif
+       call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw)
+
+    enddo ! lev
+
+  end subroutine define_matrices_topo
+
+  !-------------------------------------------------------------------------     
+  subroutine define_matrices_grid(dx, dy, zr, zw)
+
+    real(kind=rp), dimension(:,:)  , pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
 
     integer(kind=ip)::  lev
 
@@ -40,7 +189,7 @@ contains
     integer(kind=ip) :: nzf,nyf,nxf,nhf,nhtf
     integer(kind=ip) :: nyc,nxc
 
-    if (myrank==0) write(*,*)'- define matrix:'
+    if (myrank==0) write(*,*)'- define matrix directly from zr and zw:'
 
     do lev = 1, nlevs
 
@@ -94,49 +243,47 @@ contains
 
           elseif (grid(lev)%nz == 1) then
 
-             !! TODO
-             !! dx 2D
-             !! dy 2D
-             write(*,*)'Todo dx 2D, dy 2D'
-             STOP
-
-             zrc(1,1:nyc+1,1:nxc+1) = qrt  * ( &
-                  zrf(1,0:nyf:2,0:nxf:2)     + &
-                  zrf(1,1:nyf+1:2,0:nxf:2)   + &
-                  zrf(1,0:nyf:2,1:nxf+1:2)   + &
-                  zrf(1,1:nyf+1:2,1:nxf+1:2) )
-
-             zwc(:,1:nyc+1,1:nxc+1) = qrt  * ( &
-                  zwf(:,0:nyf:2,0:nxf:2)     + &
-                  zwf(:,1:nyf+1:2,0:nxf:2)   + &
-                  zwf(:,0:nyf:2,1:nxf+1:2)   + &
-                  zwf(:,1:nyf+1:2,1:nxf+1:2) )
-
-          else
-
              dxc(1:nyc,1:nxc) = hlf *      ( &
                   dxf(1:nyf  :2,1:nxf  :2) + &
                   dxf(2:nyf+1:2,1:nxf  :2) + &
                   dxf(1:nyf  :2,2:nxf+1:2) + &
-                  dxf(2:nyf+1:2,1:nxf+1:2) )
+                  dxf(2:nyf+1:2,2:nxf+1:2) )
 
              dyc(1:nyc,1:nxc) = hlf *      ( &
                   dyf(1:nyf  :2,1:nxf  :2) + &
                   dyf(2:nyf+1:2,1:nxf  :2) + &
                   dyf(1:nyf  :2,2:nxf+1:2) + &
-                  dyf(2:nyf+1:2,1:nxf+1:2) )
+                  dyf(2:nyf+1:2,2:nxf+1:2) )
 
-             zrc(:,1:nyc,1:nxc) = eigh                                              * ( &
-                  zrf(1:nz-1:2,1:nyf-1:2,1:nxf-1:2) + zrf(2:nz:2,1:nyf-1:2,1:nxf-1:2) + &
-                  zrf(1:nz-1:2,2:nyf  :2,1:nxf-1:2) + zrf(2:nz:2,2:nyf  :2,1:nxf-1:2) + &
-                  zrf(1:nz-1:2,1:nyf-1:2,2:nxf  :2) + zrf(2:nz:2,1:nyf-1:2,2:nxf  :2) + &
-                  zrf(1:nz-1:2,2:nyf  :2,2:nxf  :2) + zrf(2:nz:2,2:nyf  :2,2:nxf  :2) )
+             if (grid(lev)%nz == 1) then
 
-             zwc(:,1:nyc,1:nxc) = qrt             * ( &
-                  zwf(1:nz+1:2,1:nyf-1:2,1:nxf-1:2) + &
-                  zwf(1:nz+1:2,2:nyf:  2,1:nxf-1:2) + &
-                  zwf(1:nz+1:2,1:nyf-1:2,2:nxf  :2) + &
-                  zwf(1:nz+1:2,2:nyf  :2,2:nxf  :2) )
+                zrc(1,1:nyc+1,1:nxc+1) = qrt  * ( &
+                     zrf(1,0:nyf:2,0:nxf:2)     + &
+                     zrf(1,1:nyf+1:2,0:nxf:2)   + &
+                     zrf(1,0:nyf:2,1:nxf+1:2)   + &
+                     zrf(1,1:nyf+1:2,1:nxf+1:2) )
+
+                zwc(:,1:nyc+1,1:nxc+1) = qrt  * ( &
+                     zwf(:,0:nyf:2,0:nxf:2)     + &
+                     zwf(:,1:nyf+1:2,0:nxf:2)   + &
+                     zwf(:,0:nyf:2,1:nxf+1:2)   + &
+                     zwf(:,1:nyf+1:2,1:nxf+1:2) )
+
+             else
+
+                zrc(:,1:nyc,1:nxc) = eigh                                              * ( &
+                     zrf(1:nz-1:2,1:nyf-1:2,1:nxf-1:2) + zrf(2:nz:2,1:nyf-1:2,1:nxf-1:2) + &
+                     zrf(1:nz-1:2,2:nyf  :2,1:nxf-1:2) + zrf(2:nz:2,2:nyf  :2,1:nxf-1:2) + &
+                     zrf(1:nz-1:2,1:nyf-1:2,2:nxf  :2) + zrf(2:nz:2,1:nyf-1:2,2:nxf  :2) + &
+                     zrf(1:nz-1:2,2:nyf  :2,2:nxf  :2) + zrf(2:nz:2,2:nyf  :2,2:nxf  :2) )
+
+                zwc(:,1:nyc,1:nxc) = qrt             * ( &
+                     zwf(1:nz+1:2,1:nyf-1:2,1:nxf-1:2) + &
+                     zwf(1:nz+1:2,2:nyf  :2,1:nxf-1:2) + &
+                     zwf(1:nz+1:2,1:nyf-1:2,2:nxf  :2) + &
+                     zwf(1:nz+1:2,2:nyf  :2,2:nxf  :2) )
+
+             endif
 
           end if
 
@@ -144,7 +291,7 @@ contains
 
              call gather(lev,dxc,grid(lev)%dx)
              call gather(lev,dyc,grid(lev)%dy)
-             
+
              call gather(lev,zrc,grid(lev)%zr,nzi=nz)
              call gather(lev,zwc,grid(lev)%zw,nzi=nz+1)
 
@@ -162,23 +309,24 @@ contains
        call fill_halo_3D_nb(lev,grid(lev)%zw,nhi=nht)
 
        if (netcdf_output) then
-          call write_netcdf(grid(lev)%zr,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
-          call write_netcdf(grid(lev)%zw,vname='dy',netcdf_file_name='dy.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%dy,vname='dy',netcdf_file_name='dy.nc',rank=myrank,iter=lev)
           call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
           call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
        endif
 
        call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw)
 
-    enddo
+    enddo ! lev
 
-  end subroutine define_matrices
+  end subroutine define_matrices_grid
 
-!----------------------------------------
+  !-----------------------------------------------------------------------------------
+
   subroutine define_matrix(lev, dx, dy, zr, zw)
 
     integer(kind=ip),intent(in):: lev
-    real(kind=rp), dimension(:,:), pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:),   pointer, intent(in) :: dx, dy
     real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
 
     ! Define matrix coefficients cA
@@ -216,6 +364,250 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
+    if (myrank==0) then 
+       write(*,*)'     define matrix'
+       write(*,*)'         dx bounds:',lbound(dx), ubound(dx) 
+       write(*,*)'         dy bounds:',lbound(dy), ubound(dy)
+       write(*,*)'         zr bounds:',lbound(zr), ubound(zr)
+       write(*,*)'         zw bounds:',lbound(zw), ubound(zw) 
+    endif
+
+    cA => grid(lev)%cA 
+
+    !! Cell heights
+    allocate(dz(nz,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz
+             dz(k,j,i) = zw(k+1,j,i)-zw(k,j,i) !!  cell height at rho-points
+          enddo
+       enddo
+    enddo
+    allocate(dzw(nz+1,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          dzw(1,j,i) = zr(1,j,i)-zw(1,j,i) !!
+          do k = 2,nz
+             dzw(k,j,i) = zr(k,j,i)-zr(k-1,j,i) !!  cell height at w-points
+          enddo
+          dzw(nz+1,j,i) = zw(nz+1,j,i)-zr(nz,j,i) !!
+       enddo
+    enddo
+
+    !! Cell widths
+    allocate(dxu(ny,nx+1))
+    do i = 1,nx+1
+       do j = 1,ny
+          dxu(j,i) = 0.5_8*(dx(j,i)+dx(j,i-1))
+       enddo
+    enddo
+    allocate(dyv(ny+1,nx))
+    do i = 1,nx
+       do j = 1,ny+1
+          dyv(j,i) = 0.5_8*(dy(j,i)+dy(j-1,i))
+       enddo
+    enddo
+
+    !!  Areas
+    allocate(Arx(nz,ny,nx+1))
+    do i = 1,nx+1
+       do j = 1,ny
+          do k = 1,nz
+             Arx(k,j,i) = 0.25_8*(dz(k,j,i)+dz(k,j,i-1))*(dy(j,i)+dy(j,i-1)) 
+          enddo
+       enddo
+    enddo
+    allocate(Ary(nz,ny+1,nx))
+    do i = 1,nx
+       do j = 1,ny+1
+          do k = 1,nz
+             Ary(k,j,i) = 0.25_8*(dz(k,j,i)+dz(k,j-1,i))*(dx(j,i)+dx(j-1,i)) 
+          enddo
+       enddo
+    enddo
+    allocate(Arz(0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          Arz(j,i) = dx(j,i)*dy(j,i)
+       enddo
+    enddo
+
+    !! Slopes in x- and y-direction defined at rho-points
+    allocate(zx(nz,0:ny+1,0:nx+1))
+    allocate(zy(nz,0:ny+1,0:nx+1))
+    do i = 1,nx
+       do j = 1,ny
+          do k = 1,nz
+             zy(k,j,i) = 0.5_8*(zr(k,j+1,i)-zr(k,j-1,i))/dy(j,i)
+             zx(k,j,i) = 0.5_8*(zr(k,j,i+1)-zr(k,j,i-1))/dx(j,i)
+          enddo
+       enddo
+    enddo
+    call fill_halo(lev,zy)
+    call fill_halo(lev,zx) 
+
+    allocate(zxdy(nz,0:ny+1,0:nx+1))
+    allocate(zydx(nz,0:ny+1,0:nx+1))
+    do k = 1,nz
+       zydx(k,:,:) = zy(k,:,:)*dx(:,:)
+       zxdy(k,:,:) = zx(k,:,:)*dy(:,:)
+    enddo
+
+    allocate(zyw(nz+1,0:ny+1,0:nx+1))
+    allocate(zxw(nz+1,0:ny+1,0:nx+1))
+    do i = 1,nx
+       do j = 1,ny
+          do k = 1,nz+1
+             zyw(k,j,i) = 0.5_8*(zw(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
+             zxw(k,j,i) = 0.5_8*(zw(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
+          enddo
+       enddo
+    enddo
+    call fill_halo(lev,zyw)
+    call fill_halo(lev,zxw)
+
+    allocate(cw(nz+1,0:ny+1,0:nx+1))
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz+1
+             cw(k,j,i) = Arz(j,i)/dzw(k,j,i) * (1._8 + zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
+          enddo
+       enddo
+    enddo
+
+    !! interaction coeff with neighbours
+    do i = 1,nx
+       do j = 1,ny
+
+          k = 1 !lower level
+          cA(3,k,j,i) = ( 0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i) )       !! couples with k+1 j-1
+          cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
+                                ! topo terms                                           
+               -(zydx(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+               + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))) & 
+                                ! from j,k cross terms
+               -(0.25_8*zydx(k,j-1,i) - 0.25_8*zydx(k,j,i)) & 
+                                ! from i,j cross terms if lbc                                         
+               -(0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &
+               - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i))))
+          cA(6,k,j,i) = ( 0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1) )      !! couples with k+1 i-1
+          cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! couples with i-1
+                                ! topo terms                                                   
+               -(zxdy(k,j,i)*zxdy(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
+               + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))) &
+                                ! from i,k cross terms
+               -(0.25_8*zxdy(k,j,i-1) - 0.25_8*zxdy(k,j,i)) &
+                                ! from i,j cross terms if lbc                                         
+               -(0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
+               - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i))) )
+          cA(5,k,j,i) = +0.5_8*zxdy(k,j+1,i)*zydx(k,j+1,i)/(cw(k,j+1,i)+cw(k+1,j+1,i)) &  !! only for k==1, couples with j+1,i-1
+               +0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))       
+          cA(8,k,j,i) =-0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &   !! only for k==1, couples with j-1,i-1
+               -0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))                                   
+
+          do k = 2,nz-1 !interior levels
+             cA(2,k,j,i) = cw(k,j,i) &                                                    !! couples with k-1
+                  -(0.25_8*zxdy(k-1,j,i) - 0.25_8*zxdy(k,j,i)) &
+                  -(0.25_8*zydx(k-1,j,i) - 0.25_8*zydx(k,j,i)) 
+             cA(3,k,j,i) = (0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i))   !! couples with k+1 j-1
+             cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)                             !! couples with j-1
+             cA(5,k,j,i) =-(0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i))   !! couples with k-1 j-1
+             cA(6,k,j,i) = (0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1))   !! Couples with k+1 i-1
+             cA(7,k,j,i) = Arx(k,j,i)/dxu(j,i)                             !! Couples with i-1
+             cA(8,k,j,i) =-(0.25_8*zxdy(k-1,j,i) + 0.25_8*zxdy(k,j,i-1))   !! Couples with k-1 i-1
+          enddo
+
+          k = nz !upper level
+          cA(2,k,j,i) = cw(k,j,i)                                                         !! couples with k-1
+          cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
+               -(-0.25_8*zydx(k,j-1,i) + 0.25_8*zydx(k,j,i)) )
+          cA(5,k,j,i) =-( 0.25_8*zydx(k-1,j,i) + 0.25_8*zydx(k,j-1,i) )    !! couples with k-1 j-1
+          cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! Couples with i-1
+               -(-0.25_8*zxdy(k,j,i-1) + 0.25_8*zxdy(k,j,i)) )
+          cA(8,k,j,i) =-( 0.25_8*zxdy(k-1,j,i) + 0.25_8*zxdy(k,j,i-1) )    !! Couples with k-1 i-1
+       enddo
+    enddo
+
+    call fill_halo(lev,cA)
+
+    !! interaction coeff with itself
+    do i = 1,nx
+       do j = 1,ny
+
+          k = 1 !lower level
+          cA(1,k,j,i) = -cA(2,k+1,j,i) &
+               -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+               -cA(6,k,j,i)-cA(8,k+1,j,i+1)-cA(3,k,j,i)-cA(5,k+1,j+1,i) &
+               -cA(5,k,j,i)-cA(5,k,j-1,i+1)-cA(8,k,j,i)-cA(8,k,j+1,i+1)
+
+          do k = 2,nz-1 !interior levels
+             cA(1,k,j,i) = -cA(2,k,j,i)-cA(2,k+1,j,i) &
+                  -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+                  -cA(6,k,j,i)-cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(8,k+1,j,i+1) & 
+                  -cA(3,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)-cA(5,k+1,j+1,i)   
+
+          enddo
+
+          k = nz !upper level
+          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
+               -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
+               -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
+
+       enddo
+    enddo
+
+    deallocate(Arx)
+    deallocate(Ary)
+    deallocate(Arz)
+    deallocate(zxdy)
+    deallocate(zydx)
+    deallocate(cw)
+
+  end subroutine define_matrix
+
+  !----------------------------------------
+  subroutine define_matrix_orig(lev, dx, dy, zr, zw)
+
+    integer(kind=ip),intent(in):: lev
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
+
+    ! Define matrix coefficients cA
+    ! Coefficients are stored in order of diagonals
+    ! cA(1,:,:,:)      -> p(k,j,i)
+    ! cA(2,:,:,:)      -> p(k-1,j,i)
+    ! cA(3,:,:,:)      -> p(k+1,j-1,i)
+    ! cA(4,:,:,:)      -> p(k,j-1,i)
+    ! cA(5,:,:,:)      -> p(k-1,j-1,i)
+    ! cA(6,:,:,:)      -> p(k+1,j,i-1)
+    ! cA(7,:,:,:)      -> p(k,j,i-1)xd
+    ! cA(8,:,:,:)      -> p(k-1,j,i-1)
+
+    integer(kind=ip):: k, j, i
+    integer(kind=ip):: nx, ny, nz
+    integer(kind=ip):: nh, nht
+
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA
+    real(kind=rp), dimension(:,:)  ,   pointer :: dxu, dyv
+    real(kind=rp), dimension(:,:,:),   pointer :: Arx, Ary
+    real(kind=rp), dimension(:,:)  ,   pointer :: Arz
+    real(kind=rp), dimension(:,:,:),   pointer :: dz
+    real(kind=rp), dimension(:,:,:),   pointer :: dzw
+    real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
+    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
+    real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
+    real(kind=rp), dimension(:,:,:),   pointer :: cw
+
+    ! TODO NG
+    ! zw,zr can change in time
+    ! dx,dy constant in time
+
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
+    nht = grid(lev)%nht
+
     cA => grid(lev)%cA 
 
     !! Cell heights
@@ -227,6 +619,7 @@ contains
           enddo
        enddo
     enddo
+
     allocate(dzw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
@@ -279,14 +672,19 @@ contains
     !! Slopes in x- and y-direction defined at rho-points
     allocate(zx(nz,0:ny+1,0:nx+1))
     allocate(zy(nz,0:ny+1,0:nx+1))
-    do i = 0,nx+1
-       do j = 0,ny+1
+    do i = 1,nx
+       do j = 1,ny
           do k = 1,nz
              zy(k,j,i) = hlf*(zr(k,j+1,i)-zr(k,j-1,i))/dy(j,i)
              zx(k,j,i) = hlf*(zr(k,j,i+1)-zr(k,j,i-1))/dx(j,i)
           enddo
        enddo
     enddo
+
+    if (nht == 1 ) then
+       call fill_halo(lev,zy)
+       call fill_halo(lev,zx)
+    endif
 
     allocate(zxdy(nz,0:ny+1,0:nx+1))
     allocate(zydx(nz,0:ny+1,0:nx+1))
@@ -297,14 +695,19 @@ contains
 
     allocate(zyw(nz+1,0:ny+1,0:nx+1))
     allocate(zxw(nz+1,0:ny+1,0:nx+1))
-    do i = 0,nx+1
-       do j = 0,ny+1
+    do i = 1,nx
+       do j = 1,ny
           do k = 1,nz+1
              zyw(k,j,i) = hlf*(zw(k,j+1,i)-zw(k,j-1,i))/dy(j,i)
              zxw(k,j,i) = hlf*(zw(k,j,i+1)-zw(k,j,i-1))/dx(j,i)
           enddo
        enddo
     enddo
+
+    if (nht == 1 ) then
+       call fill_halo(lev,zyw)
+       call fill_halo(lev,zxw)
+    endif
 
     allocate(cw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
@@ -314,6 +717,8 @@ contains
           enddo
        enddo
     enddo
+
+    if (myrank==0) write(*,*)'     compute cA'
 
     cA(:,:,:,:)=0._8
 
@@ -342,7 +747,9 @@ contains
                -hlf*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))                                        
 
           do k = 2,nz-1 !interior levels
-             cA(2,k,j,i) = cw(k,j,i)                              !! couples with k-1
+             cA(2,k,j,i) = cw(k,j,i)                     &        !! couples with k-1
+                  -(qrt*zxdy(k-1,j,i) - qrt*zxdy(k,j,i)) &
+                  -(qrt*zydx(k-1,j,i) - qrt*zydx(k,j,i))
              cA(3,k,j,i) = qrt*(zydx(k+1,j,i) + zydx(k,j-1,i))    !! couples with k+1 j-1
              cA(4,k,j,i) = Ary(k,j,i)/dyv(j,i)                    !! couples with j-1
              cA(5,k,j,i) =-qrt*(zydx(k-1,j,i) + zydx(k,j-1,i))    !! couples with k-1 j-1
@@ -363,6 +770,7 @@ contains
     enddo
 
     !JM: we want to make it obsolete !
+    if (myrank==0) write(*,*)'       fill halo cA'
     call fill_halo(lev,cA)
 
     !! interaction coeff with itself
@@ -391,9 +799,16 @@ contains
           enddo
 
           k = nz !upper level
-          cA(1,k,j,i) = -cA(2,k,j,i)-cw(k+1,j,i) &
-               -cA(4,k,j,i)-cA(4,k,j+1,i)-cA(7,k,j,i)-cA(7,k,j,i+1) &
-               -cA(6,k-1,j,i+1)-cA(8,k,j,i)-cA(3,k-1,j+1,i)-cA(5,k,j,i)
+          cA(1,k,j,i) =                   &
+               -cA(2,k,j,i)               &
+               -cw(k+1,j,i)               &
+               -cA(4,k,j,i)-cA(4,k,j+1,i) &
+               -cA(7,k,j,i)-cA(7,k,j,i+1) &
+               -cA(6,k-1,j,i+1)           &
+               -cA(8,k,j,i)               &
+               -cA(3,k-1,j+1,i)           &
+               -cA(5,k,j,i)
+
        enddo
     enddo
 
@@ -404,8 +819,13 @@ contains
     deallocate(zydx)
     deallocate(cw)
 
-  end subroutine define_matrix
+    if (netcdf_output) then
+       if (myrank==0) write(*,*)'       write cA in a netcdf file'
+       call write_netcdf(grid(lev)%cA,vname='ca',netcdf_file_name='cA.nc',rank=myrank,iter=lev)
+    endif
 
-!-------------------------------------------------------------------
+  end subroutine define_matrix_orig
+
+  !-------------------------------------------------------------------
 
 end module mg_define_matrix

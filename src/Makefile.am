@@ -81,9 +81,10 @@ testrelax_SOURCES =      \
 	nhydro.f90           \
 	mg_testrelax.f90
 ##
-testcuc_SOURCES =      \
+testcuc_SOURCES =        \
 	mg_mpi.f90           \
 	mg_tictoc.f90        \
+	mg_s_coord.f90       \
 	mg_namelist.f90      \
 	mg_netcdf_out.f90    \
 	mg_grids.f90         \
@@ -91,11 +92,11 @@ testcuc_SOURCES =      \
 	mg_gather.f90        \
 	mg_define_rhs.f90    \
 	mg_define_matrix.f90 \
+	mg_cuc.f90           \
 	mg_relax.f90         \
 	mg_intergrids.f90    \
 	mg_solvers.f90       \
 	mg_netcdf_in.f90     \
-	mg_seamount.f90      \
 	nhydro.f90           \
 	mg_testcuc.f90
 ##

@@ -12,14 +12,15 @@ module mg_grids
      real(kind=rp),dimension(:,:,:,:),pointer :: cA
      real(kind=rp),dimension(:,:),pointer :: dx
      real(kind=rp),dimension(:,:),pointer :: dy
+     real(kind=rp),dimension(:,:),pointer :: h
      real(kind=rp),dimension(:,:,:),pointer :: zr
      real(kind=rp),dimension(:,:,:),pointer :: zw
      integer(kind=ip) :: nx,ny, nz
      integer(kind=ip) :: npx, npy, incx, incy
-     integer(kind=ip) :: nh,nht=2                ! number of points in halo, nht = for topo zr zw
+     integer(kind=ip) :: nh,nht=1                ! number of points in halo, nht = for topo zr zw
      integer(kind=ip) :: gather
      integer(kind=ip) :: Ng, ngx, ngy
-     integer(kind=4) :: localcomm ! should be integer (output of MPI_SPLIT)
+     integer(kind=ip) :: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=ip) :: coarsening_method, smoothing_method
      integer(kind=ip) :: color,family,key
      integer(kind=ip),dimension(8)::neighb
@@ -33,6 +34,8 @@ module mg_grids
   end type grid_type
 
   type(grid_type), dimension(:), pointer :: grid
+
+  real(kind=rp) :: hlim, theta_b, theta_s
 
   integer(kind=ip):: nlevs ! index of the coarsest level (1 is the finest)
 
@@ -112,6 +115,11 @@ contains
 
        allocate(grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh))
+
+       if (trim(vgrid) == 'topo') then
+          grid(lev)%nht = 1 ! force nht to be one when topo is used
+          allocate(grid(lev)%h(1-nh:ny+nh,1-nh:nx+nh))
+       endif
 
        nht = grid(lev)%nht
        allocate(grid(lev)%zr(  nz,1-nht:ny+nht,1-nht:nx+nht))

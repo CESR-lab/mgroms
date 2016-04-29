@@ -68,6 +68,8 @@ subroutine norm(lev,x,y,nx,ny,nz,res)
         enddo
      enddo
   enddo
+
   call global_sum(lev,r,res)
+
 end subroutine norm
 
