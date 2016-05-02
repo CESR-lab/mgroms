@@ -9,7 +9,7 @@
        red_black     = .true.,        !- .false. or .true.
        mpiexchange   = 'nonblocking', !- MPI exhanges using 'blocking' or 'nonblocking' comm
        aggressive    = .false.,       !- .false. or .true.
-       interp_type   = 'linear',     !- linear or nearest
+       interp_type   = 'linear',      !- linear or nearest
        restrict_type = 'avg',         !- linear or avg
-       netcdf_output = .true.,        !- .false. or .true.
+       netcdf_output = .false.,       !- .false. or .true.
 /

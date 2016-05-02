@@ -24,8 +24,12 @@ program mg_testrelax
 
   integer(kind=ip):: nsweeps
 
-  integer(kind=ip):: lev,ierr, np, nh, rank,i,j,k
+  integer(kind=ip):: lev,ierr, np, nh, rank,k
   real(kind=rp)    :: res,conv,res0,bnorm
+
+  real(kind = lg) :: tstart,tend,perf
+  real(kind=rp) :: rnxg,rnyg,rnzg
+  real(kind=rp) :: rnpxg,rnpyg
 
   character(len = 16) :: filen
 
@@ -34,15 +38,32 @@ program mg_testrelax
   !---------------!
   !- Ocean model -!
   !---------------!
-  nxg   = 128
-  nyg   = 128
-  nzg   = 128
+  nxg   = 512
+  nyg   = 512
+  nzg   = 32
+
+  Lx =  200d3
+  Ly =  200d3
+  Htot = 4d3
+
+!!$  nxg   = 128
+!!$  nyg   = 128
+!!$  nzg   = 128
+!!$
+!!$  Lx =  20d3
+!!$  Ly =  20d3
+!!$  Htot = 4d3
+
+
+  hc      = 100.
+  theta_b = 0.
+  theta_s = 3.
 
   npxg  = 2
   npyg  = 2
 
-  nit     = 10
-  nsweeps = 1
+  nit     = 4
+  nsweeps = 2
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
@@ -70,15 +91,8 @@ program mg_testrelax
   call print_grids()
   !!call define_rhs(nxg, nyg, npxg)
 
-  hc      = 100.
-  theta_b = 2.
-  theta_s = 4.
-  Lx = 2d4
-  Ly = 2d4
-  Htot = 4d3
 
   call setup_realistic_matrix()!2d4,2d4,4d3)
-
   nh = grid(1)%nh
 
   do lev=1,1!nlevs
@@ -96,25 +110,30 @@ program mg_testrelax
      enddo
      call fill_halo(lev,grid(lev)%p)
      !     call fill_halo(lev,grid(lev)%b)
-
      call setup_rhs(nx,ny,nz,nh,grid(lev)%b)
-     call write_netcdf(grid(lev)%b,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+
+     if (netcdf_output) then
+        call write_netcdf(grid(lev)%b,vname='rhs',netcdf_file_name='rhs.nc',rank=myrank)
+     endif
 
      call norm(lev,grid(lev)%b,grid(lev)%b,nx,ny,nz,bnorm)
 
-!     grid(lev)%p=grid(lev)%b
-!     grid(lev)%b=0.
 
+     call cpu_time(tstart)
      do it=0, nit
-        if(it>0) call Vcycle(lev)!2(lev,lev+1)
+        !if(it>0) call Vcycle(lev)
+        !if(it>0) call Vcycle2(lev,lev+5)
+        if(it>0) call Fcycle()
         !if(it>0)call relax(lev,nsweeps)
         call compute_residual(lev,res)
         res=sqrt(res/bnorm)
 
-        write(filen,'("r_",i0.2,".nc")') it
-        call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
-        write(filen,'("p_",i0.2,".nc")') it
-        call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+        if (netcdf_output) then
+           write(filen,'("r_",i0.2,".nc")') it
+           call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+           write(filen,'("p_",i0.2,".nc")') it
+           call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+        endif
 
         if(it>0)then
            conv=res0/res
@@ -125,9 +144,27 @@ program mg_testrelax
         res0=res
         if (myrank.eq.0)write(*,1000)"lev=",lev," - ite=",it," - res=",res," - conv=",conv
      enddo
+     call cpu_time(tend)
 
   enddo
-1000 format(A,I2,A,I5,A,G16.3,A,F6.3)
+1000 format(A,I2,A,I5,A,G16.3,A,F8.3)
+
+  if (myrank == 0) then
+     rnpxg=real(grid(1)%npx,kind=rp)
+     rnpyg=real(grid(1)%npy,kind=rp)
+     rnxg=real(grid(1)%nx,kind=rp)*rnpxg
+     rnyg=real(grid(1)%ny,kind=rp)*rnpyg
+     rnzg=real(grid(1)%nz,kind=rp)
+     ! the rescaled time should be expressed in terms of error reduction,
+     ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
+     perf = (tend-tstart)*(rnpxg*rnpyg)/(-log(res)/log(10._8))/(rnxg*rnyg*rnzg)
+     write(*,*)'--- summary ---'
+     write(*,'(A,F8.3,A)')"time spent to solve :",tend-tstart," s"
+     write(*,'(A,E10.3)')"rescaled performance:",perf
+     write(*,*)'---------------'
+  end if
+
+
 
   call mpi_finalize(ierr)
 

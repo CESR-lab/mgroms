@@ -17,7 +17,7 @@ module mg_grids
      real(kind=rp),dimension(:,:,:),pointer :: zw
      integer(kind=ip) :: nx,ny, nz
      integer(kind=ip) :: npx, npy, incx, incy
-     integer(kind=ip) :: nh,nht=1                ! number of points in halo, nht = for topo zr zw
+     integer(kind=ip) :: nh                ! number of points in halo
      integer(kind=ip) :: gather
      integer(kind=ip) :: Ng, ngx, ngy
      integer(kind=ip) :: localcomm ! should be integer (output of MPI_SPLIT)
@@ -49,7 +49,7 @@ contains
     integer(kind=ip), intent(in) :: npxg,npyg  ! global CPU topology
     integer(kind=ip), intent(in) :: nxl, nyl, nzl ! local dims
 
-    integer(kind=ip) :: nh, nht, nd
+    integer(kind=ip) :: nh, nd
 
     integer(kind=ip) :: nx, ny, nz
 
@@ -112,14 +112,10 @@ contains
        allocate(grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh))
 
-       if (trim(vgrid) == 'topo') then
-          grid(lev)%nht = 1 ! force nht to be one when topo is used
-          allocate(grid(lev)%h(1-nh:ny+nh,1-nh:nx+nh))
-       endif
+       allocate(grid(lev)%h(1-nh:ny+nh,1-nh:nx+nh))
 
-       nht = grid(lev)%nht
-       allocate(grid(lev)%zr(  nz,1-nht:ny+nht,1-nht:nx+nht))
-       allocate(grid(lev)%zw(nz+1,1-nht:ny+nht,1-nht:nx+nht))
+       allocate(grid(lev)%zr(  nz,1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%zw(nz+1,1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(grid(lev)%rmask(1-nh:ny+nh,1-nh:nx+nh))
 

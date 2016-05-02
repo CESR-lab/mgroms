@@ -17,7 +17,7 @@ program mg_testcoarsening
   integer(kind=ip):: npxg   ! number of processes in x
   integer(kind=ip):: npyg   ! number of processes in y
   integer(kind=ip):: it     ! iteration loop number
-  integer(kind=ip):: nit    ! number of iterations
+  integer(kind=ip):: nit    ! number of iterationsg
 
   integer(kind=ip):: nsweeps
 
@@ -64,18 +64,18 @@ program mg_testcoarsening
 
   call MPI_Barrier( MPI_COMM_WORLD ,ierr)
   if (myrank.eq.0)then
-    do lev=1,nlevs
-       if (grid(lev)%gather.eq.0)then
-          write(*,100)"lev=",lev,": ", &
-                     grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                     " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
-       else
-          write(*,100)"lev=",lev,": ", &
-                     grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
-                     " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
-       endif
-    enddo
- endif
+     do lev=1,nlevs
+        if (grid(lev)%gather.eq.0)then
+           write(*,100)"lev=",lev,": ", &
+                grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
+                " on ",grid(lev)%npx,' x',grid(lev)%npy," procs"
+        else
+           write(*,100)"lev=",lev,": ", &
+                grid(lev)%nx,' x',grid(lev)%ny,' x',grid(lev)%nz, &
+                " on ",grid(lev)%npx,' x',grid(lev)%npy," procs / gather"
+        endif
+     enddo
+  endif
 100 format (A4,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
 
   call define_rhs(nxg, nyg, npxg)
@@ -91,7 +91,7 @@ program mg_testcoarsening
      if (myrank.eq.0)then
         write(*,'(A,I2,A,8F6.3)')"stencil on lev =",lev," / ",&
              grid(lev)%cA(:,grid(lev).nz/2,grid(lev).ny/2,grid(lev).nx/2)
-!        write(*,1010)grid(lev)%cA(:,grid(lev).nz/2,grid(lev).ny/2,grid(lev).nx/2)
+        !        write(*,1010)grid(lev)%cA(:,grid(lev).nz/2,grid(lev).ny/2,grid(lev).nx/2)
      endif
      call MPI_Barrier( MPI_COMM_WORLD ,ierr)
   end do
@@ -121,7 +121,7 @@ program mg_testcoarsening
      enddo
   enddo
 
-!  call check_solution(lev)
+  !  call check_solution(lev)
 
   call mpi_finalize(ierr)
 

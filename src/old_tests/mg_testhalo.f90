@@ -12,12 +12,10 @@ program mg_testhalo
 
   integer(kind=ip):: npxg   ! number of processes in x
   integer(kind=ip):: npyg   ! number of processes in y
-  integer(kind=ip):: it     ! iteration loop number
   integer(kind=ip):: nit    ! number of iterations
 
   integer(kind=ip):: nsweeps
-  integer(kind=ip) :: south, east, north, west
-  integer(kind=ip) :: southwest, southeast, northeast, northwest
+  integer(kind=ip) :: west
   integer(kind=ip) :: nx, ny, nz ! local dimensions
   integer(kind=ip) :: nh
 

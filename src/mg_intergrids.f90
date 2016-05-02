@@ -73,6 +73,7 @@ contains
     grid(lev+1)%p = 0._8
 
   end subroutine fine2coarse
+
   !----------------------------------------
   subroutine fine2coarse_aggressive(x,y,nx,ny,nz)
 

@@ -59,7 +59,10 @@ contains
     counts(1)=nx*inc
     counts(2)=ny*inc
 
-    file='/local/tmp/1/grima/MGRoms/DATA/cuc_nhgrd.nc'
+    !!------------------------------------------------!!
+    !! Here enter the directory where cuc_nhgrd.nc is !!
+    !!------------------------------------------------!!
+    file='/net/xncd1/local/tmp/1/grima/MGRoms/DATA/cuc_nhgrd.nc'
 
     is_err = nf90_open( trim(file), NF90_NOWRITE ,nc_id  )
 
@@ -123,17 +126,7 @@ contains
 
     grid(1)%p(:,:,:)=0._8
 
-    if (trim(vgrid) == 'topo') then
-       call define_matrices(dx, dy, h)
-    else
-       !call setup_scoord(nx,ny,nz,nh)
-       call setup_scoord_gene        ( &  ! Compute zr and zw
-            hlim,theta_b,theta_s,h   , &  ! input args
-            zr,zw                    , &  ! output args
-            coord_type='new_s_coord' )  ! optional
-
-       call define_matrices(dx, dy, zr, zw)
-    endif
+    call define_matrices(dx, dy, h)
 
   end subroutine setup_cuc
 

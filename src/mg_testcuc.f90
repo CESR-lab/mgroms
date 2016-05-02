@@ -14,9 +14,7 @@ program mg_testcuc
   integer(kind=4):: npyg       ! number of processes in y
   integer(kind=4):: nx, ny, nz ! local dimensions
 
-  integer(kind=4):: lev,ierr, np, rank,inc
-
-  real(kind=8)   :: bnorm
+  integer(kind=4):: ierr, np, rank,inc
 
   real(kind=8), dimension(:,:,:), pointer :: u,v,w
 
@@ -72,20 +70,20 @@ program mg_testcuc
   !---------------------!
   !- Initialise nhydro -!
   !---------------------!
-  if (myrank == 0) write(*,*)'Initialise NHydro (grids, cA, params, etc) '
+  if (rank == 0) write(*,*)'Initialise NHydro (grids, cA, params, etc) '
   call nhydro_init(nx, ny, nz, npxg, npyg, test='cuc')
 
   !--------------------------!
   !- RHS initialisation (b) -!
   !--------------------------!
-  if (myrank == 0) write(*,*)'RHS initialisation'
+  if (rank == 0) write(*,*)'RHS initialisation'
   !! call setup_random_patches()
   call rhs_random()
   
   !----------------------!
   !- Call nhydro solver -!
   !----------------------!
-  if (myrank == 0) write(*,*)'Call nhydro solver'
+  if (rank == 0) write(*,*)'Call nhydro solver'
   call  nhydro_solve(u,v,w)
 
   !------------------!

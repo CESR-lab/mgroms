@@ -29,9 +29,6 @@ module mg_namelist
 
   logical           :: netcdf_output = .false. !- .false. or .true.
 
-  character(len=16) :: vgrid='topo'            !- Compute zr and zw from topography h (2D array)
-  !                                            !- else use zr and zw (3D arrays)
-
   namelist/nhparam/   &
        nhalo        , &
        nsmall       , &
@@ -44,8 +41,7 @@ module mg_namelist
        interp_type  , &
        restrict_type, &
        netcdf_output, &
-       aggressive   , &
-       vgrid
+       aggressive   
 
 contains
 
@@ -116,7 +112,6 @@ contains
           write(*,*)'  - interp_type  : ', trim(interp_type)
           write(*,*)'  - restrict_type: ', trim(restrict_type)
           write(*,*)'  - aggressive   : ', aggressive
-          write(*,*)'  - vgrid        : ', trim(vgrid)
           write(*,*)'  - netcdf_output: ', netcdf_output
           write(*,*)'  '
        endif
