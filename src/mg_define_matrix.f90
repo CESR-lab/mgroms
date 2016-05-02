@@ -143,22 +143,13 @@ contains
             coord_type='new_s_coord'        )    ! optional
 
        if (netcdf_output) then
-          if (lev > 1) then
-             call write_netcdf(grid(lev)%dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
-             call write_netcdf(grid(lev)%dy,vname='dy',netcdf_file_name='dy.nc',rank=myrank,iter=lev)
-             call write_netcdf(grid(lev)%h ,vname='h' ,netcdf_file_name='h.nc' ,rank=myrank,iter=lev)
-             call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
-             call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
-          endif
+          call write_netcdf(grid(lev)%dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%dy,vname='dy',netcdf_file_name='dy.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%h ,vname='h' ,netcdf_file_name='h.nc' ,rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
+          call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
        endif
 
-       if (myrank==0) then
-          write(*,*)'     call define matrix'
-          write(*,*)'         dx bounds:',lbound(grid(lev)%dx), ubound(grid(lev)%dx)
-          write(*,*)'         dy bounds:',lbound(grid(lev)%dy), ubound(grid(lev)%dy)
-          write(*,*)'         zr bounds:',lbound(grid(lev)%zr), ubound(grid(lev)%zr)
-          write(*,*)'         zw bounds:',lbound(grid(lev)%zw), ubound(grid(lev)%zw)
-       endif
        call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw)
 
     enddo ! lev
@@ -364,14 +355,6 @@ contains
     nz = grid(lev)%nz
     nh = grid(lev)%nh
 
-    if (myrank==0) then 
-       write(*,*)'     define matrix'
-       write(*,*)'         dx bounds:',lbound(dx), ubound(dx) 
-       write(*,*)'         dy bounds:',lbound(dy), ubound(dy)
-       write(*,*)'         zr bounds:',lbound(zr), ubound(zr)
-       write(*,*)'         zw bounds:',lbound(zw), ubound(zw) 
-    endif
-
     cA => grid(lev)%cA 
 
     !! Cell heights
@@ -480,18 +463,26 @@ contains
        do j = 1,ny
 
           k = 1 !lower level
-          cA(3,k,j,i) = ( 0.25_8*zydx(k+1,j,i) + 0.25_8*zydx(k,j-1,i) )       !! couples with k+1 j-1
-          cA(4,k,j,i) = ( Ary(k,j,i)/dyv(j,i) &                                           !! couples with j-1
-                                ! topo terms                                           
-               -(zydx(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
-               + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))) & 
-                                ! from j,k cross terms
-               -(0.25_8*zydx(k,j-1,i) - 0.25_8*zydx(k,j,i)) & 
-                                ! from i,j cross terms if lbc                                         
-               -(0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &
-               - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i))))
-          cA(6,k,j,i) = ( 0.25_8*zxdy(k+1,j,i) + 0.25_8*zxdy(k,j,i-1) )      !! couples with k+1 i-1
-          cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                                           !! couples with i-1
+
+          !-CA3-! 
+          cA(3,k,j,i) = qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i) ) ! couples with k+1 j-1
+
+          !-CA4-!
+          cA(4,k,j,i) = &
+               Ary(k,j,i)/dyv(j,i) - &                               ! couples with j-1                                 
+               ( & ! topo terms 
+               zydx(k,j  ,i) * zydx(k,j  ,i) / ( cw(k,j  ,i) + cw(k+1,j  ,i) )   + &
+               zydx(k,j-1,i) * zydx(k,j-1,i) / ( cw(k,j-1,i) + cw(k+1,j-1,i) ) ) - & 
+               ( & ! from j,k cross terms
+               qrt * zydx(k,j-1,i) - qrt * zydx(k,j,i)                         ) - &                                       
+               ( & ! from i,j cross terms if lbc  
+               hlf * zxdy(k,j-1,i) * zydx(k,j-1,i) / (cw(k,j-1,i)+cw(k+1,j-1,i)) - &
+               hlf * zxdy(k,j  ,i) * zydx(k,j  ,i) / (cw(k,j  ,i)+cw(k+1,j  ,i)) )
+
+          !-CA6-!
+          cA(6,k,j,i) = qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1) )  !! couples with k+1 i-1
+
+          cA(7,k,j,i) = ( Arx(k,j,i)/dxu(j,i) &                               !! couples with i-1
                                 ! topo terms                                                   
                -(zxdy(k,j,i)*zxdy(k,j,i)/(cw(k,j,i)+cw(k+1,j,i)) &
                + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))) &
@@ -500,8 +491,12 @@ contains
                                 ! from i,j cross terms if lbc                                         
                -(0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
                - 0.5_8*zxdy(k,j,i)*zydx(k,j,i)/(cw(k,j,i)+cw(k+1,j,i))) )
-          cA(5,k,j,i) = +0.5_8*zxdy(k,j+1,i)*zydx(k,j+1,i)/(cw(k,j+1,i)+cw(k+1,j+1,i)) &  !! only for k==1, couples with j+1,i-1
-               +0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))       
+
+          !-CA5-! only for k==1, couples with j+1,i-1
+          cA(5,k,j,i) = &
+               hlf * zxdy(k,j+1,i  ) * zydx(k,j+1,i  ) / ( cw(k,j+1,i  )+cw(k+1,j+1,i  ) ) + &
+               hlf * zxdy(k,j  ,i-1) * zydx(k,j  ,i-1) / ( cw(k,j  ,i-1)+cw(k+1,j  ,i-1) )   
+
           cA(8,k,j,i) =-0.5_8*zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &   !! only for k==1, couples with j-1,i-1
                -0.5_8*zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))                                   
 
@@ -562,6 +557,11 @@ contains
     deallocate(zxdy)
     deallocate(zydx)
     deallocate(cw)
+
+    if (netcdf_output) then
+       if (myrank==0) write(*,*)'       write cA in a netcdf file'
+       call write_netcdf(grid(lev)%cA,vname='ca',netcdf_file_name='cA.nc',rank=myrank,iter=lev)
+    endif
 
   end subroutine define_matrix
 

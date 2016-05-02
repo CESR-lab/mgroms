@@ -14,118 +14,6 @@ module mg_solvers
 contains
 
   !---------------------------------------------------------------------
-  subroutine testgalerkin(lev)
-
-    real(kind=8) :: norm_c,norm_f,dummy
-    integer(kind=4) :: lev,nx,ny,nz,nh,i,j,k
-    character(len = 16) :: filen
-
-
-    integer(kind=4) :: npx,npy,pi,pj
-    real(kind=8) :: x,y,z,cff
-
-    nx = grid(lev)%nx
-    ny = grid(lev)%ny
-    nz = grid(lev)%nz
-    nh = grid(lev)%nh
-
-    npx = grid(1)%npx
-    npy = grid(1)%npy
-
-    pj = myrank/npx
-    pi = mod(myrank,npx)
-
-
-    call random_number(grid(lev)%p)!
-    do i=1,nx
-       x=(1._8*i-0.5+pi*nx)/(npx*nx) -0.3
-       do j=1,ny
-          y=(1._8*j-0.5+pj*ny)/(npy*ny)-0.4
-          do k=1,nz
-             z=(1._8*k-0.5)/nz-0.2
-             cff = exp( - (x*x+y*y+z*z)*30 )
-             !             grid(lev)%p(k,j,i)= cff
-             grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
-             !             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
-             !             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
-          enddo
-       enddo
-    enddo
-    !    grid(lev)%p(2,:,:)=0._8
-    call fill_halo(lev,grid(lev)%p)
-
-    !    write(filen,'("p_",i1,".nc")') lev
-    !    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
-
-
-    grid(lev)%b = 0._8
-    call compute_residual(lev,dummy)    
-    call norm(lev,grid(lev)%p,grid(lev)%r,nx,ny,nz,norm_c)
-
-    if (netcdf_output) then
-       write(filen,'("p_",i1,".nc")') lev
-       call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
-
-       write(filen,'("r_",i1,".nc")') lev
-       call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
-    endif
-
-    grid(lev-1)%p = 0._8 
-    call coarse2fine(lev-1) ! interpolate p to r and add r to p
-
-    if (netcdf_output) then
-       write(filen,'("p_",i1,".nc")') lev-1
-       call write_netcdf(grid(lev-1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
-    endif
-
-    !    grid(lev-1)%p(:,:,:)= 1._8
-    grid(lev-1)%b = 0._8
-    call compute_residual(lev-1,dummy)
-
-    if (netcdf_output) then
-       write(filen,'("r_",i1,".nc")') lev-1
-       call write_netcdf(grid(lev-1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
-    endif
-
-    nx = grid(lev-1)%nx
-    ny = grid(lev-1)%ny
-    nz = grid(lev-1)%nz
-    nh = grid(lev-1)%nh
-    call norm(lev-1,grid(lev-1)%p,grid(lev-1)%r,nx,ny,nz,norm_f)
-
-    if (myrank==0) then
-       write(*,*)"======== lev ",lev,"==========="
-       write(*,*)"norm coarse = ",norm_c
-       write(*,*)"norm fine   = ",norm_f/4
-       write(*,*)"ratio       = ",norm_c/norm_f*4
-    endif
-
-  end subroutine testgalerkin
-
-
-  !---------------------------------------------------------------------
-  subroutine norm(lev,x,y,nx,ny,nz,res)
-    use mg_mpi_exchange
-    integer(kind=4) :: lev,i,j,k
-    integer(kind=4) :: nx,ny,nz
-    real(kind=8) :: r,res
-    real(kind=8),dimension(:,:,:)  , pointer :: x,y
-
-    r=0._8
-
-    do i=1,nx
-       do j=1,ny
-          do k=1,nz
-             r=r+x(k,j,i)*y(k,j,i)
-          enddo
-       enddo
-    enddo
-
-    call global_sum(lev,r,res)
-
-  end subroutine norm
-
-  !---------------------------------------------------------------------
   subroutine solve(tol,maxite)
 
     real(kind=rp)   , intent(in) :: tol
@@ -142,7 +30,6 @@ contains
     real(kind = lg) :: tstart,tend,perf
     real(kind=rp) :: rnxg,rnyg,rnzg
     real(kind=rp) :: rnpxg,rnpyg
-    character(len = 16) :: filen
 
     p  => grid(1)%p
     b  => grid(1)%b
@@ -162,41 +49,37 @@ contains
     call tic(1,'solve')
     call cpu_time(tstart)
 
-    !    bnorm = maxval(abs(grid(1)%b))
-    !    call global_max(bnorm)
+    nite=0
 
     res0 = sum(grid(1)%b(1:nz,1:ny,1:nx)**2)
     call global_sum(1,res0,bnorm)
+    bnorm = sqrt(bnorm)
 
-    call compute_residual(1,rnorm) ! residual returns both 'r' and its norm
-
-    if (myrank == 0) write(*,*)'rnom:', rnorm,' bnorm:', bnorm
-
-    res0 = sqrt(rnorm/bnorm)
+    ! residual returns both 'r' and its norm
+    call compute_residual(1,rnorm) 
+    res0   = rnorm/bnorm
     rnorm0 = res0
 
-    nite=0
+    if (myrank == 0) write(100,*) rnorm0, nite
+
     do while ((nite < maxite).and.(res0 > tol))
 
-       !call Vcycle(1)
        call Fcycle()
 
        call compute_residual(1,rnorm)
-
-       if (netcdf_output) then
-          write(filen,'("r_",i1,".nc")') nite
-          call write_netcdf(grid(1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
-          write(filen,'("p_",i1,".nc")') nite
-          call write_netcdf(grid(1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
-       endif
-
-       rnorm = sqrt(rnorm/bnorm)
+       rnorm = rnorm/bnorm
        conv = res0/rnorm ! error reduction after this iteration
        res0 = rnorm
 
        nite = nite+1
        if (myrank == 0) write(*,10) nite, rnorm, conv
        if (myrank == 0) write(100,*) rnorm, conv
+
+       if (netcdf_output) then
+          call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank,iter=nite)
+          call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank,iter=nite)
+       endif
+
     enddo
 
     call cpu_time(tend)
@@ -292,5 +175,117 @@ contains
     enddo
 
   end subroutine Vcycle2
+
+  !---------------------------------------------------------------------
+  subroutine norm(lev,x,y,nx,ny,nz,res)
+
+    use mg_mpi_exchange
+    integer(kind=4) :: lev,i,j,k
+    integer(kind=4) :: nx,ny,nz
+    real(kind=8) :: r,res
+    real(kind=8),dimension(:,:,:)  , pointer :: x,y
+
+    r=0._8
+
+    do i=1,nx
+       do j=1,ny
+          do k=1,nz
+             r=r+x(k,j,i)*y(k,j,i)
+          enddo
+       enddo
+    enddo
+
+    call global_sum(lev,r,res)
+
+  end subroutine norm
+
+  !---------------------------------------------------------------------
+  subroutine testgalerkin(lev)
+
+    real(kind=8) :: norm_c,norm_f,dummy
+    integer(kind=4) :: lev,nx,ny,nz,nh,i,j,k
+    character(len = 16) :: filen
+
+
+    integer(kind=4) :: npx,npy,pi,pj
+    real(kind=8) :: x,y,z,cff
+
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    nh = grid(lev)%nh
+
+    npx = grid(1)%npx
+    npy = grid(1)%npy
+
+    pj = myrank/npx
+    pi = mod(myrank,npx)
+
+
+    call random_number(grid(lev)%p)!
+    do i=1,nx
+       x=(1._8*i-0.5+pi*nx)/(npx*nx) -0.3
+       do j=1,ny
+          y=(1._8*j-0.5+pj*ny)/(npy*ny)-0.4
+          do k=1,nz
+             z=(1._8*k-0.5)/nz-0.2
+             cff = exp( - (x*x+y*y+z*z)*30 )
+             !             grid(lev)%p(k,j,i)= cff
+             grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
+             !             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
+             !             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
+          enddo
+       enddo
+    enddo
+    !    grid(lev)%p(2,:,:)=0._8
+    call fill_halo(lev,grid(lev)%p)
+
+    !    write(filen,'("p_",i1,".nc")') lev
+    !    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+
+    grid(lev)%b = 0._8
+    call compute_residual(lev,dummy)    
+    call norm(lev,grid(lev)%p,grid(lev)%r,nx,ny,nz,norm_c)
+
+    if (netcdf_output) then
+       write(filen,'("p_",i1,".nc")') lev
+       call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+
+       write(filen,'("r_",i1,".nc")') lev
+       call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+    endif
+
+    grid(lev-1)%p = 0._8 
+    call coarse2fine(lev-1) ! interpolate p to r and add r to p
+
+    if (netcdf_output) then
+       write(filen,'("p_",i1,".nc")') lev-1
+       call write_netcdf(grid(lev-1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
+    endif
+
+    !    grid(lev-1)%p(:,:,:)= 1._8
+    grid(lev-1)%b = 0._8
+    call compute_residual(lev-1,dummy)
+
+    if (netcdf_output) then
+       write(filen,'("r_",i1,".nc")') lev-1
+       call write_netcdf(grid(lev-1)%r,vname='r',netcdf_file_name=filen,rank=myrank)
+    endif
+
+    nx = grid(lev-1)%nx
+    ny = grid(lev-1)%ny
+    nz = grid(lev-1)%nz
+    nh = grid(lev-1)%nh
+    call norm(lev-1,grid(lev-1)%p,grid(lev-1)%r,nx,ny,nz,norm_f)
+
+    if (myrank==0) then
+       write(*,*)"======== lev ",lev,"==========="
+       write(*,*)"norm coarse = ",norm_c
+       write(*,*)"norm fine   = ",norm_f/4
+       write(*,*)"ratio       = ",norm_c/norm_f*4
+    endif
+
+  end subroutine testgalerkin
 
 end module mg_solvers

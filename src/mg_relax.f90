@@ -47,12 +47,13 @@ contains
 
   !----------------------------------------
   subroutine relax_2D_3(lev,p,b,cA,nsweeps,nx,ny,nh)
-    integer(kind=ip)                        , intent(in)   :: lev
+
+    integer(kind=ip)                         , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny, nh
+    integer(kind=ip)                         , intent(in)   :: nsweeps
+    integer(kind=ip)                         , intent(in)   :: nx, ny, nh
 
     integer(kind=ip)           :: i,j,k, it
 
@@ -82,7 +83,8 @@ contains
   
   !----------------------------------------
   subroutine relax_2D_5(lev,p,b,cA,nsweeps,nx,ny,nh)
-    integer(kind=ip)                        , intent(in)   :: lev
+
+    integer(kind=ip)                         , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
@@ -155,12 +157,14 @@ contains
   
   !----------------------------------------
   subroutine relax_2D_9(lev,p,b,cA,nsweeps,nx,ny,nh)
-    integer(kind=ip)                        , intent(in)   :: lev
+
+
+    integer(kind=ip)                         , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
-    integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny, nh
+    integer(kind=ip)                         , intent(in)   :: nsweeps
+    integer(kind=ip)                         , intent(in)   :: nx, ny, nh
 
     integer(kind=ip)           :: i,j,k,l,di,dj, it
 
@@ -738,14 +742,14 @@ endif
     nd = size(cA(:,:,:,:),dim=1)
 
     if (grid(lev)%nz == 1) then
-       if (nd==3) call compute_residual_2D_3(lev,res,p,b,r,cA,nx,ny)
-       if (nd==3) call compute_residual_2D_5(lev,res,p,b,r,cA,nx,ny)
-       if (nd==9) call compute_residual_2D_9(lev,res,p,b,r,cA,nx,ny)
+       if (nd==3) call compute_residual_2D_3(res,p,b,r,cA,nx,ny)
+       if (nd==5) call compute_residual_2D_5(res,p,b,r,cA,nx,ny)
+       if (nd==9) call compute_residual_2D_9(res,p,b,r,cA,nx,ny)
     else
        call tic(lev,'compute_residual_3D')
 
-       if (nd==8)  call compute_residual_3D_8(lev,res,p,b,r,cA,nx,ny,nz)
-       if (nd==27) call compute_residual_3D_27(lev,res,p,b,r,cA,nx,ny,nz)
+       if (nd==8)  call compute_residual_3D_8(res,p,b,r,cA,nx,ny,nz)
+       if (nd==27) call compute_residual_3D_27(res,p,b,r,cA,nx,ny,nz)
 
        call toc(lev,'compute_residual_3D')
     end if
@@ -757,6 +761,7 @@ endif
 !       call global_max(res)
        resloc=res
        call global_sum(lev,resloc,res)
+       res = sqrt(res)
     else
        res = -999._8
     endif
@@ -764,8 +769,8 @@ endif
   end subroutine compute_residual
 
   !----------------------------------------
-  subroutine compute_residual_2D_3(lev,res,p,b,r,cA,nx,ny)
-    integer(kind=ip), intent(in):: lev
+  subroutine compute_residual_2D_3(res,p,b,r,cA,nx,ny)
+
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
@@ -796,8 +801,8 @@ endif
   end subroutine compute_residual_2D_3
 
   !----------------------------------------
-  subroutine compute_residual_2D_5(lev,res,p,b,r,cA,nx,ny)
-    integer(kind=ip), intent(in):: lev
+  subroutine compute_residual_2D_5(res,p,b,r,cA,nx,ny)
+
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
@@ -831,8 +836,8 @@ endif
   end subroutine compute_residual_2D_5
 
   !----------------------------------------
-  subroutine compute_residual_2D_9(lev,res,p,b,r,cA,nx,ny)
-    integer(kind=ip), intent(in):: lev
+  subroutine compute_residual_2D_9(res,p,b,r,cA,nx,ny)
+
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
@@ -868,8 +873,8 @@ endif
   end subroutine compute_residual_2D_9
 
   !----------------------------------------
-  subroutine compute_residual_3D_8(lev,res,p,b,r,cA,nx,ny,nz)
-    integer(kind=ip), intent(in):: lev
+  subroutine compute_residual_3D_8(res,p,b,r,cA,nx,ny,nz)
+
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
@@ -893,55 +898,53 @@ endif
 
     do i = 1,nx
        do j = 1,ny
- 
-             k=1 !lower level
+
+          k=1 !lower level
+          r(k,j,i) = b(k,j,i)                                           &
+               - cA(1,k,j,i)*p(k,j,i)                                   &
+               - cA(2,k+1,j,i)*p(k+1,j,i)                               &
+               - cA(3,k,j,i)*p(k+1,j-1,i)                               &
+               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)                           &
+               - cA(6,k,j,i)*p(k+1,j,i-1)                               &
+               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+               - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+
+          if (cmatrix == 'real') then
+             !- Exception for the redefinition of the coef for the bottom level
+             r(k,j,i) = r(k,j,i) &
+                  - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
+                  - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
+          endif
+
+          res = res+r(k,j,i)*r(k,j,i)
+
+          do k = 2,nz-1 !interior levels
              r(k,j,i) = b(k,j,i)                                           &
                   - cA(1,k,j,i)*p(k,j,i)                                   &
-                  - cA(2,k+1,j,i)*p(k+1,j,i)    &
-                  - cA(3,k,j,i)*p(k+1,j-1,i)                               &
+                  - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
+                  - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
                   - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                  - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-                  - cA(6,k,j,i)*p(k+1,j,i-1)                               &
+                  - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                  - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
                   - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                  - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
-             if (cmatrix == 'real') then
-                !- Exception for the redefinition of the coef for the bottom level
-                r(k,j,i) = r(k,j,i) &
-                     - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
-                     - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
-             endif
+                  - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
-             !          res = max(res,abs(r(k,j,i)))
              res = res+r(k,j,i)*r(k,j,i)
+          enddo
 
-             do k = 2,nz-1 !interior levels
-                r(k,j,i) = b(k,j,i)                                           &
-                     - cA(1,k,j,i)*p(k,j,i)                                   &
-                     - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
-                     - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
-                     - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                     - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-                     - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
-                     - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                     - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+          k=nz !upper level
+          r(k,j,i) = b(k,j,i)                                           &
+               - cA(1,k,j,i)*p(k,j,i)                                   &
+               - cA(2,k,j,i)*p(k-1,j,i)                                 &
+               - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+               - cA(5,k,j,i)*p(k-1,j-1,i)                               &
+               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+               - cA(8,k,j,i)*p(k-1,j,i-1)
 
-                !             res = max(res,abs(r(k,j,i)))
-                res = res+r(k,j,i)*r(k,j,i)
-             enddo
-
-             k=nz !upper level
-             r(k,j,i) = b(k,j,i)                                           &
-                  - cA(1,k,j,i)*p(k,j,i)                                   &
-                  - cA(2,k,j,i)*p(k-1,j,i)                                 &
-                  - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
-                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                  - cA(5,k,j,i)*p(k-1,j-1,i)                               &
-                  - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
-                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                  - cA(8,k,j,i)*p(k-1,j,i-1)
-
-             !          res = max(res,abs(r(k,j,i)))
-             res = res+r(k,j,i)*r(k,j,i)
+          res = res+r(k,j,i)*r(k,j,i)
 
        enddo
     enddo
@@ -949,8 +952,8 @@ endif
   end subroutine compute_residual_3D_8
 
   !----------------------------------------
-  subroutine compute_residual_3D_27(lev,res,p,b,r,cA,nx,ny,nz)
-    integer(kind=ip), intent(in):: lev
+  subroutine compute_residual_3D_27(res,p,b,r,cA,nx,ny,nz)
+
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b

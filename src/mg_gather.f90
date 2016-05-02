@@ -25,9 +25,9 @@ contains
     real(kind=rp),dimension(:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:),pointer,intent(out) :: y
 
-    integer(kind=ip):: nx,ny,nz,nh
+    integer(kind=ip):: nx,ny,nh
     integer(kind=ip):: ngx,ngy,Ng
-    integer(kind=ip):: i,j,k,l,m,ii,jj
+    integer(kind=ip):: i,j,l,m,ii,jj
     integer(kind=ip):: i0,i1
     integer(kind=ip):: ierr
     real(kind=rp),dimension(:,:,:,:),pointer :: buffer

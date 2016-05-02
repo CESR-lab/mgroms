@@ -95,13 +95,9 @@ contains
        elseif (( trim(interp_type)=='linear') .and. (trim(restrict_type)=='avg')) then
 
           if (nz == 1) then
-             nd = 9
+             nd = 5
           else
-             if (lev == 1) then
-                nd = 8
-             else
-                nd =27
-             endif
+             nd = 8
           endif
 
        elseif (( trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
@@ -331,18 +327,6 @@ contains
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy
     integer(kind=ip) :: pi, pj
-!!$=======
-!!$    ! Watch out, I continue to use the global indexing
-!!$    ! to locate each core
-!!$    ! a core that has coordinates (2,3) on the finest decomposition
-!!$    ! will remain at this location (2,3) after gathering
-!!$    npx = grid(1)%npx ! grid(1) is not a bug!
-!!$    npy = grid(1)%npy
-!!$    
-!!$    pj = myrank/npx
-!!$    pi = mod(myrank,npx)
-!!$>>>>>>> 5d76062d572541a52c0574dba607c2e2d63cb883
-
 
     if (myrank==0) write(*,*)'  - define neighbours'
 

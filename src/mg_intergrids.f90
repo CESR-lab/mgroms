@@ -46,15 +46,15 @@ contains
 
 
     if ((aggressive).and.(lev==1)) then
-       call fine2coarse_aggressive(lev,r,b,nx,ny,nz)
+       call fine2coarse_aggressive(r,b,nx,ny,nz)
 
     elseif (grid(lev)%nz == 1) then
-       call fine2coarse_2D(lev,r,b,nx,ny)
+       call fine2coarse_2D(r,b,nx,ny)
 
     else
        call tic(lev,'fine2coarse_3D')
 
-       call fine2coarse_3D(lev,r,b,nx,ny,nz)
+       call fine2coarse_3D(r,b,nx,ny,nz)
 
       call toc(lev,'fine2coarse_3D')
 
@@ -74,9 +74,8 @@ contains
 
   end subroutine fine2coarse
   !----------------------------------------
-  subroutine fine2coarse_aggressive(lev,x,y,nx,ny,nz)
+  subroutine fine2coarse_aggressive(x,y,nx,ny,nz)
 
-    integer(kind=ip), intent(in) :: lev
     real(kind=rp)   , dimension(:,:,:), intent(in)    :: x !fine
     real(kind=rp)   , dimension(:,:,:), intent(inout) :: y ! coarse
     integer(kind=ip)                  , intent(in)    :: nx, ny, nz
@@ -104,50 +103,34 @@ contains
   end subroutine fine2coarse_aggressive
 
   !------------------------------------------------------------
-  subroutine fine2coarse_2D(lev,x,y,nx,ny)
+  subroutine fine2coarse_2D(x,y,nx,ny)
 
-    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip), intent(in) :: nx, ny
 
     integer(kind=ip) :: i,j,i2,j2
     integer(kind=ip) :: d
-    !!real(kind=rp),dimension(0:4)::c3
-    real(kind=rp) :: cff
-
-    integer(kind=1),dimension(:,:),pointer::m
-
-    !!data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
-      
-    m => grid(lev)%rmask
 
     d = size(x,1) ! vertical dimension of the fine level, can 2 or 1
 
-
    if(d==1)then
-          cff=0.25_8
        ! x was already 2D
        do i2=1,nx
           i=2*i2-1
           do j2=1,ny
              j=2*j2-1      
-!             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
-!             cff = c3(sm)
-             y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))*cff
+             y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1))
           enddo
        enddo
     else
        ! x was 3D
-          cff=0.125_8
        do i2=1,nx
           i=2*i2-1
           do j2=1,ny
              j=2*j2-1     
-!             sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
-!             cff = c3(sm)*0.5_8
              y(1,j2,i2) = (x(1,j,i)+x(1,j,i+1)+x(1,j+1,i)+x(1,j+1,i+1)&
-                          +x(2,j,i)+x(2,j,i+1)+x(2,j+1,i)+x(2,j+1,i+1))*cff
+                          +x(2,j,i)+x(2,j,i+1)+x(2,j+1,i)+x(2,j+1,i+1))
           enddo
        enddo
     endif
@@ -155,52 +138,26 @@ contains
   end subroutine fine2coarse_2D
 
   !------------------------------------------------------------
-  subroutine fine2coarse_3D(lev,x,y,nx,ny,nz)
+  subroutine fine2coarse_3D(x,y,nx,ny,nz)
     !
     ! Fine2coarse 'x' from fine level l1 to 'y' on coarse level l2=l1+1
-    integer(kind=ip), intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip), intent(in) :: nx, ny, nz
     ! local
     integer(kind=ip) :: i,j,k,i2,j2,k2
-    real(kind=rp):: z1,z2
+    real(kind=rp):: z
 
-    !!real(kind=rp),dimension(0:4)::c3
-    real(kind=rp) :: cff,cffm
-
-    integer(kind=1),dimension(:,:),pointer::m
-
-    !!data c3/0.,1.,0.5,0.3333333333333333333333333333,0.25/
-
-    m => grid(lev)%rmask
-
-    ! 
-    cffm=1.
-    if(lev==1) cffm=0.5_8
     do i2=1,nx
        i=2*i2-1
-
        do j2=1,ny
           j=2*j2-1
-          ! sm = m(j,i)+m(j,i+1)+m(j+1,i)+m(j+1,i+1)
-          ! cff = c3(sm)*0.5_8
-          if(grid(lev+1)%rmask(j2,i2)==1)then
-             cff = 0.125_8
-             do k2=1,nz
-                k=2*k2-1
-                !             z1 = x(k  ,j  ,i)*m(j  ,i) +x(k  ,j  ,i+1)*m(j  ,i+1) &
-                !                 +x(k  ,j+1,i)*m(j+1,i) +x(k  ,j+1,i+1)*m(j+1,i+1)
-                !             z2 = x(k+1,j,  i)*m(j  ,i) +x(k+1,j  ,i+1)*m(j  ,i+1) &
-                !                 +x(k+1,j+1,i)*m(j+1,i) +x(k+1,j+1,i+1)*m(j+1,i+1)
-                z1 = x(k  ,j  ,i)+x(k  ,j  ,i+1)+x(k  ,j+1,i)+x(k  ,j+1,i+1)
-                z2 = x(k+1,j,  i)+x(k+1,j  ,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
-                y(k2,j2,i2) = (z1+z2) /8!*cff
-             enddo
-             y(nz,j2,i2) = (z1+z2*cffm) /8!*cff
-          else
-             y(:,j2,i2) = 0.
-          endif
+          do k2=1,nz
+             k=2*k2-1
+             z = x(k,j,i)  +x(k,j,i+1)  +x(k,j+1,i)  +x(k,j+1,i+1) &
+                  + x(k+1,j,i)+x(k+1,j,i+1)+x(k+1,j+1,i)+x(k+1,j+1,i+1)
+             y(k2,j2,i2) = z
+          enddo
        enddo
     enddo
 
@@ -242,14 +199,14 @@ contains
 
        if ((aggressive).and.(lev==1)) then
 
-          call coarse2fine_aggressive(lev,rf,pc,nxc,nyc,nzc)
+          call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
 
        elseif (grid(lev)%nz == 1) then
 
-          call coarse2fine_2D_nearest(lev,rf,pc,nxc,nyc)
+          call coarse2fine_2D_nearest(rf,pc,nxc,nyc)
        else
-          call coarse2fine_3D_nearest(lev,rf,pc,nxc,nyc,nzc)
-          !call coarse2fine_3D_linear(lev,rf,pc,nxc,nyc,nzc)
+          call coarse2fine_3D_nearest(rf,pc,nxc,nyc,nzc)
+          !call coarse2fine_3D_linear(rf,pc,nxc,nyc,nzc)
 
        end if
 
@@ -258,29 +215,27 @@ contains
 
        if ((aggressive).and.(lev==1)) then
 
-          call coarse2fine_aggressive(lev,rf,pc,nxc,nyc,nzc)
+          call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
 
        elseif (grid(lev)%nz == 1) then
 
-          call coarse2fine_2D_linear(lev,rf,pc,nxc,nyc)
+          call coarse2fine_2D_linear(rf,pc,nxc,nyc)
        else
-          call coarse2fine_3D_linear(lev,rf,pc,nxc,nyc,nzc)
+          call coarse2fine_3D_linear(rf,pc,nxc,nyc,nzc)
 
        end if
 
     endif
 
-
+    call fill_halo(lev,grid(lev)%r)
 
     grid(lev)%p = grid(lev)%p + grid(lev)%r
-    call fill_halo(lev,grid(lev)%p)
-
 
   end subroutine coarse2fine
 
   !------------------------------------------------------------
-  subroutine coarse2fine_aggressive(lev,x,y,nx,ny,nz)
-    integer(kind=ip), intent(in) :: lev
+  subroutine coarse2fine_aggressive(x,y,nx,ny,nz)
+
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
     integer(kind=ip),intent(in) :: nx, ny, nz
@@ -298,8 +253,8 @@ contains
   end subroutine coarse2fine_aggressive
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D_nearest(lev,xf,xc,nx,ny)
-    integer(kind=ip), intent(in) :: lev
+  subroutine coarse2fine_2D_nearest(xf,xc,nx,ny)
+
     real(kind=rp),dimension(:,:,:),pointer,intent(out):: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: xc
     integer(kind=ip),intent(in) :: nx, ny
@@ -343,8 +298,8 @@ contains
   end subroutine coarse2fine_2D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_2D_linear(lev,xf,xc,nx,ny)
-    integer(kind=ip), intent(in) :: lev
+  subroutine coarse2fine_2D_linear(xf,xc,nx,ny)
+
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny
@@ -384,212 +339,120 @@ contains
   end subroutine coarse2fine_2D_linear
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D_nearest(lev,xf,xc,nx,ny,nz)
-    integer(kind=ip), intent(in) :: lev
+  subroutine coarse2fine_3D_nearest(xf,xc,nx,ny,nz)
+
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
 
     ! local
     integer(kind=ip) :: i,j,k,i2,j2,k2
-    real(kind=rp) :: cff
     ! 
-    cff = 1.
-    if(lev==2)cff=2.
-    !cff = (1.-4./8**lev)
     do i2=1,nx
        i=2*i2-1
        do j2=1,ny
           j=2*j2-1
-          
-          if(grid(lev)%rmask(j,i)==1)then
-             do k2=1,nz
-                k=2*k2-1
-                xf(k  ,j  ,i  ) = xc(k2,j2,i2)
-                xf(k+1,j  ,i  ) = xc(k2,j2,i2)
-             enddo
-             k2=nz
-             k=2*nz
-             xf(k  ,j  ,i  ) = xc(k2,j2,i2)*cff
-          else
-             xf(:,j,i)=0.
-          endif
-
-          if(grid(lev)%rmask(j+1,i)==1)then
-             do k2=1,nz
-                k=2*k2-1
-                xf(k  ,j+1,i) = xc(k2,j2,i2)
-                xf(k+1,j+1,i) = xc(k2,j2,i2)
-             enddo
-             k2=nz
-             k=2*nz
-             xf(k  ,j+1,i) = xc(k2,j2,i2)*cff
-          else
-             xf(:,j+1,i)=0.
-          endif
-
-          if(grid(lev)%rmask(j,i+1)==1)then
-             do k2=1,nz
-                k=2*k2-1
-                xf(k  ,j,i+1) = xc(k2,j2,i2)
-                xf(k+1,j,i+1) = xc(k2,j2,i2)
-             enddo
-             k2=nz
-             k=2*nz
-             xf(k  ,j,i+1) = xc(k2,j2,i2)*cff
-          else
-             xf(:,j,i+1)=0.
-          endif
-
-          if(grid(lev)%rmask(j+1,i+1)==1)then
-             do k2=1,nz
-                k=2*k2-1
-                xf(k  ,j+1,i+1) = xc(k2,j2,i2)
-                xf(k+1,j+1,i+1) = xc(k2,j2,i2)
-             enddo
-             k2=nz
-             k=2*nz
-             xf(k  ,j+1,i+1) = xc(k2,j2,i2)*cff
-          else
-             xf(:,j+1,i+1)=0.
-          endif
-
-!!$          do k2=1,nz
-!!$             k=2*k2-1
-!!$             xf(k  ,j  ,i  ) = xc(k2,j2,i2)
-!!$             xf(k+1,j  ,i  ) = xc(k2,j2,i2)
-!!$             xf(k  ,j+1,i  ) = xc(k2,j2,i2)
-!!$             xf(k+1,j+1,i  ) = xc(k2,j2,i2)
-!!$             xf(k  ,j  ,i+1) = xc(k2,j2,i2)
-!!$             xf(k+1,j  ,i+1) = xc(k2,j2,i2)
-!!$             xf(k  ,j+1,i+1) = xc(k2,j2,i2)
-!!$             xf(k+1,j+1,i+1) = xc(k2,j2,i2)
-!!$          enddo
-!!$          k2=nz
-!!$          k=2*nz
-!!$          xf(k  ,j  ,i  ) = xc(k2,j2,i2)*cff
-!!$          xf(k  ,j+1,i  ) = xc(k2,j2,i2)*cff
-!!$          xf(k  ,j  ,i+1) = xc(k2,j2,i2)*cff
-!!$          xf(k  ,j+1,i+1) = xc(k2,j2,i2)*cff
-!!$
-!!$          xf(:,j  ,i  ) = xf(:,j  ,i  ) * grid(lev)%rmask(j  ,i  )
-!!$          xf(:,j+1,i  ) = xf(:,j+1,i  ) * grid(lev)%rmask(j+1,i  )
-!!$          xf(:,j  ,i+1) = xf(:,j  ,i+1) * grid(lev)%rmask(j  ,i+1)
-!!$          xf(:,j+1,i+1) = xf(:,j+1,i+1) * grid(lev)%rmask(j+1,i+1)
+          do k2=1,nz
+             k=2*k2-1
+             xf(k  ,j  ,i  ) = xc(k2,j2,i2)
+             xf(k+1,j  ,i  ) = xc(k2,j2,i2)
+             xf(k  ,j+1,i  ) = xc(k2,j2,i2)
+             xf(k+1,j+1,i  ) = xc(k2,j2,i2)
+             xf(k  ,j  ,i+1) = xc(k2,j2,i2)
+             xf(k+1,j  ,i+1) = xc(k2,j2,i2)
+             xf(k  ,j+1,i+1) = xc(k2,j2,i2)
+             xf(k+1,j+1,i+1) = xc(k2,j2,i2)
+          enddo
        enddo
     enddo
 
   end subroutine coarse2fine_3D_nearest
 
   !------------------------------------------------------------
-  subroutine coarse2fine_3D_linear(lev,xf,xc,nx,ny,nz)
-    integer(kind=ip), intent(in) :: lev
+  subroutine coarse2fine_3D_linear(xf,xc,nx,ny,nz)
+
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: xf
     real(kind=rp),dimension(:,:,:),pointer,intent(in)  :: xc
     integer(kind=ip),intent(in) :: nx, ny, nz
 
     ! local
-  integer(kind=ip) :: i,j,k,i2,j2,k2,kp
-  real(kind=rp) :: a,b,c,d,e,f,g
-  !
-  ! weights for bilinear in (i,j), nearest in k
-  a = 9._8 / 16._8
-  b = 3._8 / 16._8
-  c = 1._8 / 16._8
-  !
-  ! weights for trilinear in (i,j,k)
-  d = 27._8 / 64._8
-  e =  9._8 / 64._8
-  f =  3._8 / 64._8
-  g =  1._8 / 64._8
-  ! 
-  do i2=1,nx
-     i=2*i2-1
-     do j2=1,ny
-        j=2*j2-1
-        ! bottom level
-        k  = 1
-        k2 = 1
-        xf(k  ,j  ,i  ) =  &
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
-             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)
-        xf(k  ,j+1,i  ) =  &
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)
-        xf(k  ,j  ,i+1) =  &
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
-             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
-        xf(k  ,j+1,i+1) =  &
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)
-        ! interior level
-        do k=2,nz*2-1
-           ! kp = k2+1 for k=2,4 ..
-           ! kp = k2-1 for k=3,5 ..
-           k2 = ((k+1)/2)
-           kp = k2-(mod(k,2)*2-1)
-           xf(k  ,j  ,i  ) =  &
-                + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2-1) &
-                + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2-1) &
-                + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2-1) &
-                + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2-1)
-           xf(k  ,j+1,i  ) =  &
-                + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2-1) &
-                + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2-1) &
-                + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2-1) &
-                + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2-1)
-           xf(k  ,j  ,i+1) = &
-                + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2+1) &
-                + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2+1) &
-                + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2+1) &
-                + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2+1)
-           xf(k  ,j+1,i+1) = &
-                + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2+1) &
-                + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2+1) &
-                + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2+1) &
-                + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2+1)
-        enddo
-        ! top level
-        k = nz*2
-        xf(k  ,j  ,i  ) =  (&
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
-             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1))/2
-        xf(k  ,j+1,i  ) =  (&
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1))/2
-        xf(k  ,j  ,i+1) =  (&
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
-             + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1))/2
-        xf(k  ,j+1,i+1) =  (&
-             + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
-             + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1))/2
-
-        xf(:,j,i) = xf(:,j,i) * grid(lev)%rmask(j,i)
-     enddo
-  enddo
-
+    integer(kind=ip) :: i,j,k,i2,j2,k2,kp
+    real(kind=rp) :: a,b,c,d,e,f,g
+    !
+    ! weights for bilinear in (i,j), nearest in k
+    a = 9._8 / 16._8
+    b = 3._8 / 16._8
+    c = 1._8 / 16._8
+    !
+    ! weights for trilinear in (i,j,k)
+    d = 27._8 / 64._8
+    e =  9._8 / 64._8
+    f =  3._8 / 64._8
+    g =  1._8 / 64._8
+    ! 
+    do i2=1,nx
+       i=2*i2-1
+       do j2=1,ny
+          j=2*j2-1
+          ! bottom level
+          k  = 1
+          k2 = 1
+          xf(k  ,j  ,i  ) =  &
+               + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) &
+               + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)
+          xf(k  ,j+1,i  ) =  &
+               + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) &
+               + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)
+          xf(k  ,j  ,i+1) =  &
+               + a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) &
+               + b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)
+          xf(k  ,j+1,i+1) =  &
+               + a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) &
+               + b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)
+          ! interior level
+          do k=2,nz*2-1
+             ! kp = k2+1 for k=2,4 ..
+             ! kp = k2-1 for k=3,5 ..
+             k2 = ((k+1)/2)
+             kp = k2-(mod(k,2)*2-1)
+             xf(k  ,j  ,i  ) =  &
+                  + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2-1) &
+                  + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2-1) &
+                  + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2-1) &
+                  + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2-1)
+             xf(k  ,j+1,i  ) =  &
+                  + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2-1) &
+                  + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2-1) &
+                  + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2-1) &
+                  + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2-1)
+             xf(k  ,j  ,i+1) = &
+                  + d * xc(k2,j2  ,i2) + f * xc(k2,j2-1,i2+1) &
+                  + e * xc(k2,j2-1,i2) + e * xc(k2,j2  ,i2+1) &
+                  + e * xc(kp,j2  ,i2) + g * xc(kp,j2-1,i2+1) &
+                  + f * xc(kp,j2-1,i2) + f * xc(kp,j2  ,i2+1)
+             xf(k  ,j+1,i+1) = &
+                  + d * xc(k2,j2  ,i2) + f * xc(k2,j2+1,i2+1) &
+                  + e * xc(k2,j2+1,i2) + e * xc(k2,j2  ,i2+1) &
+                  + e * xc(kp,j2  ,i2) + g * xc(kp,j2+1,i2+1) &
+                  + f * xc(kp,j2+1,i2) + f * xc(kp,j2  ,i2+1)
+          enddo
+          ! top level
+          k = nz*2
+          xf(k  ,j  ,i  ) =  0.5_8                       * ( &
+               a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) +   &
+               b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)   )
+          xf(k  ,j+1,i  ) =  0.5_8                       * ( &
+               a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) +   &
+               b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)   )
+          xf(k  ,j  ,i+1) =  0.5_8                       * ( &
+               a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) +   &
+               b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)   ) 
+          xf(k  ,j+1,i+1) =  0.5_8                       * ( &
+               a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) +   &
+               b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)   )
+       enddo
+    enddo
 
   end subroutine coarse2fine_3D_linear
-
-!!$  !----------------------------------------
-!!$  subroutine interpolate_zzz(l2,l1,y,x)
-!!$
-!!$    integer(kind = 4), intent(in):: l1,l2
-!!$    real*8,dimension(:,:,:), intent(out):: x
-!!$    real*8,dimension(:,:,:), intent(in) :: y
-!!$
-!!$    integer(kind = 4):: i, j, k, k2
-!!$    integer(kind = 4):: nx, ny, nz
-!!$
-!!$    do k=1,nz
-!!$       k2=(k-1)/8+1
-!!$       do j=1,ny
-!!$          do i=1,nx               
-!!$             x(i,j,k)=y(i,j,k2)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$
-!!$  end subroutine interpolate_zzz
 
 end module mg_intergrids

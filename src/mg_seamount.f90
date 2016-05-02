@@ -447,7 +447,7 @@ contains
     pj = myrank/npxg
     pi = mod(myrank,npxg)
 
-    grid(1)%b = 0.
+    grid(1)%b = 0._8
     do l=1,nbpatch
 
        call random_number(x0)
