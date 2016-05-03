@@ -41,6 +41,7 @@ contains
           write(*,*)'Error: nhydro: please enter a valid test name!', trim(test)
           stop
        endif
+
     endif
 
   end subroutine nhydro_init
