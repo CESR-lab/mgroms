@@ -1,45 +1,38 @@
-program mg_testcuc
+program mg_testseamount
 
-  use mg_mpi 
+  use mg_mpi
   use mg_tictoc
   use mg_define_rhs
   use nhydro
 
   implicit none
 
-  integer(kind=4):: nxg        ! global x dimension
-  integer(kind=4):: nyg        ! global y dimension
-  integer(kind=4):: nzg        ! z dimension
-  integer(kind=4):: npxg       ! number of processes in x
-  integer(kind=4):: npyg       ! number of processes in y
-  integer(kind=4):: nx, ny, nz ! local dimensions
+  integer(kind=4):: nxg    ! global x dimension
+  integer(kind=4):: nyg    ! global y dimension
+  integer(kind=4):: nzg    ! z dimension
 
-  integer(kind=4):: ierr, np, rank,inc
+  integer(kind=4):: npxg   ! number of processes in x
+  integer(kind=4):: npyg   ! number of processes in y
+
+  integer(kind=4) :: nx, ny, nz  ! local dimensions
 
   real(kind=8), dimension(:,:,:), pointer :: u,v,w
 
-  call tic(1,'mg_testcuc')
+  integer(kind=4) :: np, ierr, rank
 
-  !---------------!
-  !- Ocean model -!
-  !---------------!
-  inc  = 1
-  nxg  = 1024/inc
-  nyg  = 1024/inc
-  nzg  =   64/inc
+  call tic(1,'mg_bench_seamount')
 
-  Lx   = 200d3
-  Ly   = 200d3
-  Htot = 4d3
+  ! global domain dimensions
+  nxg   = 128
+  nyg   = 128
+  nzg   = 128
 
-  ! global variables define in mg_grids !?!
-  ! Should be nhydro arguments !
-  hlim    = 250._8
-  theta_b =   6._8
-  theta_s =   6._8
+  Lx   =  32d3
+  Ly   =  32d3
+  Htot =   4d2
 
-  npxg  = 2
-  npyg  = 2
+  npxg  = 8
+  npyg  = 9
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
@@ -71,27 +64,27 @@ program mg_testcuc
   !- Initialise nhydro -!
   !---------------------!
   if (rank == 0) write(*,*)'Initialise NHydro (grids, cA, params, etc) '
-  call nhydro_init(nx, ny, nz, npxg, npyg, test='cuc')
+  call nhydro_init(nx, ny, nz, npxg, npyg, test='seamount')
 
   !--------------------------!
   !- RHS initialisation (b) -!
   !--------------------------!
   if (rank == 0) write(*,*)'RHS initialisation'
-  !! call setup_random_patches()
-  call rhs_random()
-  
+  call rhs_seamount()
+
   !----------------------!
   !- Call nhydro solver -!
   !----------------------!
   if (rank == 0) write(*,*)'Call nhydro solver'
-  call  nhydro_solve(u,v,w)
+  call nhydro_solve(u,v,w)
 
-  !------------------!
-  !- End test-model -!
-  !------------------!
+  !----------------------!
+  !- End Bench-seamount -!
+  !----------------------!
   call mpi_finalize(ierr)
 
-  call toc(1,'mg_testcuc')
+  call toc(1,'mg_bench_seamount')
   if(myrank == 0) call print_tictoc(myrank)
 
-end program mg_testcuc
+end program mg_testseamount
+

@@ -37,6 +37,12 @@ module mg_grids
 
   real(kind=rp) :: hlim, theta_b, theta_s
 
+  real(kind=8), dimension(:,:), pointer   :: dx, dy
+  real(kind=8), dimension(:,:), pointer   :: h
+  real(kind=8), dimension(:,:,:), pointer :: zr, zw
+
+  real(kind=8) :: Lx,Ly,Htot
+
   integer(kind=ip):: nlevs ! index of the coarsest level (1 is the finest)
 
   integer(kind=ip),dimension(27,3) :: loc
@@ -529,6 +535,7 @@ contains
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
           allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
 
+          allocate(grid(lev)%gatherbuffer2D(1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           allocate(grid(lev)%gatherbufferp(nz+1,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
 

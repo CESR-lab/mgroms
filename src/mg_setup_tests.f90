@@ -1,29 +1,23 @@
-module mg_cuc
+module mg_setup_tests
 
   use mg_mpi 
   use mg_tictoc
   use mg_grids
-  use mg_s_coord
+  use mg_zr_zw
   use mg_mpi_exchange
   use mg_define_matrix
   use mg_netcdf_out
 
   implicit none
 
-  real(kind=8), dimension(:,:), pointer   :: dx, dy
-  real(kind=8), dimension(:,:), pointer   :: h
-  real(kind=8), dimension(:,:,:), pointer :: zr, zw
-
-  real(kind=8) :: Lx,Ly,Htot
-
 contains
 
   !-------------------------------------------------------------------------     
   subroutine setup_cuc(inc)
+
+
     integer(kind=4):: npxg,npyg
     integer(kind=4):: nx,ny,nz,nh
-
-
     integer(kind=4):: is_err,nc_id,varid
     integer(kind=4):: i,j,i0,j0,pi,pj,inc
     real(kind=8), dimension(:,:), allocatable   :: dummy2d
@@ -130,4 +124,53 @@ contains
 
   end subroutine setup_cuc
 
-end module mg_cuc
+  !-------------------------------------------------------------------------     
+  subroutine setup_seamount()
+
+    integer(kind=4), parameter :: ip=4, rp=8
+    integer(kind=ip):: npxg,npyg
+    integer(kind=ip):: nx,ny,nz,nh
+    integer(kind=ip):: pi, pj
+    integer(kind=ip):: i,j
+
+    real(kind=rp) :: x, y
+    real(kind=rp) :: x0, y0
+
+    ! grid definition
+    allocate(h(0:ny+1,0:nx+1))
+    allocate(dx(0:ny+1,0:nx+1))
+    allocate(dy(0:ny+1,0:nx+1))
+    allocate(zr(nz,0:ny+1,0:nx+1))
+    allocate(zw(nz+1,0:ny+1,0:nx+1))
+
+    npxg = grid(1)%npx
+    npyg = grid(1)%npy
+
+    nx = grid(1)%nx
+    ny = grid(1)%ny
+    nz = grid(1)%nz
+    nh = grid(1)%nh
+
+    dx(:,:) = Lx/real(npxg,kind=rp)
+    dy(:,:) = Ly/real(npyg,kind=rp)
+
+    pj = myrank/npxg
+    pi = mod(myrank,npxg)
+
+    x0 = Lx * 0.5_rp
+    y0 = Ly * 0.5_rp
+    do i = 0,nx+1 !!!  I need to know my global index range
+       do j = 0,ny+1
+          x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
+          y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
+          !h(j,i) = Htot
+          !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
+          h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
+       enddo
+    enddo
+
+    call define_matrices(dx, dy, h)
+
+  end subroutine setup_seamount
+
+end module mg_setup_tests

@@ -4,7 +4,7 @@ module mg_define_matrix
   use mg_tictoc
   use mg_namelist
   use mg_grids
-  use mg_s_coord
+  use mg_zr_zw
   use mg_mpi_exchange
   use mg_gather
   use mg_netcdf_out
@@ -138,10 +138,14 @@ contains
        zwc => grid(lev)%zw
 
        ! Compute zr and zw
-       call setup_scoord_gene               ( & 
-            hlim,theta_b,theta_s,grid(lev)%h, &  ! input args
-            grid(lev)%zr, grid(lev)%zw      , &  ! output args
-            coord_type='new_s_coord'        )    ! optional
+       if (trim(bench) == 'seamount') then
+          call setup_zr_zw(grid(lev)%h,grid(lev)%zr,grid(lev)%zw)
+       else
+          call setup_zr_zw                     ( & 
+               hlim,theta_b,theta_s,grid(lev)%h, &  ! input args
+               grid(lev)%zr, grid(lev)%zw      , &  ! output args
+               coord_type='new_s_coord'        )    ! optional
+       endif
 
        if (netcdf_output) then
           call write_netcdf(grid(lev)%dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)

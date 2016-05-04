@@ -1,10 +1,41 @@
-module mg_s_coord 
+module mg_zr_zw
 
-implicit none
+  implicit none
+
+  interface setup_zr_zw
+     module procedure           &
+          setup_zr_zw_seamount, &
+          setup_zr_zw_croco
+  end interface setup_zr_zw
 
 contains
 
-  subroutine setup_scoord_gene(hlim,theta_b,theta_s,h,zr,zw,coord_type)
+  !-------------------------------------------------------------------------     
+  subroutine setup_zr_zw_seamount(h, zr, zw)
+
+    integer(kind=4),parameter :: ip=4,rp=8
+    real(kind=rp), dimension(:,:)  , pointer, intent(in)  :: h
+    real(kind=rp), dimension(:,:,:), pointer, intent(out) :: zr
+    real(kind=rp), dimension(:,:,:), pointer, intent(out) :: zw
+
+    integer(kind=ip):: nx,ny,nz
+
+    integer(kind=ip):: i,j,k
+
+    do i = 0,nx+1
+       do j = 0,ny+1
+          do k = 1,nz
+             zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+             zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
+          enddo
+          zw(nz+1,j,i) = 0.0_rp
+       enddo
+    enddo
+
+  end subroutine setup_zr_zw_seamount
+
+  !-------------------------------------------------------------------------     
+  subroutine setup_zr_zw_croco(hlim,theta_b,theta_s,h,zr,zw,coord_type)
 
     ! compute zr and zw from h(j,i)
 
@@ -110,9 +141,9 @@ contains
           enddo ! j
        enddo ! i
 
-    !---------------------!
-    !- Sigma coordinates -!
-    !---------------------!
+       !---------------------!
+       !- Sigma coordinates -!
+       !---------------------!
     else
 
        cff  = one/real(nz, kind=rp)
@@ -153,6 +184,6 @@ contains
 
     endif
 
-  end subroutine setup_scoord_gene
+  end subroutine setup_zr_zw_croco
 
-end module mg_s_coord
+end module mg_zr_zw

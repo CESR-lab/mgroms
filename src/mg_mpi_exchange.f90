@@ -1555,7 +1555,7 @@ contains
     real(kind=rp),intent(in) :: sumloc
     real(kind=rp),intent(out) :: sumglo
 
-    integer(kind=ip) :: ierr,N
+    integer(kind=ip) :: ierr
 
     ! note: the global comm using MPI_COMM_WORLD is over-kill for levels 
     ! where subdomains are gathered
