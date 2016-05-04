@@ -19,6 +19,8 @@ contains
     real(kind=8) :: bet, x, x1, z1, x2, z2
 
     real(kind=8), dimension(:,:,:), pointer :: rhs
+    real(kind=8), dimension(:,:,:), pointer :: zr
+    real(kind=8), dimension(:,:,:), pointer :: zw
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -37,6 +39,8 @@ contains
     z2  = Htot * (0.65_8 - 1._8)
 
     rhs => grid(1)%b
+    zr  => grid(1)%zr
+    zw  => grid(1)%zw
 
     do i = 0,nx+1 !!!  I need to know my global index range
        do j = 0,ny+1 

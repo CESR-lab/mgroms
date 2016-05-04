@@ -15,7 +15,6 @@ contains
   !-------------------------------------------------------------------------     
   subroutine setup_cuc(inc)
 
-
     integer(kind=4):: npxg,npyg
     integer(kind=4):: nx,ny,nz,nh
     integer(kind=4):: is_err,nc_id,varid
@@ -40,8 +39,6 @@ contains
     allocate(h(0:ny+1,0:nx+1))
     allocate(dx(0:ny+1,0:nx+1))
     allocate(dy(0:ny+1,0:nx+1))
-    allocate(zr(nz,0:ny+1,0:nx+1))
-    allocate(zw(nz+1,0:ny+1,0:nx+1))
     ! dummy 2D to read from netcdf
     allocate(dummy2d(1:nx*inc,1:ny*inc))
 
@@ -128,20 +125,14 @@ contains
   subroutine setup_seamount()
 
     integer(kind=4), parameter :: ip=4, rp=8
-    integer(kind=ip):: npxg,npyg
-    integer(kind=ip):: nx,ny,nz,nh
+    integer(kind=ip):: npxg,npyg ! nb procs
+    integer(kind=ip):: nxg, nyg  ! global dims
+    integer(kind=ip):: nx,ny,nz,nh ! local dims
     integer(kind=ip):: pi, pj
     integer(kind=ip):: i,j
 
     real(kind=rp) :: x, y
     real(kind=rp) :: x0, y0
-
-    ! grid definition
-    allocate(h(0:ny+1,0:nx+1))
-    allocate(dx(0:ny+1,0:nx+1))
-    allocate(dy(0:ny+1,0:nx+1))
-    allocate(zr(nz,0:ny+1,0:nx+1))
-    allocate(zw(nz+1,0:ny+1,0:nx+1))
 
     npxg = grid(1)%npx
     npyg = grid(1)%npy
@@ -151,11 +142,19 @@ contains
     nz = grid(1)%nz
     nh = grid(1)%nh
 
-    dx(:,:) = Lx/real(npxg,kind=rp)
-    dy(:,:) = Ly/real(npyg,kind=rp)
+    nxg = npxg * nx
+    nyg = npyg * ny
+
+    ! grid definition
+    allocate( h(0:ny+1,0:nx+1))
+    allocate(dx(0:ny+1,0:nx+1))
+    allocate(dy(0:ny+1,0:nx+1))
+
+    dx(:,:) = Lx/real(nxg,kind=rp)
+    dy(:,:) = Ly/real(nyg,kind=rp)
 
     pj = myrank/npxg
-    pi = mod(myrank,npxg)
+    pi = myrank-pj*npxg
 
     x0 = Lx * 0.5_rp
     y0 = Ly * 0.5_rp
@@ -163,11 +162,15 @@ contains
        do j = 0,ny+1
           x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
           y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
-          !h(j,i) = Htot
-          !h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp))
           h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))
        enddo
     enddo
+
+    if (netcdf_output) then
+       call write_netcdf(h, vname= 'h',netcdf_file_name= 'h.nc',rank=myrank)
+       call write_netcdf(dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank)
+       call write_netcdf(dy,vname='dy',netcdf_file_name='dy.nc',rank=myrank)
+    endif
 
     call define_matrices(dx, dy, h)
 

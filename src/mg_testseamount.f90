@@ -7,32 +7,32 @@ program mg_testseamount
 
   implicit none
 
-  integer(kind=4):: nxg    ! global x dimension
-  integer(kind=4):: nyg    ! global y dimension
-  integer(kind=4):: nzg    ! z dimension
+  integer(kind=ip):: nxg    ! global x dimension
+  integer(kind=ip):: nyg    ! global y dimension
+  integer(kind=ip):: nzg    ! z dimension
 
-  integer(kind=4):: npxg   ! number of processes in x
-  integer(kind=4):: npyg   ! number of processes in y
+  integer(kind=ip):: npxg   ! number of processes in x
+  integer(kind=ip):: npyg   ! number of processes in y
 
-  integer(kind=4) :: nx, ny, nz  ! local dimensions
+  integer(kind=ip) :: nx, ny, nz  ! local dimensions
 
-  real(kind=8), dimension(:,:,:), pointer :: u,v,w
+  real(kind=rp), dimension(:,:,:), pointer :: u,v,w
 
-  integer(kind=4) :: np, ierr, rank
+  integer(kind=ip) :: np, ierr, rank
 
   call tic(1,'mg_bench_seamount')
 
   ! global domain dimensions
-  nxg   = 128
-  nyg   = 128
-  nzg   = 128
+  nxg   = 64
+  nyg   = 64
+  nzg   = 64
 
-  Lx   =  32d3
-  Ly   =  32d3
-  Htot =   4d2
+  Lx   =  1.e4_rp
+  Ly   =  1.e4_rp
+  Htot =  4.e3_rp 
 
-  npxg  = 8
-  npyg  = 9
+  npxg  = 2
+  npyg  = 2
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)

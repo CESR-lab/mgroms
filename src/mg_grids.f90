@@ -19,7 +19,7 @@ module mg_grids
      integer(kind=ip) :: npx, npy, incx, incy
      integer(kind=ip) :: nh                ! number of points in halo
      integer(kind=ip) :: gather
-     integer(kind=ip) :: Ng, ngx, ngy
+     integer(kind=ip) :: Ng2D, Ng, ngx, ngy
      integer(kind=ip) :: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=ip) :: coarsening_method, smoothing_method
      integer(kind=ip) :: color,family,key
@@ -37,9 +37,8 @@ module mg_grids
 
   real(kind=rp) :: hlim, theta_b, theta_s
 
-  real(kind=8), dimension(:,:), pointer   :: dx, dy
-  real(kind=8), dimension(:,:), pointer   :: h
-  real(kind=8), dimension(:,:,:), pointer :: zr, zw
+  real(kind=8), dimension(:,:)  , pointer :: dx, dy
+  real(kind=8), dimension(:,:)  , pointer :: h
 
   real(kind=8) :: Lx,Ly,Htot
 
@@ -540,7 +539,8 @@ contains
           allocate(grid(lev)%gatherbufferp(nz+1,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
 
           ! number of elements of dummy3
-          grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
+          grid(lev)%Ng2D=(nx+2*nh)*(ny+2*nh)
+          grid(lev)%Ng  =(nx+2*nh)*(ny+2*nh)*nz
 
        endif
     enddo

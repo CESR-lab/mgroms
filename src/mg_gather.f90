@@ -43,8 +43,13 @@ contains
     buffer => grid(lev)%gatherbuffer2D
 
     ! numel(x)
-    !NG: 21 april 2106: Ng = grid(lev)%Ng
-    Ng = (nx+2*nh)*(ny+2*nh)
+    Ng = grid(lev)%Ng2D
+
+!!$    if (myrank == 0) then
+!!$       write(*,*)' shape(x)     :', shape(x)
+!!$       write(*,*)' Ng           :', Ng
+!!$       write(*,*)' shape(buffer):', shape(buffer)
+!!$    end if
 
     call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
     !       if(myrank==0)write(*,*)'gather lev, Ng=',lev,Ng,ngx,ngy,nx,ny
@@ -130,8 +135,15 @@ contains
     endif
 
     ! numel(x)
-    !NG: 21 april 2106: Ng = grid(lev)%Ng
-    Ng = (nx+2*nh)*(ny+2*nh)*nz
+    Ng = grid(lev)%Ng
+    !!Ng = (nx+2*nh)*(ny+2*nh)*nz
+
+!!$    if (myrank == 0) then
+!!$       write(*,*)'3D shape(x)     :', shape(x)
+!!$       write(*,*)'3D nz           :', nz
+!!$       write(*,*)'3D Ng           :', Ng
+!!$       write(*,*)'3D shape(buffer):', shape(buffer)
+!!$    end if
 
     call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
     !       if(myrank==0)write(*,*)'gather lev, Ng=',lev,Ng,ngx,ngy,nx,ny

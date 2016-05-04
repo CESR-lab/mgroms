@@ -60,6 +60,7 @@ contains
        nh=grid(lev)%nh
 
        if (lev == 1) then
+
           grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh) = dx
           grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh) = dy
           grid(lev)%h (1-nh:ny+nh,1-nh:nx+nh) =  h
@@ -140,6 +141,9 @@ contains
        ! Compute zr and zw
        if (trim(bench) == 'seamount') then
           call setup_zr_zw(grid(lev)%h,grid(lev)%zr,grid(lev)%zw)
+          !!call setup_zr_zw                     ( & 
+          !!     hlim,theta_b,theta_s,grid(lev)%h, &  ! input args
+          !!     grid(lev)%zr, grid(lev)%zw      )    ! output args
        else
           call setup_zr_zw                     ( & 
                hlim,theta_b,theta_s,grid(lev)%h, &  ! input args
