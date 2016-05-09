@@ -131,11 +131,14 @@ contains
 
        endif ! lev == 1
 
-       if (lev /= 1) then
+
+       !NG: 9 may 2016 remove this condition in normal mode
+       !NG: 9 may 2016 just a condition for seamount and its validation with Nico Jr results
+       !!if (lev /= 1) then
           call fill_halo(lev, grid(lev)%dx)
           call fill_halo(lev, grid(lev)%dy)
           call fill_halo(lev, grid(lev)%h )
-       endif
+       !!endif
 
        zrc => grid(lev)%zr
        zwc => grid(lev)%zw
