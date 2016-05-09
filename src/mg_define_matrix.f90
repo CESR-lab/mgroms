@@ -131,14 +131,9 @@ contains
 
        endif ! lev == 1
 
-
-       !NG: 9 may 2016 remove this condition in normal mode
-       !NG: 9 may 2016 just a condition for seamount and its validation with Nico Jr results
-       !!if (lev /= 1) then
-          call fill_halo(lev, grid(lev)%dx)
-          call fill_halo(lev, grid(lev)%dy)
-          call fill_halo(lev, grid(lev)%h )
-       !!endif
+       call fill_halo(lev, grid(lev)%dx)
+       call fill_halo(lev, grid(lev)%dy)
+       call fill_halo(lev, grid(lev)%h )
 
        zrc => grid(lev)%zr
        zwc => grid(lev)%zw
@@ -322,8 +317,8 @@ contains
     enddo
 
     !! interaction coeff with neighbours
-    do i = 1,nx
-       do j = 1,ny
+    do i = 1,nx     !! 1, nx+1 improve the solution
+       do j = 1,ny  !! 1, ny+1 improve the solution but not possible
 
           !---------!
           !- K = 1 -! lower level
@@ -337,10 +332,7 @@ contains
                - ( zydx(k,j  ,i) * zydx(k,j  ,i) / ( cw(k,j  ,i) + cw(k+1,j  ,i) )     &
                +   zydx(k,j-1,i) * zydx(k,j-1,i) / ( cw(k,j-1,i) + cw(k+1,j-1,i) )   ) &
                                 ! from j,k cross terms
-               - qrt * ( zydx(k,j-1,i) -  zydx(k,j,i)                                ) &  
-                                ! from i,j cross terms if lbc  
-               - ( hlf * zxdy(k,j-1,i) * zydx(k,j-1,i) / (cw(k,j-1,i) + cw(k+1,j-1,i)) &
-               -   hlf * zxdy(k,j  ,i) * zydx(k,j  ,i) / (cw(k,j  ,i) + cw(k+1,j  ,i)) )
+               - qrt * ( zydx(k,j-1,i) -  zydx(k,j,i)                                )  
           cA(6,k,j,i) = qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1) )  ! couples with k+1 i-1
           cA(7,k,j,i) =                                                                &
                                 ! couples with i-1
@@ -349,10 +341,7 @@ contains
                - ( zxdy(k,j,i  ) * zxdy(k,j,i  ) / ( cw(k,j,i  ) + cw(k+1,j,i  ) )     &
                +   zxdy(k,j,i-1) * zxdy(k,j,i-1) / ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
                                 ! from i,k cross terms
-               - qrt * ( zxdy(k,j,i-1) - zxdy(k,j,i)                                 ) &
-                                ! from i,j cross terms if lbc    
-               - ( hlf * zxdy(k,j,i-1) * zydx(k,j,i-1) / (cw(k,j,i-1) + cw(k+1,j,i-1)) &
-               -   hlf * zxdy(k,j,i  ) * zydx(k,j,i  ) / (cw(k,j,i  ) + cw(k+1,j,i  )) )
+               - qrt * ( zxdy(k,j,i-1) - zxdy(k,j,i)                                 )
           ! only for k==1, couples with j+1,i-1
           cA(5,k,j,i) = &
                + hlf * zxdy(k,j+1,i  ) * zydx(k,j+1,i  ) / ( cw(k,j+1,i  ) + cw(k+1,j+1,i  ))  &
@@ -366,9 +355,7 @@ contains
           !- K = 2, nz-1 -! interior levels
           !---------------!
           do k = 2,nz-1 
-             cA(2,k,j,i) =  cw(k,j,i)                    &          ! couples with k-1
-                  - qrt * ( zxdy(k-1,j,i) - zxdy(k,j,i)) &
-                  - qrt * ( zydx(k-1,j,i) - zydx(k,j,i)) 
+             cA(2,k,j,i) =  cw(k,j,i)                               ! couples with k-1
              cA(3,k,j,i) =  qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i))  ! couples with k+1 j-1
              cA(4,k,j,i) =  Ary(k,j,i) / dyv(j,i)                   ! couples with j-1
              cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i))  ! couples with k-1 j-1

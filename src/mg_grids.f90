@@ -111,7 +111,7 @@ contains
 
        allocate(grid(lev)%p(    nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%b(    nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%r(    nz,1-nh:ny+nh,1-nh:nx+nh)) ! Need or not ?
+       allocate(grid(lev)%r(    nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%cA(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh))
