@@ -26,37 +26,38 @@ contains
     ny = grid(1)%ny
     nz = grid(1)%nz
 
-    npxg = grid(1)%ngx
+    npxg = grid(1)%npx
 
     pj = myrank / npxg   
     pi = myrank - pj * npxg
 
     ! rhs definition
-    bet = 1200._8 / (Lx*Lx)
-    x1  = Lx   * 0.45_8
+    bet = 600._8 / (Lx*Lx)
+    x1  = Lx   *  0.65_8
+    x2  = Lx   *  0.75_8
     z1  = Htot * (0.75_8 - 1._8)
-    x2  = Lx   * 0.75_8
     z2  = Htot * (0.65_8 - 1._8)
 
     rhs => grid(1)%b
     zr  => grid(1)%zr
     zw  => grid(1)%zw
 
-    do i = 0,nx+1 !!!  I need to know my global index range
+    do i = 0,nx+1
        do j = 0,ny+1 
           x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
           do k = 1,nz
              rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
                   (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                  exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-             !           rhs(k,j,i) = (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-             !                         exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
-             !           rhs(k,j,i) = rhs(k,j,i) * rmask(j,i)
+                   exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
           enddo
        enddo
     enddo
 
-    call fill_halo(1,rhs)
+    !!call fill_halo(1,rhs)
+
+    if (netcdf_output) then
+       call write_netcdf(grid(1)%b,vname='rhs',netcdf_file_name='rhs_seamount.nc',rank=myrank)
+    endif
 
   end subroutine rhs_seamount
 

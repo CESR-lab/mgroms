@@ -27,12 +27,12 @@ program mg_testseamount
   nyg   = 64
   nzg   = 64
 
+  npxg  = 2
+  npyg  = 2
+
   Lx   =  1.e4_rp
   Ly   =  1.e4_rp
   Htot =  4.e3_rp 
-
-  npxg  = 2
-  npyg  = 2
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)

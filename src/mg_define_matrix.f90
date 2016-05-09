@@ -131,9 +131,11 @@ contains
 
        endif ! lev == 1
 
-       call fill_halo(lev, grid(lev)%dx)
-       call fill_halo(lev, grid(lev)%dy)
-       call fill_halo(lev, grid(lev)%h )
+       if (lev /= 1) then
+          call fill_halo(lev, grid(lev)%dx)
+          call fill_halo(lev, grid(lev)%dy)
+          call fill_halo(lev, grid(lev)%h )
+       endif
 
        zrc => grid(lev)%zr
        zwc => grid(lev)%zw
@@ -326,26 +328,26 @@ contains
           k = 1
           cA(3,k,j,i) = qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i) ) ! couples with k+1 j-1
           cA(4,k,j,i) =                                                                &
-               ! couples with j-1
+                                ! couples with j-1
                Ary(k,j,i)/dyv(j,i)                                                     & 
-               ! topo terms 
+                                ! topo terms 
                - ( zydx(k,j  ,i) * zydx(k,j  ,i) / ( cw(k,j  ,i) + cw(k+1,j  ,i) )     &
                +   zydx(k,j-1,i) * zydx(k,j-1,i) / ( cw(k,j-1,i) + cw(k+1,j-1,i) )   ) &
-               ! from j,k cross terms
-               - ( qrt * zydx(k,j-1,i) - qrt * zydx(k,j,i)                           ) &  
-               ! from i,j cross terms if lbc  
+                                ! from j,k cross terms
+               - qrt * ( zydx(k,j-1,i) -  zydx(k,j,i)                                ) &  
+                                ! from i,j cross terms if lbc  
                - ( hlf * zxdy(k,j-1,i) * zydx(k,j-1,i) / (cw(k,j-1,i) + cw(k+1,j-1,i)) &
                -   hlf * zxdy(k,j  ,i) * zydx(k,j  ,i) / (cw(k,j  ,i) + cw(k+1,j  ,i)) )
           cA(6,k,j,i) = qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1) )  ! couples with k+1 i-1
           cA(7,k,j,i) =                                                                &
-               ! couples with i-1
+                                ! couples with i-1
                Arx(k,j,i)/dxu(j,i)                                                     &  
-               ! topo terms
+                                ! topo terms
                - ( zxdy(k,j,i  ) * zxdy(k,j,i  ) / ( cw(k,j,i  ) + cw(k+1,j,i  ) )     &
                +   zxdy(k,j,i-1) * zxdy(k,j,i-1) / ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
-               ! from i,k cross terms
-               - ( qrt*zxdy(k,j,i-1) - qrt*zxdy(k,j,i)                               ) &
-               ! from i,j cross terms if lbc    
+                                ! from i,k cross terms
+               - qrt * ( zxdy(k,j,i-1) - zxdy(k,j,i)                                 ) &
+                                ! from i,j cross terms if lbc    
                - ( hlf * zxdy(k,j,i-1) * zydx(k,j,i-1) / (cw(k,j,i-1) + cw(k+1,j,i-1)) &
                -   hlf * zxdy(k,j,i  ) * zydx(k,j,i  ) / (cw(k,j,i  ) + cw(k+1,j,i  )) )
           ! only for k==1, couples with j+1,i-1
@@ -378,7 +380,7 @@ contains
           k = nz
           cA(2,k,j,i) = cw(k,j,i)                                    ! couples with k-1
           cA(4,k,j,i) = Ary(k,j,i) / dyv(j,i) &                      ! couples with j-1
-               + qrt * ( zydx(k,j-1,i) - zydx(k,j,i))
+               + qrt * ( zydx(k,j-1,i) - zydx(k,j,i) )
           cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i) )     ! couples with k-1 j-1
           cA(7,k,j,i) =  Arx(k,j,i)/dxu(j,i) &                       ! Couples with i-1
                - qrt * (- zxdy(k,j,i-1) + zxdy(k,j,i))
