@@ -595,11 +595,10 @@ contains
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!
   !-----------------------------!
-  subroutine fill_halo_3D_nb(lev,p,nhi)
+  subroutine fill_halo_3D_nb(lev,p)
 
     integer(kind=ip), intent(in):: lev
     real(kind=rp), dimension(:,:,:), pointer, intent(inout)::p
-    integer(kind=ip), optional, intent(in):: nhi
 
     integer(kind=ip) :: nx, ny, nz
     integer(kind=ip) :: nh
@@ -629,11 +628,7 @@ contains
     ny = grid(lev)%ny
     nz = size(p,dim=1)
 
-    if (present(nhi)) then
-       nh = nhi
-    else
-       nh = grid(lev)%nh
-    endif
+    nh = grid(lev)%nh
 
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)
