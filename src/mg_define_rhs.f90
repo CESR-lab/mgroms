@@ -8,7 +8,7 @@ module mg_define_rhs
   implicit none
 
 contains
-!-------------------------------------------------------------------------     
+  !-------------------------------------------------------------------------     
   subroutine rhs_seamount()
 
     integer(kind=4):: nx,ny,nz
@@ -48,7 +48,7 @@ contains
           do k = 1,nz
              rhs(k,j,i) = dx(j,i)*dy(j,i)*(zw(k+1,j,i)-zw(k,j,i)) * &
                   (exp(-bet * ((x-x1)**2 + (zr(k,j,i)-z1)**2)) - &
-                   exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
+                  exp(-bet * ((x-x2)**2 + (zr(k,j,i)-z2)**2)))
           enddo
        enddo
     enddo

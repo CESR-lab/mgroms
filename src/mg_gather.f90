@@ -183,17 +183,7 @@ contains
 
     integer(kind=ip),intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
-    !    real(kind=rp),dimension( &
-    !         grid(lev)%nz,       &
-    !         1-grid(lev)%nh:grid(lev)%ny+grid(lev)%nh, &
-    !         1-grid(lev)%nh:grid(lev)%nx+grid(lev)%nh), intent(in) :: x
-
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
-    !    real(kind=rp),dimension( &
-    !         grid(lev)%nz,       &
-    !         1-grid(lev)%nh:grid(lev)%ny/grid(lev)%ngy+grid(lev)%nh, &
-    !         1-grid(lev)%nh:grid(lev)%nx/grid(lev)%ngx+grid(lev)%nh), intent(out) :: y
-
 
     integer(kind=ip):: nx,ny,nz,nh
     integer(kind=ip):: ngx,ngy
@@ -213,15 +203,6 @@ contains
     l = mod(key,2)
     m = key/2
 
-    !      write(*,'(I3,I4,I4,I4,I3,I3,I3,I3)')myrank,nx,ny,nz,l,m,key,grid(lev)%color!size(x),size(y),l,m
-    !     l=0
-    !     m=0
-    !      call MPI_Barrier( MPI_COMM_WORLD,ierr)
-
-    !      y = 0.
-    !      z = 0.
-    !      return
-    !      return
     ii = 1-nh+l*nx
     do i=1-nh,nx+nh
        jj = 1-nh+m*ny
@@ -233,9 +214,6 @@ contains
        enddo
        ii=ii+1
     enddo
-    !      call MPI_Barrier( MPI_COMM_WORLD)
-    !      write(*,*)"done",z
-    !      call MPI_Barrier( MPI_COMM_WORLD,ierr)
 
   end subroutine split
 
