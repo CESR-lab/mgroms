@@ -183,37 +183,6 @@ contains
     nlevs=min(nl1,nl2)
 
     return
-    ! the code below can be removed
-    ! nlevs = 1   
-
-    ! do 
-    !    ! stop criterion
-    !    if (min(nxg,nyg).le.nsmall*2) exit
-
-    !    nlevs = nlevs+1
-
-    !    if(nz.eq.1)then 
-    !       ! 2D coarsening
-    !       if ((mod(nxg,2) == 0).or.(mod(nyg,2) == 0)) then
-    !          nxg = nxg/2
-    !          nyg = nyg/2
-    !       else
-    !          write(*,*)'Error:grid dimension not a power of 2!'
-    !          stop -1
-    !       end if
-    !    else
-    !       ! regular 3D coarsening
-    !       if ((mod(nxg,2) == 0).or.(mod(nyg,2) == 0).or.(mod(nzg,2) == 0)) then
-    !          nxg = nxg/2
-    !          nyg = nyg/2
-    !          nzg = nzg/2
-    !       else
-    !          write(*,*)'Error:grid dimension not a power of 2!'
-    !          stop -1
-    !       end if
-    !    endif
-
-    ! enddo
 
   end subroutine find_grid_levels
 
@@ -283,27 +252,6 @@ contains
 
        endif
 
-!!$       if((nx < nsmall).and.(npx > 1))then
-!!$          npx  = npx/2
-!!$          nx   = nx*2
-!!$!          incx = incx*2
-!!$          grid(lev)%gather = 1
-!!$          grid(lev)%ngx = 2
-!!$       endif
-!!$
-!!$       if((ny < nsmall).and.(npy > 1))then
-!!$          npy  = npy/2
-!!$          ny   = ny*2
-!!$!          incy = incy*2
-!!$          grid(lev)%gather = 1
-!!$          grid(lev)%ngy = 2
-!!$       endif
-!!$
-!!$       if(grid(lev)%gather == 1)then
-!!$          incx=incx*2
-!!$          incy=incy*2
-!!$       endif
-
        grid(lev)%nx   = nx
        grid(lev)%ny   = ny
        grid(lev)%nz   = nz
@@ -313,8 +261,6 @@ contains
        grid(lev)%incy = incy
        grid(lev)%nh   = nh
 
-
-!       if(myrank==0)write(*,*)'11/12/15: lev,npx,npy=',lev,npx,npy
     enddo
 
   end subroutine define_grid_dims
@@ -400,69 +346,6 @@ contains
           stop -1
        endif
     endif
-    !GR =======
-    !GR!    return ! not yet ready to go through
-    !GR    
-    !GR    ! prepare the informations for the gathering 
-    !GR    do lev=1,nlevs-1
-    !GR       if(grid(lev)%gather.eq.1)then
-    !GR          
-    !GR          nx = grid(lev)%nx
-    !GR          ny = grid(lev)%ny
-    !GR          nz = grid(lev)%nz
-    !GR          nh = grid(lev)%nh
-    !GR          incx=grid(lev)%incx / 2
-    !GR          incy=grid(lev)%incy / 2          
-    !GR          ngx=grid(lev)%ngx
-    !GR          ngy=grid(lev)%ngy
-
-
-    !GR         !gather cores by quadruplets (and marginally by pair, for the coarsest grid)
-    !GR
-    !GR         ! cores having the same family index share the same subdomain
-    !GR          family=(pi/incx)*incx*incy + (npx)*incy*(pj/incy)
-    !GR
-    !GR          nextfamily = (pi/(2*incx))*incx*incy*4 + (npx)*2*incy*(pj/(incy*2))
-    !GR
-    !GR          ! - assign a color to each core: make a cycling ramp index
-    !GR          ! through 2 or 4 close families 
-    !GR          ! - cores having the same color should be a pair or a quadruplet 
-    !GR          ! - colors are all distinct *within* a family
-    !GR          color=nextfamily + mod(pi,incx)+mod(pj,incy)*incx
-    !GR
-    !GR          
-    !          prevfamily = (pi/(incx/2))*incx*incy/4 + (npx/2)*(incy/2)*(pj/(incy/2))
-    !GR          N=incx*npx;
-    !GR          key = mod(mod(family,N)/(incx*incy),2)+2*mod( (family/N),2)
-    !GR         
-    !GR
-    !GR          grid(lev)%color=color
-    !GR          grid(lev)%family=nextfamily
-    !GR          grid(lev)%key=key
-    !GR
-    !GR          call MPI_COMM_SPLIT(MPI_COMM_WORLD, color, key, localcomm, ierr)
-    !GR          grid(lev)%localcomm = localcomm
-    !GR
-    !GR
-    !GR          ! this dummy 3D array is to store the restriction from lev-1, before the gathering
-    !GR          ! its size can be deduced from the size after the gathering
-    !GR          
-    !GR          nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
-    !GR          ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
-    !GR          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh)) 
-    !GR          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,ngx,ngy))
-    !GR          ! number of elements of dummy3
-    !GR          grid(lev)%Ng=(nx+2*nh)*(ny+2*nh)*nz
-    !GR
-    !          if(myrank.eq.0)then
-    !             write(*,*)"incx=",incx,"Ng=",grid(lev)%Ng,"size(dummy3)=",&
-    !   size(grid(lev)%dummy3),"size(gatherbuffer)=",size(grid(lev)%gatherbuffer)
-    !      endif
-    !GR
-    !GR      endif
-    !GR   enddo
-    !GR
-    !GR  end subroutine define_grids
 
   end subroutine define_neighbours
 

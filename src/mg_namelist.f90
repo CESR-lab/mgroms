@@ -14,12 +14,12 @@ module mg_namelist
   integer(kind=ip) :: nsmall      =   8
 
   integer(kind=ip) :: ns_coarsest =  40
-  integer(kind=ip) :: ns_pre      =   2
+  integer(kind=ip) :: ns_pre      =   3
   integer(kind=ip) :: ns_post     =   2
 
-  character(len=16) :: cmatrix='simple'
+  character(len=16) :: cmatrix='real'          !- 'real' or 'simple'
 
-  logical           :: red_black = .false.     !- .false. or .true.
+  logical           :: red_black = .true.      !- .false. or .true.
 
   character(len=16) :: interp_type='linear'    !- 'nearest'  or 'linear'
 
