@@ -203,14 +203,10 @@ contains
           call coarse2fine_aggressive(rf,pc,nxc,nyc,nzc)
 
        elseif (grid(lev)%nz == 1) then
-
           call coarse2fine_2D_nearest(rf,pc,nxc,nyc)
        else
           call coarse2fine_3D_nearest(rf,pc,nxc,nyc,nzc)
-          !call coarse2fine_3D_linear(rf,pc,nxc,nyc,nzc)
-
        end if
-
 
     elseif ( trim(interp_type)=='linear')then
 

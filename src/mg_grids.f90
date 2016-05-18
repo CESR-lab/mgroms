@@ -26,7 +26,6 @@ module mg_grids
      integer(kind=ip),dimension(8)::neighb
      real(kind=rp), dimension(:,:,:,:),pointer :: gatherbuffer2D
      real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbuffer
-     real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbufferp
      real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
      real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
      real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
@@ -536,7 +535,6 @@ contains
 
           allocate(grid(lev)%gatherbuffer2D(1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
           allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
-          allocate(grid(lev)%gatherbufferp(nz+1,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
 
           ! number of elements of dummy3
           grid(lev)%Ng2D=(nx+2*nh)*(ny+2*nh)

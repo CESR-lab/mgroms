@@ -40,16 +40,10 @@ contains
     ny = grid(lev)%ny
     nh = grid(lev)%nh
 
-    buffer => grid(lev)%gatherbuffer2D
-
     ! numel(x)
     Ng = grid(lev)%Ng2D
 
-!!$    if (myrank == 0) then
-!!$       write(*,*)' shape(x)     :', shape(x)
-!!$       write(*,*)' Ng           :', Ng
-!!$       write(*,*)' shape(buffer):', shape(buffer)
-!!$    end if
+    buffer => grid(lev)%gatherbuffer2D
 
     call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
     !       if(myrank==0)write(*,*)'gather lev, Ng=',lev,Ng,ngx,ngy,nx,ny
@@ -99,7 +93,7 @@ contains
 
   end subroutine gather_2D
   !----------------------------------------
-  subroutine gather_3D(lev,x,y,nzi)
+  subroutine gather_3D(lev,x,y)
 
     ! lev is the level of y, after the gathering
 
@@ -109,7 +103,6 @@ contains
     integer(kind=ip),intent(in) :: lev
     real(kind=rp),dimension(:,:,:),pointer,intent(in) :: x
     real(kind=rp),dimension(:,:,:),pointer,intent(out) :: y
-    integer(kind=ip), optional, intent(in) :: nzi
 
     integer(kind=ip):: nx,ny,nz,nh
     integer(kind=ip):: ngx,ngy,Ng
@@ -124,26 +117,13 @@ contains
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
+    nz = grid(lev)%nz
     nh = grid(lev)%nh
-
-    if (present(nzi)) then
-       nz = nzi
-       buffer => grid(lev)%gatherbufferp
-    else
-       nz = grid(lev)%nz
-       buffer => grid(lev)%gatherbuffer
-    endif
 
     ! numel(x)
     Ng = grid(lev)%Ng
-    !!Ng = (nx+2*nh)*(ny+2*nh)*nz
 
-!!$    if (myrank == 0) then
-!!$       write(*,*)'3D shape(x)     :', shape(x)
-!!$       write(*,*)'3D nz           :', nz
-!!$       write(*,*)'3D Ng           :', Ng
-!!$       write(*,*)'3D shape(buffer):', shape(buffer)
-!!$    end if
+    buffer => grid(lev)%gatherbuffer
 
     call MPI_ALLGATHER( x, Ng, MPI_DOUBLE_PRECISION, buffer, Ng, MPI_DOUBLE_PRECISION, grid(lev)%localcomm,ierr)
     !       if(myrank==0)write(*,*)'gather lev, Ng=',lev,Ng,ngx,ngy,nx,ny
