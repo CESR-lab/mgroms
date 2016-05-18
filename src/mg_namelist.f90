@@ -21,8 +21,8 @@ module mg_namelist
 
   logical           :: red_black = .false.     !- .false. or .true.
 
-  character(len=16) :: mpiexchange='blocking'  !- 'blocking' or 'nonblocking'
   character(len=16) :: interp_type='linear'    !- 'nearest'  or 'linear'
+
   character(len=16) :: restrict_type='avg'     !- 'avg'  or 'linear'
 
   logical           :: aggressive = .false.    !- .false. or .true.
@@ -39,7 +39,6 @@ module mg_namelist
        ns_post      , &
        cmatrix      , &
        red_black    , &
-       mpiexchange  , &
        interp_type  , &
        restrict_type, &
        netcdf_output, &
@@ -110,7 +109,6 @@ contains
           write(*,*)'  - ns_post      : ', ns_post
           write(*,*)'  - cmatrix      : ', trim(cmatrix)
           write(*,*)'  - red_black    : ', red_black
-          write(*,*)'  - mpiexchange  : ', trim(mpiexchange)
           write(*,*)'  - interp_type  : ', trim(interp_type)
           write(*,*)'  - restrict_type: ', trim(restrict_type)
           write(*,*)'  - aggressive   : ', aggressive
