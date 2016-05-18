@@ -53,7 +53,7 @@ contains
     !!------------------------------------------------!!
     !! Here enter the directory where cuc_nhgrd.nc is !!
     !!------------------------------------------------!!
-    file='/net/xncd1/local/tmp/1/grima/MGRoms/DATA/cuc_nhgrd.nc'
+    file='../DATA/cuc_nhgrd.nc'
 
     is_err = nf90_open( trim(file), NF90_NOWRITE ,nc_id  )
 
