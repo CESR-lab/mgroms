@@ -337,7 +337,6 @@ contains
     integer(kind=ip) :: sntag, ewtag, nstag, wetag
     integer(kind=ip) :: swnetag, senwtag, nwsetag, neswtag
 
-
     integer(kind=ip) :: i, j
     integer(kind=ip) :: icount
     integer(kind=ip) :: indx
@@ -345,6 +344,11 @@ contains
     integer(kind=ip),dimension(16) :: comm
     integer(kind=ip),dimension(MPI_STATUS_SIZE) :: status
     integer(kind=ip) :: ierr
+
+    logical :: flag_sw_s, flag_sw_w
+    logical :: flag_se_s, flag_se_e
+    logical :: flag_ne_n, flag_ne_e
+    logical :: flag_nw_n, flag_nw_w
 
     real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
     real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
@@ -457,38 +461,62 @@ contains
        p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
     endif
 
+    flag_sw_s = .false.
+    flag_sw_w = .false.
     if (southwest.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                      &
             recvSW,nz*nh*nh,MPI_DOUBLE_PRECISION,southwest, &
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
+    elseif (south.ne.MPI_PROC_NULL) then
+       flag_sw_s = .true.
+    elseif (west.ne.MPI_PROC_NULL) then
+       flag_sw_w = .true.
     else !!Homogenous Neumann  
        p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
     endif
 
+    flag_se_s = .false.
+    flag_se_e = .false.
     if (southeast.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                       &
             recvSE,nz*nh*nh,MPI_DOUBLE_PRECISION,southeast, &
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
+    elseif (south.ne.MPI_PROC_NULL) then
+       flag_se_s = .true.
+    elseif (east.ne.MPI_PROC_NULL) then
+       flag_se_e = .true.
     else !!Homogenous Neumann  
        p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
     endif
 
+    flag_ne_n = .false.
+    flag_ne_e = .false.
     if (northeast.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                      &
             recvNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast, &
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
+    elseif (north.ne.MPI_PROC_NULL) then
+       flag_ne_n = .true.
+    elseif (east.ne.MPI_PROC_NULL) then
+       flag_ne_e = .true.
     else !!Homogenous Neumann  
        p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     endif
 
+    flag_nw_n = .false.
+    flag_nw_w = .false.
     if (northwest.ne.MPI_PROC_NULL) then
        call MPI_IRecv(                                      &
             recvNW,nz*nh*nh,MPI_DOUBLE_PRECISION,northwest, &
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
+    elseif (north.ne.MPI_PROC_NULL) then
+       flag_nw_n = .true.
+    elseif (west.ne.MPI_PROC_NULL) then
+       flag_nw_w = .true.
     else !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
     endif
@@ -611,7 +639,32 @@ contains
           p(:,ny+1:ny+nh,1-nh:0) = recvNW
        endif
 
-    enddo      !<-- while  
+    enddo      !<-- while
+
+    !- corners on physicical boundarie if a flag is true-!
+    if (flag_sw_s) then
+       p(:,1-nh:0,1-nh:0) = p(:,1-nh:0,nh:1:-1)
+    elseif (flag_sw_w) then
+       p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,1-nh:0)
+    endif
+
+    if (flag_se_s) then
+       p(:,1-nh:0,nx+1:nx+nh) = p(:,1-nh:0,nx:nx-nh+1:-1)
+    elseif (flag_se_e) then
+       p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx+1:nx+nh)
+    endif
+
+    if (flag_ne_n) then
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny+1:ny+nh,nx:nx-nh+1:-1)
+    elseif (flag_ne_e) then
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx+1:nx+nh)
+    endif
+
+    if (flag_nw_n) then
+       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny+1:ny+nh,nh:1:-1)
+    elseif (flag_nw_w) then
+       p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,1-nh:0)
+    endif
 
     call toc(lev,'fill_halo_3D_nb')
 
