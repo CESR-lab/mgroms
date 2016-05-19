@@ -36,7 +36,7 @@ contains
        call relax_2D_5(lev,p,b,cA,nsweeps,nx,ny,nh)
 
     else
- 
+
        call relax_line_3D_8(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
 
     end if
@@ -110,7 +110,7 @@ contains
     enddo
 
   end subroutine relax_2D_5
-  
+
 
   !----------------------------------------
   subroutine relax_line_3D_8(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
@@ -135,7 +135,9 @@ contains
     !
     !     LOCAL 
     integer(kind=ip)            :: i,j,k,it,rb
-    integer(kind=ip)            :: ib,ie,jb,je,rbb,rbe,rbi
+    integer(kind=ip)            :: ib,ie,jb,je
+    integer(kind=ip)            :: rbb,rbe,rbi
+!!$    integer(kind=ip)            :: fc1, fc2, fcb, fce, fci
     real(kind=rp),dimension(nz) :: rhs,d,ud
 
     real(kind=rp)    :: g1,g2,gamma
@@ -178,10 +180,27 @@ contains
        endif
 
        do rb = rbb,rbe ! Red black loop
- 
+
           do i = ib,ie
              do j = jb+mod(i+rb,rbi),je,rbi
-              
+
+!!$       ib = 1
+!!$       ie = nx
+!!$       jb = 1
+!!$       je = ny
+!!$
+!!$       fcb = 1
+!!$       fce = 2
+!!$       fci = 2
+!!$
+!!$       do fc1 = fcb, fce ! 
+!!$
+!!$          do fc2 = fcb, fce ! 
+!!$
+!!$             do i = ib+mod(fc1-1,fci),ie,fci
+!!$
+!!$                do j = jb+mod(fc2-1,fci),je,fci
+
                    k=1 !lower level
                    rhs(k) = b(k,j,i)                                              &
                         - cA(3,k,j,i)*p(k+1,j-1,i)                                &
@@ -200,7 +219,7 @@ contains
 
                    d(k)   = cA(1,k,j,i)
                    ud(k)  = cA(2,k+1,j,i)
- 
+
                    do k = 2,nz-1 !interior levels
                       rhs(k) = b(k,j,i) &
                            - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
@@ -222,7 +241,7 @@ contains
                         - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
                         - cA(8,k,j,i)*p(k-1,j,i-1) 
                    d(k)   = cA(1,k,j,i)
- 
+
                    call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
 
                    ! December 10th, dev below is to try to by-pass the computation of the residual
@@ -233,17 +252,21 @@ contains
                    ! seems to be the same
                    ! obviously, this residual is only an estimate, it is not the correct one
 
-             enddo
-          enddo
+                enddo ! j
+             enddo    ! i
 
-          ! don't call mpi at every pass if nh>1
-          if ((mod(it,nh) == 0).or.(it==nsweeps)) then
+             ! don't call mpi at every pass if nh>1
+             !if ((mod(it,nh) == 0).or.(it==nsweeps)) then
              call fill_halo(lev,p)
-          endif
+             !endif
 
-       enddo
+!!$          enddo  ! fc2
+!!$
+!!$       enddo  ! fc1
 
-    enddo
+       enddo ! Red Black
+
+    enddo  !it
 
     call toc(lev,'relax_line')
 
@@ -274,7 +297,7 @@ contains
     do k=l-1,1,-1
        xc(k) = xc(k)-gam(k+1)*xc(k+1)
     enddo
-!    endif
+    !    endif
   end subroutine tridiag
 
   !----------------------------------------
@@ -342,16 +365,16 @@ contains
 
     do i = 1,nx
        do j = 1,ny
-          
-             z = b(k,j,i) - cA(1,k,j,i)*p(k,j,i)                           &
-                  - cA(2,k,j,i)*p(k,j-1,i  ) - cA(2,k,j+1,i  )*p(k,j+1,  i)&
-                  - cA(3,k,j,i)*p(k,j  ,i-1) - cA(3,k,j  ,i+1)*p(k,j  ,i+1)&
-                  - cA(4,k,j,i)*p(k,j-1,i-1) - cA(4,k,j+1,i+1)*p(k,j+1,i+1)&
-                  - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1)
 
-             r(k,j,i) = z
-             !          res = max(res,abs(r(k,j,i)))
-             res = res+z*z
+          z = b(k,j,i) - cA(1,k,j,i)*p(k,j,i)                           &
+               - cA(2,k,j,i)*p(k,j-1,i  ) - cA(2,k,j+1,i  )*p(k,j+1,  i)&
+               - cA(3,k,j,i)*p(k,j  ,i-1) - cA(3,k,j  ,i+1)*p(k,j  ,i+1)&
+               - cA(4,k,j,i)*p(k,j-1,i-1) - cA(4,k,j+1,i+1)*p(k,j+1,i+1)&
+               - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1)
+
+          r(k,j,i) = z
+          !          res = max(res,abs(r(k,j,i)))
+          res = res+z*z
 
        enddo
     enddo
