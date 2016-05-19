@@ -27,7 +27,7 @@ program mg_testseamount
   nyg   = 64
   nzg   = 64
 
-  npxg  = 2
+  npxg  = 2 
   npyg  = 2
 
   Lx   =  1.e4_rp
