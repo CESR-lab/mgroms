@@ -37,7 +37,18 @@ contains
 
     else
 
-       call relax_line_3D_8(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+       select case(trim(relax_method))
+
+       case('Gauss-Seidel','GS')
+          call relax_3D_8_GS(lev,p,b,cA,nsweeps,nx,ny,nz)
+
+       case('Red-Black','RB')
+          call relax_3D_8_RB(lev,p,b,cA,nsweeps,nx,ny,nz)
+
+       case('Four-Color','FC')
+          call relax_3D_8_FC(lev,p,b,cA,nsweeps,nx,ny,nz)
+
+       end select
 
     end if
 
@@ -85,9 +96,6 @@ contains
           rbe = 0
           rbi = 1
        endif
-       rbb = 0
-       rbe = 0
-       rbi = 1
 
        do rb = rbb,rbe
           do i = ib,ie
@@ -111,17 +119,132 @@ contains
 
   end subroutine relax_2D_5
 
-
-  !----------------------------------------
-  subroutine relax_line_3D_8(lev,p,b,cA,nsweeps,nx,ny,nz,nh)
+ !----------------------------------------
+  subroutine relax_3D_8_GS(lev,p,b,cA,nsweeps,nx,ny,nz)
 
     integer(kind=ip)                        , intent(in)   :: lev
     integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny, nz, nh
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+
+    integer(kind=ip)            :: i,j,it
+
+    call tic(lev,'relax_3D_8_GS')
+
+    ! add a loop on smoothing
+    do it = 1,nsweeps
+
+       do i = 1, nx
+          do j = 1, ny
+
+             call relax_3D_8_heart(p,b,cA,i,j,nz)
+
+          enddo ! j
+       enddo    ! i
+
+       call fill_halo(lev,p)
+
+    enddo  !it
+
+    call toc(lev,'relax_3D_8_GS')
+
+  end subroutine relax_3D_8_GS
+
+ !----------------------------------------
+  subroutine relax_3D_8_RB(lev,p,b,cA,nsweeps,nx,ny,nz)
+
+    integer(kind=ip)                        , intent(in)   :: lev
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz
+
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+
+    integer(kind=ip) :: i,j,it
+    integer(kind=ip) :: rb
+
+    call tic(lev,'relax_3D_8_RB')
+
+    ! add a loop on smoothing
+    do it = 1,nsweeps
+
+       do rb = 1, 2 ! Red black loop
+          do i = 1, nx
+             do j = 1+mod(i+rb,2),ny,2
+
+                call relax_3D_8_heart(p,b,cA,i,j,nz)
+
+             enddo ! j
+          enddo    ! i
+
+          call fill_halo(lev,p)
+
+       enddo       ! red-black
+
+    enddo  !it
+
+    call toc(lev,'relax_3D_8_RB')
+
+  end subroutine relax_3D_8_RB
+
+ !----------------------------------------
+  subroutine relax_3D_8_FC(lev,p,b,cA,nsweeps,nx,ny,nz)
+
+    integer(kind=ip)                        , intent(in)   :: lev
+    integer(kind=ip)                        , intent(in)   :: nsweeps
+    integer(kind=ip)                        , intent(in)   :: nx, ny, nz
+
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+
+    integer(kind=ip)            :: i,j,it
+    integer(kind=ip)            :: fc1,fc2
+
+    call tic(lev,'relax_3D_8_FC')
+
+    ! add a loop on smoothing
+    do it = 1,nsweeps
+
+       do fc1 = 1, 2 ! 
+          do fc2 = 1, 2 ! 
+             do i = 1 + mod(fc1-1,2), nx, 2
+                do j = 1 + mod(fc2-1,2), ny, 2
+
+                   call relax_3D_8_heart(p,b,cA,i,j,nz)
+
+                enddo ! j
+             enddo    ! i
+
+             call fill_halo(lev,p)
+
+          enddo  ! fc2
+       enddo  ! fc1
+
+    enddo  !it
+
+    call toc(lev,'relax_3D_8_FC')
+
+  end subroutine relax_3D_8_FC
+
+  !----------------------------------------
+  subroutine relax_3D_8_heart(p,b,cA,i,j,nz)
+
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+
+    integer(kind=ip)                          , intent(in)  :: i
+    integer(kind=ip)                          , intent(in)  :: j
+    integer(kind=ip)                          , intent(in)  :: nz
+
+    !- Local -!
+    integer(kind=ip) :: k
+    real(kind=rp), dimension(nz) :: rhs, d, ud
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -132,145 +255,51 @@ contains
     ! cA(6,:,:,:)      -> p(k+1,j,i-1)
     ! cA(7,:,:,:)      -> p(k,j,i-1)
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
-    !
-    !     LOCAL 
-    integer(kind=ip)            :: i,j,k,it,rb
-    integer(kind=ip)            :: ib,ie,jb,je
-    integer(kind=ip)            :: rbb,rbe,rbi
-!!$    integer(kind=ip)            :: fc1, fc2, fcb, fce, fci
-    real(kind=rp),dimension(nz) :: rhs,d,ud
 
-    real(kind=rp)    :: g1,g2,gamma
+    k=1 !lower level
+    rhs(k) = b(k,j,i)                                              &
+         - cA(3,k,j,i)*p(k+1,j-1,i)                                &
+         - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+         - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
+         - cA(6,k,j,i)*p(k+1,j,i-1)                                &
+         - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
+         - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
 
-    call tic(lev,'relax_line')
+    if (cmatrix == 'real') then
+       !- Exception for the redefinition of the coef for the bottom level
+       rhs(k) = rhs(k) &
+            - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
+            - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
+    endif
 
-    ! monitor convergence
-    !    res0 = sum(b(1:nz,1:ny,1:nx)**2)
-    !    call global_sum(lev,res0,bnorm)
-    !    call compute_residual(lev,rnorm)
-    !    res0 = rnorm/bnorm
+    d(k)   = cA(1,k,j,i)
+    ud(k)  = cA(2,k+1,j,i)
 
-    gamma = 1.8_8
-    g1 = gamma
-    g2 = 1._8 - gamma
+    do k = 2,nz-1 !interior levels
+       rhs(k) = b(k,j,i) &
+            - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+            - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+            - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
+            - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+            - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
+            - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
+       d(k)   = cA(1,k,j,i)
+       ud(k)  = cA(2,k+1,j,i)
+    enddo
 
-    ! add a loop on smoothing
-    do it = 1,nsweeps
+    k=nz !upper level
+    rhs(k) = b(k,j,i)                                              &
+         - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
+         - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
+         - cA(5,k,j,i)*p(k-1,j-1,i)                                &
+         - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
+         - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
+         - cA(8,k,j,i)*p(k-1,j,i-1) 
+    d(k)   = cA(1,k,j,i)
 
-       if (mod(it,nh) == 0) then
-          ib = 1 
-          ie = nx
-          jb = 1
-          je = ny
-       else
-          ib = 0
-          ie = nx+1
-          jb = 0
-          je = ny+1
-       endif
+    call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
 
-       if (red_black) then
-          rbb = 1
-          rbe = 2
-          rbi = 2
-       else
-          rbb = 0
-          rbe = 0
-          rbi = 1
-       endif
-
-       do rb = rbb,rbe ! Red black loop
-
-          do i = ib,ie
-             do j = jb+mod(i+rb,rbi),je,rbi
-
-!!$       ib = 1
-!!$       ie = nx
-!!$       jb = 1
-!!$       je = ny
-!!$
-!!$       fcb = 1
-!!$       fce = 2
-!!$       fci = 2
-!!$
-!!$       do fc1 = fcb, fce ! 
-!!$
-!!$          do fc2 = fcb, fce ! 
-!!$
-!!$             do i = ib+mod(fc1-1,fci),ie,fci
-!!$
-!!$                do j = jb+mod(fc2-1,fci),je,fci
-
-                   k=1 !lower level
-                   rhs(k) = b(k,j,i)                                              &
-                        - cA(3,k,j,i)*p(k+1,j-1,i)                                &
-                        - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                        - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
-                        - cA(6,k,j,i)*p(k+1,j,i-1)                                &
-                        - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                        - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
-
-                   if (cmatrix == 'real') then
-                      !- Exception for the redefinition of the coef for the bottom level
-                      rhs(k) = rhs(k) &
-                           - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
-                           - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
-                   endif
-
-                   d(k)   = cA(1,k,j,i)
-                   ud(k)  = cA(2,k+1,j,i)
-
-                   do k = 2,nz-1 !interior levels
-                      rhs(k) = b(k,j,i) &
-                           - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
-                           - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                           - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
-                           - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
-                           - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                           - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
-                      d(k)   = cA(1,k,j,i)
-                      ud(k)  = cA(2,k+1,j,i)
-                   enddo
-
-                   k=nz !upper level
-                   rhs(k) = b(k,j,i)                                              &
-                        - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
-                        - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
-                        - cA(5,k,j,i)*p(k-1,j-1,i)                                &
-                        - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
-                        - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
-                        - cA(8,k,j,i)*p(k-1,j,i-1) 
-                   d(k)   = cA(1,k,j,i)
-
-                   call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
-
-                   ! December 10th, dev below is to try to by-pass the computation of the residual
-                   ! in the dedicated subroutine and to use instead the rhs(k) to compute the
-                   ! residual on the fly.
-                   ! it seems that what we gain on the one hand, less computation, we lose it on 
-                   ! the other hand, worse convergence rate. Overall the rescaled convergence time
-                   ! seems to be the same
-                   ! obviously, this residual is only an estimate, it is not the correct one
-
-                enddo ! j
-             enddo    ! i
-
-             ! don't call mpi at every pass if nh>1
-             !if ((mod(it,nh) == 0).or.(it==nsweeps)) then
-             call fill_halo(lev,p)
-             !endif
-
-!!$          enddo  ! fc2
-!!$
-!!$       enddo  ! fc1
-
-       enddo ! Red Black
-
-    enddo  !it
-
-    call toc(lev,'relax_line')
-
-  end subroutine relax_line_3D_8
+  end subroutine relax_3D_8_heart
 
   !----------------------------------------
   subroutine tridiag(l,d,dd,b,xc)

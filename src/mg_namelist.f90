@@ -20,6 +20,9 @@ module mg_namelist
   character(len=16) :: cmatrix='real'          !- 'real' or 'simple'
 
   logical           :: red_black = .true.      !- .false. or .true.
+  character(len=16) :: relax_method ='RB'      !- 'Gauss-Seidel', 'GS', 
+  !                                            !- 'Red-Black'   , 'RB',
+  !                                            !- 'Four-Color'  , 'FC'
 
   character(len=16) :: interp_type='linear'    !- 'nearest'  or 'linear'
 
@@ -38,7 +41,7 @@ module mg_namelist
        ns_pre       , &
        ns_post      , &
        cmatrix      , &
-       red_black    , &
+       relax_method , &
        interp_type  , &
        restrict_type, &
        netcdf_output, &
@@ -108,7 +111,7 @@ contains
           write(*,*)'  - ns_pre       : ', ns_pre
           write(*,*)'  - ns_post      : ', ns_post
           write(*,*)'  - cmatrix      : ', trim(cmatrix)
-          write(*,*)'  - red_black    : ', red_black
+          write(*,*)'  - relax_method : ', trim(relax_method)
           write(*,*)'  - interp_type  : ', trim(interp_type)
           write(*,*)'  - restrict_type: ', trim(restrict_type)
           write(*,*)'  - aggressive   : ', aggressive

@@ -6,7 +6,7 @@
        ns_pre        = 3,             !-
        ns_post       = 2,             !-
        cmatrix       = 'real',        !- Take the 'simple' or 'real' matric coefs
-       red_black     = .true.,        !- .false. or .true.
+       relax_method  = 'RB',          !- 'Gauss-Seidel','GS','Red-Black','RB','Four-Color','FC'
        aggressive    = .false.,       !- .false. or .true.
        interp_type   = 'linear',      !- linear or nearest
        restrict_type = 'avg',         !- linear or avg
