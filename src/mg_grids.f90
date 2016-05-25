@@ -26,6 +26,8 @@ module mg_grids
      integer(kind=ip),dimension(8)::neighb
      real(kind=rp), dimension(:,:,:,:),pointer :: gatherbuffer2D
      real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbuffer
+     real(kind=rp), dimension(:,:)  , pointer :: sendN2D,recvN2D,sendS2D,recvS2D
+     real(kind=rp), dimension(:,:)  , pointer :: sendE2D,recvE2D,sendW2D,recvW2D
      real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
      real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
      real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
@@ -122,6 +124,16 @@ contains
        allocate(grid(lev)%zw(nz+1,1-nh:ny+nh,1-nh:nx+nh))
 
        allocate(grid(lev)%rmask(1-nh:ny+nh,1-nh:nx+nh))
+
+       allocate(grid(lev)%sendS2D(nh,nx))
+       allocate(grid(lev)%recvS2D(nh,nx))
+       allocate(grid(lev)%sendN2D(nh,nx))
+       allocate(grid(lev)%recvN2D(nh,nx))
+
+       allocate(grid(lev)%sendE2D(ny,nh))
+       allocate(grid(lev)%recvE2D(ny,nh))
+       allocate(grid(lev)%sendW2D(ny,nh))
+       allocate(grid(lev)%recvW2D(ny,nh))
 
        allocate(grid(lev)%sendS(nz,nh,nx))
        allocate(grid(lev)%recvS(nz,nh,nx))
