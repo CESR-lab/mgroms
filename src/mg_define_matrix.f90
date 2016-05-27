@@ -131,9 +131,9 @@ contains
 
        endif ! lev == 1
 
-       call fill_halo(lev, grid(lev)%dx)
-       call fill_halo(lev, grid(lev)%dy)
-       call fill_halo(lev, grid(lev)%h )
+       call fill_halo(lev, grid(lev)%dx,nhalo=1)
+       call fill_halo(lev, grid(lev)%dy,nhalo=1)
+       call fill_halo(lev, grid(lev)%h ,nhalo=2)
 
        zrc => grid(lev)%zr
        zwc => grid(lev)%zw
@@ -197,9 +197,9 @@ contains
     real(kind=rp) :: Arz
 !!$    real(kind=rp), dimension(:,:,:),   pointer :: dz
 !!$    real(kind=rp), dimension(:,:,:),   pointer :: dzw
-    real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
-    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
-    real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
     real(kind=rp), dimension(:,:,:),   pointer :: cw
 
     ! TODO NG
@@ -282,39 +282,63 @@ contains
 !!$    enddo
 
     !! Slopes in x- and y-direction defined at rho-points
-    allocate(zx(nz,0:ny+1,0:nx+1))
-    allocate(zy(nz,0:ny+1,0:nx+1))
-    do i = 1,nx
-       do j = 1,ny
-          do k = 1,nz
-             zy(k,j,i) = hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i)
-             zx(k,j,i) = hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i)
-          enddo
-       enddo
-    enddo
-    call fill_halo(lev,zy)
-    call fill_halo(lev,zx) 
+!!$    allocate(zx(nz,0:ny+1,0:nx+1))
+!!$    allocate(zy(nz,0:ny+1,0:nx+1))
+!!$    do i = 1,nx
+!!$       do j = 1,ny
+!!$          do k = 1,nz
+!!$             zy(k,j,i) = hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i)
+!!$             zx(k,j,i) = hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i)
+!!$          enddo
+!!$       enddo
+!!$    enddo
+!!$    call fill_halo(lev,zy)
+!!$    call fill_halo(lev,zx) 
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          do k = 1,nz
+!!$             zy(k,j,i) = hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i)
+!!$             zx(k,j,i) = hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i)
+!!$          enddo
+!!$       enddo
+!!$    enddo
 
-    allocate(zxdy(nz,0:ny+1,0:nx+1))
-    allocate(zydx(nz,0:ny+1,0:nx+1))
-    do k = 1,nz
-       zydx(k,:,:) = zy(k,:,:)*dx(:,:)
-       zxdy(k,:,:) = zx(k,:,:)*dy(:,:)
-    enddo
+!!$    if (netcdf_output) then
+!!$       call write_netcdf(zy,vname='zy',netcdf_file_name='zy.nc',rank=myrank,iter=lev)
+!!$       call write_netcdf(zx,vname='zx',netcdf_file_name='zx.nc',rank=myrank,iter=lev)
+!!$    endif
 
-    allocate(zyw(nz+1,0:ny+1,0:nx+1))
-    allocate(zxw(nz+1,0:ny+1,0:nx+1))
-    do i = 1,nx
-       do j = 1,ny
-          do k = 1,nz+1
-             zyw(k,j,i) = hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i)
-             zxw(k,j,i) = hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i)
-          enddo
-       enddo
-    enddo
-    call fill_halo(lev,zyw)
-    call fill_halo(lev,zxw)
+!!$    allocate(zxdy(nz,0:ny+1,0:nx+1))
+!!$    allocate(zydx(nz,0:ny+1,0:nx+1))
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          do k = 1,nz
+!!$             zydx(k,j,i) = ( hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i) ) * dx(j,i)
+!!$             zxdy(k,j,i) = ( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i)
+!!$          enddo
+!!$       enddo
+!!$    enddo
 
+!!$    allocate(zyw(nz+1,0:ny+1,0:nx+1))
+!!$    allocate(zxw(nz+1,0:ny+1,0:nx+1))
+!!$    do i = 1,nx
+!!$       do j = 1,ny
+!!$          do k = 1,nz+1
+!!$             zyw(k,j,i) = hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i)
+!!$             zxw(k,j,i) = hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i)
+!!$          enddo
+!!$       enddo
+!!$    enddo
+!!$    call fill_halo(lev,zyw)
+!!$    call fill_halo(lev,zxw)
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          do k = 1,nz+1
+!!$             zyw(k,j,i) = hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i)
+!!$             zxw(k,j,i) = hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i)
+!!$          enddo
+!!$       enddo
+!!$    enddo
 
 !!$    do i = 0,nx+1
 !!$       do j = 0,ny+1
@@ -332,16 +356,24 @@ contains
 
           k=1
           cw(k,j,i) = ( Arz / (zr(k,j,i)-zw(k,j,i)) ) * &
-               (one + zxw(k,j,i)*zxw(k,j,i) + zyw(k,j,i)*zyw(k,j,i))
+               (one + &
+               ( hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i) )**2 + &
+               ( hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i) )**2 )
 
           do k = 2,nz
              cw(k,j,i) = ( Arz / (zr(k,j,i)-zr(k-1,j,i)) ) * &
-                  (one + zxw(k,j,i)*zxw(k,j,i) + zyw(k,j,i)*zyw(k,j,i))
+                  (one + &
+                  ( hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i) )**2 + &
+                  ( hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i) )**2 )
+
           enddo
 
           k=nz+1
           cw(k,j,i) = ( Arz / (zw(k,j,i)-zr(k-1,j,i)) ) * &
-               (one + zxw(k,j,i)*zxw(k,j,i) + zyw(k,j,i)*zyw(k,j,i))
+               (one + &
+               ( hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i) )**2 + &
+               ( hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i) )**2 )
+
        enddo
     enddo
 
@@ -353,18 +385,28 @@ contains
           !- K = 1 -! lower level
           !---------!
           k = 1
-          cA(3,k,j,i) = qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i) ) ! couples with k+1 j-1
+          cA(3,k,j,i) = qrt * ( &
+               ( hlf * (zr(k+1,j+1,i  )-zr(k+1,j-1,i  )) / dy(j,i) ) * dx(j,i) + &
+               ( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i) )
+               !! zydx(k+1,j,i) + &
+               !! zydx(k,j-1,i) ) ! couples with k+1 j-1
           cA(4,k,j,i) =                                                                &
                                 ! couples with j-1
                ( qrt                                                                 * &
                ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) )             * &
                (dx(j,i)+dx(j-1,i)) )/ (hlf * (dy(j,i)+dy(j-1,i)))                      & 
                                 ! topo terms 
-               - ( zydx(k,j  ,i) * zydx(k,j  ,i) / ( cw(k,j  ,i) + cw(k+1,j  ,i) )     &
-               +   zydx(k,j-1,i) * zydx(k,j-1,i) / ( cw(k,j-1,i) + cw(k+1,j-1,i) )   ) &
+               - ( (( hlf * (zr(k,j+1,i)-zr(k,j-1,i)) / dy(j,i) ) * dx(j,i))**2 / &
+               ( cw(k,j  ,i) + cw(k+1,j  ,i) )     &
+               +   (( hlf * (zr(k,j,i)-zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i))**2 / &
+               ( cw(k,j-1,i) + cw(k+1,j-1,i) )   ) &
                                 ! from j,k cross terms
-               - qrt * ( zydx(k,j-1,i) -  zydx(k,j,i)                                )  
-          cA(6,k,j,i) = qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1) )  ! couples with k+1 i-1
+               - qrt * ( &
+               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) -  &
+               ( hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i) ) * dx(j,i))  
+          cA(6,k,j,i) = qrt * ( &
+               ( hlf * (zr(k+1,j  ,i+1)-zr(k+1,j  ,i-1)) / dx(j,i) ) * dy(j,i) + &
+               ( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1) )  ! couples with k+1 i-1
           cA(7,k,j,i) =                                                                &
                                 ! couples with i-1
                ( qrt                                                                 * &
@@ -372,34 +414,58 @@ contains
                (dy(j,i)+dy(j,i-1)) )                                                 / &
                ( hlf * (dx(j,i)+dx(j,i-1)) )                                           &  
                                 ! topo terms
-               - ( zxdy(k,j,i  ) * zxdy(k,j,i  ) / ( cw(k,j,i  ) + cw(k+1,j,i  ) )     &
-               +   zxdy(k,j,i-1) * zxdy(k,j,i-1) / ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
+               - ( (( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i))**2 / &
+               ( cw(k,j,i  ) + cw(k+1,j,i  ) )     &
+               +   (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1))**2 / &
+               ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
                                 ! from i,k cross terms
-               - qrt * ( zxdy(k,j,i-1) - zxdy(k,j,i)                                 )
+               - qrt * ( &
+               ( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1) - &
+               ( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i) )
           ! only for k==1, couples with j+1,i-1
           cA(5,k,j,i) = &
-               + hlf * zxdy(k,j+1,i  ) * zydx(k,j+1,i  ) / ( cw(k,j+1,i  ) + cw(k+1,j+1,i  ))  &
-               + hlf * zxdy(k,j  ,i-1) * zydx(k,j  ,i-1) / ( cw(k,j  ,i-1) + cw(k+1,j  ,i-1))   
+               + hlf * &
+               (( hlf * (zr(k,j+1,i+1)-zr(k,j+1,i-1)) / dx(j+1,i) ) * dy(j+1,i)) * &
+               (( hlf * (zr(k,j+2,i  )-zr(k,j  ,i  )) / dy(j+1,i) ) * dx(j+1,i)) / &
+               ( cw(k,j+1,i  ) + cw(k+1,j+1,i  ))  &
+               + hlf * &
+               (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) * &
+               (( hlf * (zr(k,j+1,i-1)-zr(k,j-1,i-1)) / dy(j,i-1) ) * dx(j,i-1)) / &
+               ( cw(k,j  ,i-1) + cw(k+1,j  ,i-1))   
           ! only for k==1, couples wit
           cA(8,k,j,i) = &
-               - hlf * zxdy(k,j-1,i  ) * zydx(k,j-1,i  ) / (cw(k,j-1,i  ) + cw(k+1,j-1,i  )) & 
-               - hlf * zxdy(k,j  ,i-1) * zydx(k,j  ,i-1) / (cw(k,j  ,i-1) + cw(k+1,j  ,i-1)) 
+               - hlf * &
+               (( hlf * (zr(k,j-1,i+1)-zr(k,j-1,i-1)) / dx(j-1,i) ) * dy(j-1,i)) * &
+               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) / &
+               (cw(k,j-1,i  ) + cw(k+1,j-1,i  )) & 
+               - hlf * &
+               (( hlf * (zr(k,j,i)-zr(k,j,i-2)) / dx(j,i-1) ) * dy(j,i-1)) * &
+               (( hlf * (zr(k,j+1,i-1)-zr(k,j-1,i-1)) / dy(j,i-1) ) * dx(j,i-1)) / &
+               (cw(k,j  ,i-1) + cw(k+1,j  ,i-1)) 
 
           !---------------!
           !- K = 2, nz-1 -! interior levels
           !---------------!
           do k = 2,nz-1 
              cA(2,k,j,i) =  cw(k,j,i)                                  ! couples with k-1
-             cA(3,k,j,i) =  qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i))     ! couples with k+1 j-1
+             cA(3,k,j,i) =  qrt * ( &
+                  ( hlf * (zr(k+1,j+1,i  )-zr(k+1,j-1,i  )) / dy(j,i) ) * dx(j,i) + &
+                  ( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i) )     ! couples with k+1 j-1
              cA(4,k,j,i) =  ( qrt * &
                   ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
                   (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) ) ! couples with j-1
-             cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i))     ! couples with k-1 j-1
-             cA(6,k,j,i) =  qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1))     ! Couples with k+1 i-1
+             cA(5,k,j,i) =- qrt * ( &
+                  (( hlf * (zr(k-1,j+1,i  )-zr(k-1,j-1,i  )) / dy(j,i) ) * dx(j,i)) + &
+                  (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) )     ! couples with k-1 j-1
+             cA(6,k,j,i) =  qrt * ( &
+                  (( hlf * (zr(k+1,j  ,i+1)-zr(k+1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
+                  (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) )     ! Couples with k+1 i-1
              cA(7,k,j,i) =   (qrt * &
                   ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
                   (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) ) ! Couples with i-1
-             cA(8,k,j,i) =- qrt * ( zxdy(k-1,j,i) + zxdy(k,j,i-1))     ! Couples with k-1 i-1
+             cA(8,k,j,i) =- qrt * ( &
+                  (( hlf * (zr(k-1,j  ,i+1)-zr(k-1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
+                  (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1))  )     ! Couples with k-1 i-1
           enddo
 
           !----------!
@@ -410,13 +476,21 @@ contains
           cA(4,k,j,i) = ( qrt * &
                ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
                (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) ) & ! couples with j-1
-               + qrt * ( zydx(k,j-1,i) - zydx(k,j,i) )
-          cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i) )     ! couples with k-1 j-1
+               + qrt * ( &
+               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) - &
+               (( hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i) ) * dx(j,i)) )
+          cA(5,k,j,i) =- qrt * ( &
+               (( hlf * (zr(k-1,j+1,i  )-zr(k-1,j-1,i  )) / dy(j,i) ) * dx(j,i)) + &
+               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) )     ! couples with k-1 j-1
           cA(7,k,j,i) = (qrt * &
                ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
                (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) ) & ! Couples with i-1
-               - qrt * (- zxdy(k,j,i-1) + zxdy(k,j,i))
-          cA(8,k,j,i) =- qrt * ( zxdy(k-1,j,i) + zxdy(k,j,i-1) )     ! Couples with k-1 i-1
+               + qrt * ( &
+               (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) - &
+               (( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i))   )
+          cA(8,k,j,i) =- qrt * ( &
+               (( hlf * (zr(k-1,j  ,i+1)-zr(k-1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
+               (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) )     ! Couples with k-1 i-1
 
        enddo ! j
     enddo ! i
@@ -462,8 +536,6 @@ contains
        enddo ! j
     enddo ! i
 
-    deallocate(zxdy)
-    deallocate(zydx)
     deallocate(cw)
 
     if (netcdf_output) then

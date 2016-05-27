@@ -23,14 +23,15 @@ contains
     integer(kind=ip):: i,j,k
 
     nz = size(zr,dim=1)
-    nh = 1+abs(lbound(zr,dim=2)) ! Assume that "one" is the first indice !
-    !                            !  0 -> nh = 1  <= 1 + abs( 0) = 1
-    !                            ! -1 -> nh = 2  <= 1 + abs(-1) = 2
+    nh = abs(lbound(zr,dim=2)-1) ! Assume that "one" is the first indice !
+    !                            !  1 -> nh = 0  <= abs( 1-1) = 0
+    !                            !  0 -> nh = 1  <= abs( 0-1) = 1
+    !                            ! -1 -> nh = 2  <= abs(-1-1) = 2
     ny = size(zr,dim=2) - 2*nh
     nx = size(zr,dim=3) - 2*nh
 
-    do i = 0,nx+1
-       do j = 0,ny+1
+    do i = 1-nh,nx+nh
+       do j = 1-nh,ny+nh
           do k = 1,nz
              zr(k,j,i) = (real(k,kind=rp)-0.5_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
              zw(k,j,i) = (real(k,kind=rp)-1.0_rp)*h(j,i)/real(nz,kind=rp) - h(j,i)
@@ -81,9 +82,10 @@ contains
     endif
 
     nz = size(zr,dim=1)
-    nh = 1+abs(lbound(zr,dim=2)) ! Assume that "one" is the first indice !
-    !                            !  0 -> nh = 1  <= 1 + abs( 0) = 1
-    !                            ! -1 -> nh = 2  <= 1 + abs(-1) = 2
+    nh = abs(lbound(zr,dim=2)-1) ! Assume that "one" is the first indice !
+    !                            !  1 -> nh = 0  <= abs( 1-1) = 0
+    !                            !  0 -> nh = 1  <= abs( 0-1) = 1
+    !                            ! -1 -> nh = 2  <= abs(-1-1) = 2
     ny = size(zr,dim=2) - 2*nh
     nx = size(zr,dim=3) - 2*nh
 

@@ -30,18 +30,22 @@ contains
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!
   !-----------------------------!
-  subroutine fill_halo_2D(lev,a2D)
+  subroutine fill_halo_2D(lev,a2D,nhalo)
 
     integer(kind=ip), intent(in):: lev
     real(kind=rp), dimension(:,:), pointer, intent(inout)::a2D
+    integer(kind=ip), optional, intent(in):: nhalo
 
     integer(kind=ip) :: nx, ny
     integer(kind=ip) :: nh
     integer(kind=ip) :: south, east, north, west
+    integer(kind=ip) :: southwest, southeast, northeast, northwest
 
     integer(kind=ip) :: sntag, ewtag, nstag, wetag
+    integer(kind=ip) :: swnetag, senwtag, nwsetag, neswtag
 
     integer(kind=ip) :: i, j
+    integer(kind=ip) :: ih
     integer(kind=ip) :: icount
     integer(kind=ip) :: indx
     integer(kind=ip),dimension(16) :: req
@@ -49,29 +53,71 @@ contains
     integer(kind=ip),dimension(MPI_STATUS_SIZE) :: status
     integer(kind=ip) :: ierr
 
+    logical :: flag_sw_s, flag_sw_w
+    logical :: flag_se_s, flag_se_e
+    logical :: flag_ne_n, flag_ne_e
+    logical :: flag_nw_n, flag_nw_w
+
     real(kind=rp), dimension(:,:), pointer :: sendN,recvN,sendS,recvS
     real(kind=rp), dimension(:,:), pointer :: sendE,recvE,sendW,recvW
+    real(kind=rp), dimension(:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+    real(kind=rp), dimension(:,:), pointer :: sendNW,recvNW,sendNE,recvNE
 
     call tic(lev,'fill_halo_2D_nb')
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
-    nh = grid(lev)%nh
+
+    if (present(nhalo)) then
+       nh = nhalo
+    else
+       nh = grid(lev)%nh
+    endif
 
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)
     north     = grid(lev)%neighb(3)
     west      = grid(lev)%neighb(4)
 
-    sendS => grid(lev)%sendS2D
-    recvS => grid(lev)%recvS2D
-    sendN => grid(lev)%sendN2D
-    recvN => grid(lev)%recvN2D
+    if (nh==1) then
+       sendS => grid(lev)%sendS2D1
+       recvS => grid(lev)%recvS2D1
+       sendN => grid(lev)%sendN2D1
+       recvN => grid(lev)%recvN2D1
 
-    sendE => grid(lev)%sendE2D
-    recvE => grid(lev)%recvE2D
-    sendW => grid(lev)%sendW2D
-    recvW => grid(lev)%recvW2D
+       sendE => grid(lev)%sendE2D1
+       recvE => grid(lev)%recvE2D1
+       sendW => grid(lev)%sendW2D1
+       recvW => grid(lev)%recvW2D1
+
+    elseif(nh==2) then
+       southwest = grid(lev)%neighb(5)
+       southeast = grid(lev)%neighb(6)
+       northeast = grid(lev)%neighb(7)
+       northwest = grid(lev)%neighb(8)
+
+       sendS => grid(lev)%sendS2D2
+       recvS => grid(lev)%recvS2D2
+       sendN => grid(lev)%sendN2D2
+       recvN => grid(lev)%recvN2D2
+
+       sendE => grid(lev)%sendE2D2
+       recvE => grid(lev)%recvE2D2
+       sendW => grid(lev)%sendW2D2
+       recvW => grid(lev)%recvW2D2
+
+       sendSW => grid(lev)%sendSW2D2
+       sendSE => grid(lev)%sendSE2D2
+       sendNW => grid(lev)%sendNW2D2
+       sendNE => grid(lev)%sendNE2D2
+
+       recvSW => grid(lev)%recvSW2D2
+       recvSE => grid(lev)%recvSE2D2
+       recvNW => grid(lev)%recvNW2D2
+       recvNE => grid(lev)%recvNE2D2
+    else
+       stop
+    endif
 
     comm(:) = 0
     req(:)  = MPI_REQUEST_NULL
@@ -81,45 +127,150 @@ contains
     ewtag   = 101
     nstag   = 102
     wetag   = 103
+    if (nh==2) then
+       swnetag = 104
+       senwtag = 105
+       neswtag = 106
+       nwsetag = 107
+    endif
 
     !-----------------------!
     !- Nonblocking RECEIVE -!
     !-----------------------!
 
     if (south.ne.MPI_PROC_NULL) then
-       call MPI_IRecv(                                 &
+       call MPI_IRecv(                              &
             recvS,nx*nh,MPI_DOUBLE_PRECISION,south, &
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     else !!Homogenous Neumann  
-       a2D(1-nh:0,1:nx) = a2D(nh:1:-1,1:nx)
+       !! a2D(1-nh:0,1:nx) = a2D(nh:1:-1,1:nx)
+       do ih = 1, nh
+          if (ih == 1) then
+             a2D(0,1:nx) = a2D(1,1:nx)
+          elseif(ih == 2) then
+             a2D(-1,1:nx) = 2._rp * a2D(1,1:nx) - a2D(2,1:nx)
+          else
+             stop
+          endif
+       enddo
     endif
 
     if (east.ne.MPI_PROC_NULL) then
-       call MPI_IRecv(                                &
+       call MPI_IRecv(                             &
             recvE,ny*nh,MPI_DOUBLE_PRECISION,east, &
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     else !!Homogenous Neumann
-       a2D(1:ny,nx+1:nx+nh) = a2D(1:ny,nx:nx-nh+1:-1)
+       do ih = 1, nh
+          if (ih == 1) then
+             a2D(1:ny,nx+1) = a2D(1:ny,nx)
+          elseif(ih == 2) then
+             a2D(1:ny,nx+2) = 2._rp * a2D(1:ny,nx) - a2D(1:ny,nx-1)
+          else
+             stop
+          endif
+       enddo
     endif
 
     if (north.ne.MPI_PROC_NULL) then
-       call MPI_IRecv(                                 &
+       call MPI_IRecv(                              &
             recvN,nx*nh,MPI_DOUBLE_PRECISION,north, &
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     else !!Homogenous Neumann  
-       a2D(ny+1:ny+nh,1:nx) = a2D(ny:ny-nh+1:-1,1:nx)
+       !! a2D(ny+1:ny+nh,1:nx) = a2D(ny:ny-nh+1:-1,1:nx)
+       do ih = 1, nh
+          if (ih == 1) then
+             a2D(ny+1,1:nx) = a2D(ny,1:nx)
+          elseif(ih == 2) then
+             a2D(ny+2,1:nx) = 2._rp * a2D(ny,1:nx) - a2D(ny-1,1:nx)
+          else
+             stop
+          endif
+       enddo
     endif
 
     if (west.ne.MPI_PROC_NULL) then
-       call MPI_IRecv(                                &
+       call MPI_IRecv(                             &
             recvW,ny*nh,MPI_DOUBLE_PRECISION,west, &
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     else !!Homogenous Neumann
-       a2D(1:ny,1-nh:0) = a2D(1:ny,nh:1:-1)
+       !! a2D(1:ny,1-nh:0) = a2D(1:ny,nh:1:-1)
+       do ih = 1, nh
+          if (ih == 1) then
+             a2D(1:ny,0) = a2D(1:ny,1)
+          elseif(ih == 2) then
+             a2D(1:ny,-1) = 2._rp * a2D(1:ny,1) - a2D(1:ny,2)
+          else
+             stop
+          endif
+       enddo
+    endif
+
+    if (nh==2) then
+
+       flag_sw_s = .false.
+       flag_sw_w = .false.
+       if (southwest.ne.MPI_PROC_NULL) then
+          call MPI_IRecv(                                   &
+               recvSW,nh*nh,MPI_DOUBLE_PRECISION,southwest, &
+               neswtag,MPI_COMM_WORLD,req(5),ierr)
+          comm(5)=5
+       elseif (south.ne.MPI_PROC_NULL) then
+          flag_sw_s = .true.
+       elseif (west.ne.MPI_PROC_NULL) then
+          flag_sw_w = .true.
+       else !!Homogenous Neumann  
+          a2D(1-nh:0,1-nh:0) = a2D(nh:1:-1,nh:1:-1)
+       endif
+
+       flag_se_s = .false.
+       flag_se_e = .false.
+       if (southeast.ne.MPI_PROC_NULL) then
+          call MPI_IRecv(                                   &
+               recvSE,nh*nh,MPI_DOUBLE_PRECISION,southeast, &
+               nwsetag,MPI_COMM_WORLD,req(6),ierr)
+          comm(6)=6
+       elseif (south.ne.MPI_PROC_NULL) then
+          flag_se_s = .true.
+       elseif (east.ne.MPI_PROC_NULL) then
+          flag_se_e = .true.
+       else !!Homogenous Neumann  
+          a2D(1-nh:0,nx+1:nx+nh) = a2D(nh:1:-1,nx:nx-nh+1:-1)
+       endif
+
+       flag_ne_n = .false.
+       flag_ne_e = .false.
+       if (northeast.ne.MPI_PROC_NULL) then
+          call MPI_IRecv(                                   &
+               recvNE,nh*nh,MPI_DOUBLE_PRECISION,northeast, &
+               swnetag,MPI_COMM_WORLD,req(7),ierr)
+          comm(7)=7
+       elseif (north.ne.MPI_PROC_NULL) then
+          flag_ne_n = .true.
+       elseif (east.ne.MPI_PROC_NULL) then
+          flag_ne_e = .true.
+       else !!Homogenous Neumann  
+          a2D(ny+1:ny+nh,nx+1:nx+nh) = a2D(ny:ny-nh+1:-1,nx:nx-nh+1:-1)
+       endif
+
+       flag_nw_n = .false.
+       flag_nw_w = .false.
+       if (northwest.ne.MPI_PROC_NULL) then
+          call MPI_IRecv(                                   &
+               recvNW,nh*nh,MPI_DOUBLE_PRECISION,northwest, &
+               senwtag,MPI_COMM_WORLD,req(8),ierr)
+          comm(8)=8
+       elseif (north.ne.MPI_PROC_NULL) then
+          flag_nw_n = .true.
+       elseif (west.ne.MPI_PROC_NULL) then
+          flag_nw_w = .true.
+       else !!Homogenous Neumann  
+          a2D(ny+1:ny+nh,1-nh:0) = a2D(ny:ny-nh+1:-1,nh:1:-1)
+       endif
+
     endif
 
     !--------------------!
@@ -128,7 +279,7 @@ contains
 
     if (south.ne.MPI_PROC_NULL) then
        sendS(:,:) = a2D(1:nh,1:nx)  
-       call MPI_ISend(                                 &
+       call MPI_ISend(                              &
             sendS,nx*nh,MPI_DOUBLE_PRECISION,south, &
             sntag,MPI_COMM_WORLD,req(9),ierr)
        comm(9)=9
@@ -136,7 +287,7 @@ contains
 
     if (east.ne.MPI_PROC_NULL) then
        sendE(:,:) = a2D(1:ny,nx-nh+1:nx) 
-       call MPI_ISend(                                &
+       call MPI_ISend(                             &
             sendE,ny*nh,MPI_DOUBLE_PRECISION,east, &
             ewtag,MPI_COMM_WORLD,req(10),ierr)
        comm(10)=10
@@ -144,7 +295,7 @@ contains
 
     if (north.ne.MPI_PROC_NULL) then
        sendN(:,:) = a2D(ny-nh+1:ny,1:nx)
-       call MPI_ISend(                                 &
+       call MPI_ISend(                              &
             sendN,nx*nh,MPI_DOUBLE_PRECISION,north, &
             nstag,MPI_COMM_WORLD,req(11),ierr)
        comm(11)=11
@@ -152,10 +303,44 @@ contains
 
     if (west.ne.MPI_PROC_NULL) then
        sendW(:,:) = a2D(1:ny,1:nh)  
-       call MPI_ISend(                                &
+       call MPI_ISend(                             &
             sendW,ny*nh,MPI_DOUBLE_PRECISION,west, &
             wetag,MPI_COMM_WORLD,req(12),ierr)
        comm(12)=12
+    endif
+
+    if (nh==2) then
+       if (southwest.ne.MPI_PROC_NULL) then
+          sendSW(:,:) = a2D(1:nh,1:nh)  
+          call MPI_ISend(                                   &
+               sendSW,nh*nh,MPI_DOUBLE_PRECISION,southwest, &
+               swnetag,MPI_COMM_WORLD,req(13),ierr)
+          comm(13)=13
+       endif
+
+       if (southeast.ne.MPI_PROC_NULL) then
+          sendSE(:,:) = a2D(1:nh,nx-nh+1:nx)  
+          call MPI_ISend(                                   &
+               sendSE,nh*nh,MPI_DOUBLE_PRECISION,southeast, &
+               senwtag,MPI_COMM_WORLD,req(14),ierr)
+          comm(14)=14
+       endif
+
+       if (northeast.ne.MPI_PROC_NULL) then
+          sendNE(:,:) = a2D(ny-nh+1:ny,nx-nh+1:nx) 
+          call MPI_ISend(                                   &
+               sendNE,nh*nh,MPI_DOUBLE_PRECISION,northeast, &
+               neswtag,MPI_COMM_WORLD,req(15),ierr)
+          comm(15)=15
+       endif
+
+       if (northwest.ne.MPI_PROC_NULL) then
+          sendNW(:,:) = a2D(ny-nh+1:ny,1:nh)
+          call MPI_ISend(                                   &
+               sendNW,nh*nh,MPI_DOUBLE_PRECISION,northwest, &
+               nwsetag,MPI_COMM_WORLD,req(16),ierr)
+          comm(16)=16
+       endif
     endif
 
     !- Wait for completion of receive and fill ghost points
@@ -195,9 +380,48 @@ contains
        elseif (indx.eq.4) then ! west
           a2D(1:ny,1-nh:0) = recvW(:,:)
 
+       elseif (indx.eq.5) then ! southwest
+          a2D(1-nh:0,1-nh:0) = recvSW(:,:)
+
+       elseif (indx.eq.6) then ! southeast
+          a2D(1-nh:0,nx+1:nx+nh) = recvSE(:,:)
+
+       elseif (indx.eq.7) then ! northeast
+          a2D(ny+1:ny+nh,nx+1:nx+nh) = recvNE(:,:)
+
+       elseif (indx.eq.8) then ! northwest
+          a2D(ny+1:ny+nh,1-nh:0) = recvNW(:,:)
+
        endif
 
-    enddo      !<-- while  
+    enddo      !<-- while
+
+    if (nh==2) then
+       !- corners on physicical boundarie if a flag is true-!
+       if (flag_sw_s) then
+          a2D(1-nh:0,1-nh:0) = a2D(1-nh:0,nh:1:-1)
+       elseif (flag_sw_w) then
+          a2D(1-nh:0,1-nh:0) = a2D(nh:1:-1,1-nh:0)
+       endif
+
+       if (flag_se_s) then
+          a2D(1-nh:0,nx+1:nx+nh) = a2D(1-nh:0,nx:nx-nh+1:-1)
+       elseif (flag_se_e) then
+          a2D(1-nh:0,nx+1:nx+nh) = a2D(nh:1:-1,nx+1:nx+nh)
+       endif
+
+       if (flag_ne_n) then
+          a2D(ny+1:ny+nh,nx+1:nx+nh) = a2D(ny+1:ny+nh,nx:nx-nh+1:-1)
+       elseif (flag_ne_e) then
+          a2D(ny+1:ny+nh,nx+1:nx+nh) = a2D(ny:ny-nh+1:-1,nx+1:nx+nh)
+       endif
+
+       if (flag_nw_n) then
+          a2D(ny+1:ny+nh,1-nh:0) = a2D(ny+1:ny+nh,nh:1:-1)
+       elseif (flag_nw_w) then
+          a2D(ny+1:ny+nh,1-nh:0) = a2D(ny:ny-nh+1:-1,1-nh:0)
+       endif
+    endif
 
     call toc(lev,'fill_halo_2D_nb')
 

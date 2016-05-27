@@ -26,8 +26,12 @@ module mg_grids
      integer(kind=ip),dimension(8)::neighb
      real(kind=rp), dimension(:,:,:,:),pointer :: gatherbuffer2D
      real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbuffer
-     real(kind=rp), dimension(:,:)  , pointer :: sendN2D,recvN2D,sendS2D,recvS2D
-     real(kind=rp), dimension(:,:)  , pointer :: sendE2D,recvE2D,sendW2D,recvW2D
+     real(kind=rp), dimension(:,:)  , pointer :: sendN2D1,recvN2D1,sendS2D1,recvS2D1
+     real(kind=rp), dimension(:,:)  , pointer :: sendE2D1,recvE2D1,sendW2D1,recvW2D1
+     real(kind=rp), dimension(:,:)  , pointer :: sendN2D2,recvN2D2,sendS2D2,recvS2D2
+     real(kind=rp), dimension(:,:)  , pointer :: sendE2D2,recvE2D2,sendW2D2,recvW2D2
+     real(kind=rp), dimension(:,:)  , pointer :: sendSW2D2,recvSW2D2,sendSE2D2,recvSE2D2
+     real(kind=rp), dimension(:,:)  , pointer :: sendNW2D2,recvNW2D2,sendNE2D2,recvNE2D2
      real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
      real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
      real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
@@ -56,6 +60,7 @@ contains
     integer(kind=ip), intent(in) :: nxl, nyl, nzl ! local dims
 
     integer(kind=ip) :: nh, nd
+    integer(kind=ip) :: tmp_nh
 
     integer(kind=ip) :: nx, ny, nz
 
@@ -118,22 +123,44 @@ contains
        allocate(grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh))
 
+       tmp_nh=nh
+       nh=2
        allocate(grid(lev)%h(1-nh:ny+nh,1-nh:nx+nh))
-
        allocate(grid(lev)%zr(  nz,1-nh:ny+nh,1-nh:nx+nh))
        allocate(grid(lev)%zw(nz+1,1-nh:ny+nh,1-nh:nx+nh))
+       nh=tmp_nh
 
        allocate(grid(lev)%rmask(1-nh:ny+nh,1-nh:nx+nh))
 
-       allocate(grid(lev)%sendS2D(nh,nx))
-       allocate(grid(lev)%recvS2D(nh,nx))
-       allocate(grid(lev)%sendN2D(nh,nx))
-       allocate(grid(lev)%recvN2D(nh,nx))
+       allocate(grid(lev)%sendS2D1(1,nx))
+       allocate(grid(lev)%recvS2D1(1,nx))
+       allocate(grid(lev)%sendN2D1(1,nx))
+       allocate(grid(lev)%recvN2D1(1,nx))
 
-       allocate(grid(lev)%sendE2D(ny,nh))
-       allocate(grid(lev)%recvE2D(ny,nh))
-       allocate(grid(lev)%sendW2D(ny,nh))
-       allocate(grid(lev)%recvW2D(ny,nh))
+       allocate(grid(lev)%sendE2D1(ny,1))
+       allocate(grid(lev)%recvE2D1(ny,1))
+       allocate(grid(lev)%sendW2D1(ny,1))
+       allocate(grid(lev)%recvW2D1(ny,1))
+
+       allocate(grid(lev)%sendS2D2(2,nx))
+       allocate(grid(lev)%recvS2D2(2,nx))
+       allocate(grid(lev)%sendN2D2(2,nx))
+       allocate(grid(lev)%recvN2D2(2,nx))
+
+       allocate(grid(lev)%sendE2D2(ny,2))
+       allocate(grid(lev)%recvE2D2(ny,2))
+       allocate(grid(lev)%sendW2D2(ny,2))
+       allocate(grid(lev)%recvW2D2(ny,2))
+
+       allocate(grid(lev)%sendSW2D2(2,2))
+       allocate(grid(lev)%sendSE2D2(2,2))
+       allocate(grid(lev)%sendNW2D2(2,2))
+       allocate(grid(lev)%sendNE2D2(2,2))
+
+       allocate(grid(lev)%recvSW2D2(2,2))
+       allocate(grid(lev)%recvSE2D2(2,2))
+       allocate(grid(lev)%recvNW2D2(2,2))
+       allocate(grid(lev)%recvNE2D2(2,2))
 
        allocate(grid(lev)%sendS(nz,nh,nx))
        allocate(grid(lev)%recvS(nz,nh,nx))
