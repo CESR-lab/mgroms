@@ -188,23 +188,9 @@ contains
     integer(kind=ip):: nx, ny, nz
     integer(kind=ip):: nh
 
-    real(kind=rp), dimension(:,:,:,:), pointer :: cA
-!!$    real(kind=rp), dimension(:,:)  ,   pointer :: dxu
-!!$    real(kind=rp), dimension(:,:)  ,   pointer :: dyv
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: Arx
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: Ary
-!!$    real(kind=rp), dimension(:,:)  ,   pointer :: Arz
     real(kind=rp) :: Arz
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: dz
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: dzw
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
-!!$    real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
     real(kind=rp), dimension(:,:,:),   pointer :: cw
-
-    ! TODO NG
-    ! zw,zr can change in time
-    ! dx,dy constant in time
+    real(kind=rp), dimension(:,:,:,:), pointer :: cA
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -212,141 +198,6 @@ contains
     nh = grid(lev)%nh
 
     cA => grid(lev)%cA 
-
-    !NG comment: perf ? allocate-deallocate -> mg_grid ?
-
-    !! Cell heights
-!!$    allocate(dz(nz,0:ny+1,0:nx+1))
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          do k = 1,nz
-!!$             dz(k,j,i) = zw(k+1,j,i)-zw(k,j,i) !!  cell height at rho-points
-!!$          enddo
-!!$       enddo
-!!$    enddo
-
-!!$    allocate(dzw(nz+1,0:ny+1,0:nx+1))
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          dzw(1,j,i) = zr(1,j,i)-zw(1,j,i) !!
-!!$          do k = 2,nz
-!!$             dzw(k,j,i) = zr(k,j,i)-zr(k-1,j,i) !!  cell height at w-points
-!!$          enddo
-!!$          dzw(nz+1,j,i) = zw(nz+1,j,i)-zr(nz,j,i) !!
-!!$       enddo
-!!$    enddo
-
-!!$    !! Cell widths
-!!$    allocate(dxu(ny,nx+1))
-!!$    do i = 1,nx+1
-!!$       do j = 1,ny
-!!$          dxu(j,i) = hlf * (dx(j,i)+dx(j,i-1))
-!!$       enddo
-!!$    enddo
-
-!!$    allocate(dyv(ny+1,nx))
-!!$    do i = 1,nx
-!!$       do j = 1,ny+1
-!!$          dyv(j,i) = hlf * (dy(j,i)+dy(j-1,i))
-!!$       enddo
-!!$    enddo
-
-    !!  Areas
-!!$    allocate(Arx(nz,ny,nx+1))
-!!$    do i = 1,nx+1
-!!$       do j = 1,ny
-!!$          do k = 1,nz
-!!$             Arx(k,j,i) = qrt * &
-!!$                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
-!!$                  (dy(j,i)+dy(j,i-1))
-!!$          enddo
-!!$       enddo
-!!$    enddo
-
-!!$    allocate(Ary(nz,ny+1,nx))
-!!$    do i = 1,nx
-!!$       do j = 1,ny+1
-!!$          do k = 1,nz
-!!$             Ary(k,j,i) = qrt * &
-!!$                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-!!$                  (dx(j,i)+dx(j-1,i)) 
-!!$          enddo
-!!$       enddo
-!!$    enddo
-
-!!$    allocate(Arz(0:ny+1,0:nx+1))
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          Arz(j,i) = dx(j,i)*dy(j,i)
-!!$       enddo
-!!$    enddo
-
-    !! Slopes in x- and y-direction defined at rho-points
-!!$    allocate(zx(nz,0:ny+1,0:nx+1))
-!!$    allocate(zy(nz,0:ny+1,0:nx+1))
-!!$    do i = 1,nx
-!!$       do j = 1,ny
-!!$          do k = 1,nz
-!!$             zy(k,j,i) = hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i)
-!!$             zx(k,j,i) = hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$    call fill_halo(lev,zy)
-!!$    call fill_halo(lev,zx) 
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          do k = 1,nz
-!!$             zy(k,j,i) = hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i)
-!!$             zx(k,j,i) = hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-
-!!$    if (netcdf_output) then
-!!$       call write_netcdf(zy,vname='zy',netcdf_file_name='zy.nc',rank=myrank,iter=lev)
-!!$       call write_netcdf(zx,vname='zx',netcdf_file_name='zx.nc',rank=myrank,iter=lev)
-!!$    endif
-
-!!$    allocate(zxdy(nz,0:ny+1,0:nx+1))
-!!$    allocate(zydx(nz,0:ny+1,0:nx+1))
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          do k = 1,nz
-!!$             zydx(k,j,i) = ( hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i) ) * dx(j,i)
-!!$             zxdy(k,j,i) = ( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-
-!!$    allocate(zyw(nz+1,0:ny+1,0:nx+1))
-!!$    allocate(zxw(nz+1,0:ny+1,0:nx+1))
-!!$    do i = 1,nx
-!!$       do j = 1,ny
-!!$          do k = 1,nz+1
-!!$             zyw(k,j,i) = hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i)
-!!$             zxw(k,j,i) = hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$    call fill_halo(lev,zyw)
-!!$    call fill_halo(lev,zxw)
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          do k = 1,nz+1
-!!$             zyw(k,j,i) = hlf * (zw(k,j+1,i  )-zw(k,j-1,i  )) / dy(j,i)
-!!$             zxw(k,j,i) = hlf * (zw(k,j  ,i+1)-zw(k,j  ,i-1)) / dx(j,i)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-
-!!$    do i = 0,nx+1
-!!$       do j = 0,ny+1
-!!$          do k = 1,nz+1
-!!$             cw(k,j,i) = ( Arz(j,i) / dzw(k,j,i) ) * (one + zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
-!!$          enddo
-!!$       enddo
-!!$    enddo
 
     allocate(cw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
