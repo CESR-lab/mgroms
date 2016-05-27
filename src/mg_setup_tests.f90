@@ -36,9 +36,9 @@ contains
     pi = mod(myrank,npxg)
 
     ! grid definition
-    allocate(h(0:ny+1,0:nx+1))
-    allocate(dx(0:ny+1,0:nx+1))
-    allocate(dy(0:ny+1,0:nx+1))
+    allocate(h(1-nh:ny+nh,1-nh:nx+nh))
+    allocate(dx(1-nh:ny+nh,1-nh:nx+nh))
+    allocate(dy(1-nh:ny+nh,1-nh:nx+nh))
     ! dummy 2D to read from netcdf
     allocate(dummy2d(1:nx*inc,1:ny*inc))
 
@@ -97,19 +97,12 @@ contains
 
     is_err = nf90_close(nc_id)
 
-    ! unpleasant cooking to fill_halo (no 2D wrapper)
-    grid(1)%p(1,:,:)=h
-    grid(1)%p(2,:,:)=dx
-    grid(1)%p(3,:,:)=dy
+    call fill_halo(1, dx)
+    call fill_halo(1, dy)
+    call fill_halo(1, h )
 
-    call fill_halo(1,grid(1)%p)
-
-    h     = grid(1)%p(1,:,:)
-    dx    = grid(1)%p(2,:,:)
-    dy    = grid(1)%p(3,:,:)
-
-    do i=0,nx+1
-       do j=0,ny+1
+    do i=1-nh,nx+nh
+       do j=1-nh,ny+nh
           dx(j,i)=max(1.,dx(j,i))
           dy(j,i)=max(1.,dy(j,i))
        enddo
@@ -146,9 +139,9 @@ contains
     nyg = npyg * ny
 
     ! grid definition
-    allocate( h(0:ny+1,0:nx+1))
-    allocate(dx(0:ny+1,0:nx+1))
-    allocate(dy(0:ny+1,0:nx+1))
+    allocate( h(1-nh:ny+nh,1-nh:nx+nh))
+    allocate(dx(1-nh:ny+nh,1-nh:nx+nh))
+    allocate(dy(1-nh:ny+nh,1-nh:nx+nh))
 
     dx(:,:) = Lx/real(nxg,kind=rp)
     dy(:,:) = Ly/real(nyg,kind=rp)
@@ -158,8 +151,8 @@ contains
 
     x0 = Lx * 0.5_rp
     y0 = Ly * 0.5_rp
-    do i = 0,nx+1 !!!  I need to know my global index range
-       do j = 0,ny+1
+    do i = 1-nh,nx+nh !!!  I need to know my global index range
+       do j = 1-nh,ny+nh
           x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
           y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
           h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))

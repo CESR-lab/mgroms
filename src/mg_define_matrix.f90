@@ -189,11 +189,14 @@ contains
     integer(kind=ip):: nh
 
     real(kind=rp), dimension(:,:,:,:), pointer :: cA
-    real(kind=rp), dimension(:,:)  ,   pointer :: dxu, dyv
-    real(kind=rp), dimension(:,:,:),   pointer :: Arx, Ary
-    real(kind=rp), dimension(:,:)  ,   pointer :: Arz
-    real(kind=rp), dimension(:,:,:),   pointer :: dz
-    real(kind=rp), dimension(:,:,:),   pointer :: dzw
+!!$    real(kind=rp), dimension(:,:)  ,   pointer :: dxu
+!!$    real(kind=rp), dimension(:,:)  ,   pointer :: dyv
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: Arx
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: Ary
+!!$    real(kind=rp), dimension(:,:)  ,   pointer :: Arz
+    real(kind=rp) :: Arz
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: dz
+!!$    real(kind=rp), dimension(:,:,:),   pointer :: dzw
     real(kind=rp), dimension(:,:,:),   pointer :: zy,zx
     real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
     real(kind=rp), dimension(:,:,:),   pointer :: zxw,zyw
@@ -213,65 +216,70 @@ contains
     !NG comment: perf ? allocate-deallocate -> mg_grid ?
 
     !! Cell heights
-    allocate(dz(nz,0:ny+1,0:nx+1))
-    do i = 0,nx+1
-       do j = 0,ny+1
-          do k = 1,nz
-             dz(k,j,i) = zw(k+1,j,i)-zw(k,j,i) !!  cell height at rho-points
-          enddo
-       enddo
-    enddo
+!!$    allocate(dz(nz,0:ny+1,0:nx+1))
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          do k = 1,nz
+!!$             dz(k,j,i) = zw(k+1,j,i)-zw(k,j,i) !!  cell height at rho-points
+!!$          enddo
+!!$       enddo
+!!$    enddo
 
-    allocate(dzw(nz+1,0:ny+1,0:nx+1))
-    do i = 0,nx+1
-       do j = 0,ny+1
-          dzw(1,j,i) = zr(1,j,i)-zw(1,j,i) !!
-          do k = 2,nz
-             dzw(k,j,i) = zr(k,j,i)-zr(k-1,j,i) !!  cell height at w-points
-          enddo
-          dzw(nz+1,j,i) = zw(nz+1,j,i)-zr(nz,j,i) !!
-       enddo
-    enddo
+!!$    allocate(dzw(nz+1,0:ny+1,0:nx+1))
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          dzw(1,j,i) = zr(1,j,i)-zw(1,j,i) !!
+!!$          do k = 2,nz
+!!$             dzw(k,j,i) = zr(k,j,i)-zr(k-1,j,i) !!  cell height at w-points
+!!$          enddo
+!!$          dzw(nz+1,j,i) = zw(nz+1,j,i)-zr(nz,j,i) !!
+!!$       enddo
+!!$    enddo
 
-    !! Cell widths
-    allocate(dxu(ny,nx+1))
-    do i = 1,nx+1
-       do j = 1,ny
-          dxu(j,i) = hlf * (dx(j,i)+dx(j,i-1))
-       enddo
-    enddo
+!!$    !! Cell widths
+!!$    allocate(dxu(ny,nx+1))
+!!$    do i = 1,nx+1
+!!$       do j = 1,ny
+!!$          dxu(j,i) = hlf * (dx(j,i)+dx(j,i-1))
+!!$       enddo
+!!$    enddo
 
-    allocate(dyv(ny+1,nx))
-    do i = 1,nx
-       do j = 1,ny+1
-          dyv(j,i) = hlf * (dy(j,i)+dy(j-1,i))
-       enddo
-    enddo
+!!$    allocate(dyv(ny+1,nx))
+!!$    do i = 1,nx
+!!$       do j = 1,ny+1
+!!$          dyv(j,i) = hlf * (dy(j,i)+dy(j-1,i))
+!!$       enddo
+!!$    enddo
 
     !!  Areas
-    allocate(Arx(nz,ny,nx+1))
-    do i = 1,nx+1
-       do j = 1,ny
-          do k = 1,nz
-             Arx(k,j,i) = qrt * (dz(k,j,i)+dz(k,j,i-1)) * (dy(j,i)+dy(j,i-1))
-          enddo
-       enddo
-    enddo
+!!$    allocate(Arx(nz,ny,nx+1))
+!!$    do i = 1,nx+1
+!!$       do j = 1,ny
+!!$          do k = 1,nz
+!!$             Arx(k,j,i) = qrt * &
+!!$                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
+!!$                  (dy(j,i)+dy(j,i-1))
+!!$          enddo
+!!$       enddo
+!!$    enddo
 
-    allocate(Ary(nz,ny+1,nx))
-    do i = 1,nx
-       do j = 1,ny+1
-          do k = 1,nz
-             Ary(k,j,i) = qrt * (dz(k,j,i)+dz(k,j-1,i)) * (dx(j,i)+dx(j-1,i)) 
-          enddo
-       enddo
-    enddo
-    allocate(Arz(0:ny+1,0:nx+1))
-    do i = 0,nx+1
-       do j = 0,ny+1
-          Arz(j,i) = dx(j,i)*dy(j,i)
-       enddo
-    enddo
+!!$    allocate(Ary(nz,ny+1,nx))
+!!$    do i = 1,nx
+!!$       do j = 1,ny+1
+!!$          do k = 1,nz
+!!$             Ary(k,j,i) = qrt * &
+!!$                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
+!!$                  (dx(j,i)+dx(j-1,i)) 
+!!$          enddo
+!!$       enddo
+!!$    enddo
+
+!!$    allocate(Arz(0:ny+1,0:nx+1))
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          Arz(j,i) = dx(j,i)*dy(j,i)
+!!$       enddo
+!!$    enddo
 
     !! Slopes in x- and y-direction defined at rho-points
     allocate(zx(nz,0:ny+1,0:nx+1))
@@ -307,12 +315,33 @@ contains
     call fill_halo(lev,zyw)
     call fill_halo(lev,zxw)
 
+
+!!$    do i = 0,nx+1
+!!$       do j = 0,ny+1
+!!$          do k = 1,nz+1
+!!$             cw(k,j,i) = ( Arz(j,i) / dzw(k,j,i) ) * (one + zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
+!!$          enddo
+!!$       enddo
+!!$    enddo
+
     allocate(cw(nz+1,0:ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 0,ny+1
-          do k = 1,nz+1
-             cw(k,j,i) = Arz(j,i)/dzw(k,j,i) * (one + zxw(k,j,i)*zxw(k,j,i)+zyw(k,j,i)*zyw(k,j,i))
+
+          Arz = dx(j,i)*dy(j,i)
+
+          k=1
+          cw(k,j,i) = ( Arz / (zr(k,j,i)-zw(k,j,i)) ) * &
+               (one + zxw(k,j,i)*zxw(k,j,i) + zyw(k,j,i)*zyw(k,j,i))
+
+          do k = 2,nz
+             cw(k,j,i) = ( Arz / (zr(k,j,i)-zr(k-1,j,i)) ) * &
+                  (one + zxw(k,j,i)*zxw(k,j,i) + zyw(k,j,i)*zyw(k,j,i))
           enddo
+
+          k=nz+1
+          cw(k,j,i) = ( Arz / (zw(k,j,i)-zr(k-1,j,i)) ) * &
+               (one + zxw(k,j,i)*zxw(k,j,i) + zyw(k,j,i)*zyw(k,j,i))
        enddo
     enddo
 
@@ -327,7 +356,9 @@ contains
           cA(3,k,j,i) = qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i) ) ! couples with k+1 j-1
           cA(4,k,j,i) =                                                                &
                                 ! couples with j-1
-               Ary(k,j,i)/dyv(j,i)                                                     & 
+               ( qrt                                                                 * &
+               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) )             * &
+               (dx(j,i)+dx(j-1,i)) )/ (hlf * (dy(j,i)+dy(j-1,i)))                      & 
                                 ! topo terms 
                - ( zydx(k,j  ,i) * zydx(k,j  ,i) / ( cw(k,j  ,i) + cw(k+1,j  ,i) )     &
                +   zydx(k,j-1,i) * zydx(k,j-1,i) / ( cw(k,j-1,i) + cw(k+1,j-1,i) )   ) &
@@ -336,7 +367,10 @@ contains
           cA(6,k,j,i) = qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1) )  ! couples with k+1 i-1
           cA(7,k,j,i) =                                                                &
                                 ! couples with i-1
-               Arx(k,j,i)/dxu(j,i)                                                     &  
+               ( qrt                                                                 * &
+               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) )             * &
+               (dy(j,i)+dy(j,i-1)) )                                                 / &
+               ( hlf * (dx(j,i)+dx(j,i-1)) )                                           &  
                                 ! topo terms
                - ( zxdy(k,j,i  ) * zxdy(k,j,i  ) / ( cw(k,j,i  ) + cw(k+1,j,i  ) )     &
                +   zxdy(k,j,i-1) * zxdy(k,j,i-1) / ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
@@ -355,13 +389,17 @@ contains
           !- K = 2, nz-1 -! interior levels
           !---------------!
           do k = 2,nz-1 
-             cA(2,k,j,i) =  cw(k,j,i)                               ! couples with k-1
-             cA(3,k,j,i) =  qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i))  ! couples with k+1 j-1
-             cA(4,k,j,i) =  Ary(k,j,i) / dyv(j,i)                   ! couples with j-1
-             cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i))  ! couples with k-1 j-1
-             cA(6,k,j,i) =  qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1))  ! Couples with k+1 i-1
-             cA(7,k,j,i) =  Arx(k,j,i) / dxu(j,i)                   ! Couples with i-1
-             cA(8,k,j,i) =- qrt * ( zxdy(k-1,j,i) + zxdy(k,j,i-1))  ! Couples with k-1 i-1
+             cA(2,k,j,i) =  cw(k,j,i)                                  ! couples with k-1
+             cA(3,k,j,i) =  qrt * ( zydx(k+1,j,i) + zydx(k,j-1,i))     ! couples with k+1 j-1
+             cA(4,k,j,i) =  ( qrt * &
+                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
+                  (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) ) ! couples with j-1
+             cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i))     ! couples with k-1 j-1
+             cA(6,k,j,i) =  qrt * ( zxdy(k+1,j,i) + zxdy(k,j,i-1))     ! Couples with k+1 i-1
+             cA(7,k,j,i) =   (qrt * &
+                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
+                  (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) ) ! Couples with i-1
+             cA(8,k,j,i) =- qrt * ( zxdy(k-1,j,i) + zxdy(k,j,i-1))     ! Couples with k-1 i-1
           enddo
 
           !----------!
@@ -369,10 +407,14 @@ contains
           !----------!
           k = nz
           cA(2,k,j,i) = cw(k,j,i)                                    ! couples with k-1
-          cA(4,k,j,i) = Ary(k,j,i) / dyv(j,i) &                      ! couples with j-1
+          cA(4,k,j,i) = ( qrt * &
+               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
+               (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) ) & ! couples with j-1
                + qrt * ( zydx(k,j-1,i) - zydx(k,j,i) )
           cA(5,k,j,i) =- qrt * ( zydx(k-1,j,i) + zydx(k,j-1,i) )     ! couples with k-1 j-1
-          cA(7,k,j,i) =  Arx(k,j,i)/dxu(j,i) &                       ! Couples with i-1
+          cA(7,k,j,i) = (qrt * &
+               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
+               (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) ) & ! Couples with i-1
                - qrt * (- zxdy(k,j,i-1) + zxdy(k,j,i))
           cA(8,k,j,i) =- qrt * ( zxdy(k-1,j,i) + zxdy(k,j,i-1) )     ! Couples with k-1 i-1
 
@@ -420,9 +462,6 @@ contains
        enddo ! j
     enddo ! i
 
-    deallocate(Arx)
-    deallocate(Ary)
-    deallocate(Arz)
     deallocate(zxdy)
     deallocate(zydx)
     deallocate(cw)
