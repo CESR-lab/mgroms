@@ -69,3 +69,7 @@ Oprofile:
 /usr/bin/ophelp > oprofile_list_events.txt
 
 mpirun -np 4 /usr/bin/ocount --events=CPU_CLK_UNHALTED,INST_RETIRED ./testseamount
+
+Cache misses :
+-------------
+valgrind --tool=cachegrind mpirun -np 4 testseamount

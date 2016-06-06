@@ -45,6 +45,8 @@ contains
           stop
        endif
 
+       call define_matrices(dx, dy, h)
+
     endif
 
   end subroutine nhydro_init

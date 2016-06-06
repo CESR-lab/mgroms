@@ -110,8 +110,6 @@ contains
 
     grid(1)%p(:,:,:)=0._8
 
-    call define_matrices(dx, dy, h)
-
   end subroutine setup_cuc
 
   !-------------------------------------------------------------------------     
@@ -164,8 +162,6 @@ contains
        call write_netcdf(dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank)
        call write_netcdf(dy,vname='dy',netcdf_file_name='dy.nc',rank=myrank)
     endif
-
-    call define_matrices(dx, dy, h)
 
   end subroutine setup_seamount
 
