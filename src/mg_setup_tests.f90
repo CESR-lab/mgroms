@@ -16,7 +16,7 @@ contains
   subroutine setup_cuc(inc)
 
     integer(kind=4):: npxg,npyg
-    integer(kind=4):: nx,ny,nz,nh
+    integer(kind=4):: nx,ny,nz
     integer(kind=4):: is_err,nc_id,varid
     integer(kind=4):: i,j,i0,j0,pi,pj,inc
     real(kind=8), dimension(:,:), allocatable   :: dummy2d
@@ -30,15 +30,14 @@ contains
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
-    nh = grid(1)%nh
 
     pj = myrank/npxg
     pi = mod(myrank,npxg)
 
     ! grid definition
-    allocate(h(1-nh:ny+nh,1-nh:nx+nh))
-    allocate(dx(1-nh:ny+nh,1-nh:nx+nh))
-    allocate(dy(1-nh:ny+nh,1-nh:nx+nh))
+    allocate(h(0:ny+1,0:nx+1))
+    allocate(dx(0:ny+1,0:nx+1))
+    allocate(dy(0:ny+1,0:nx+1))
     ! dummy 2D to read from netcdf
     allocate(dummy2d(1:nx*inc,1:ny*inc))
 
@@ -101,8 +100,8 @@ contains
     call fill_halo(1, dy)
     call fill_halo(1, h )
 
-    do i=1-nh,nx+nh
-       do j=1-nh,ny+nh
+    do i= 0,nx+1
+       do j= 0,ny+1
           dx(j,i)=max(1.,dx(j,i))
           dy(j,i)=max(1.,dy(j,i))
        enddo
@@ -118,7 +117,7 @@ contains
     integer(kind=4), parameter :: ip=4, rp=8
     integer(kind=ip):: npxg,npyg ! nb procs
     integer(kind=ip):: nxg, nyg  ! global dims
-    integer(kind=ip):: nx,ny,nz,nh ! local dims
+    integer(kind=ip):: nx,ny,nz  ! local dims
     integer(kind=ip):: pi, pj
     integer(kind=ip):: i,j
 
@@ -131,15 +130,14 @@ contains
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
-    nh = grid(1)%nh
 
     nxg = npxg * nx
     nyg = npyg * ny
 
     ! grid definition
-    allocate( h(1-nh:ny+nh,1-nh:nx+nh))
-    allocate(dx(1-nh:ny+nh,1-nh:nx+nh))
-    allocate(dy(1-nh:ny+nh,1-nh:nx+nh))
+    allocate( h(0:ny+1,0:nx+1))
+    allocate(dx(0:ny+1,0:nx+1))
+    allocate(dy(0:ny+1,0:nx+1))
 
     dx(:,:) = Lx/real(nxg,kind=rp)
     dy(:,:) = Ly/real(nyg,kind=rp)
@@ -149,8 +147,8 @@ contains
 
     x0 = Lx * 0.5_rp
     y0 = Ly * 0.5_rp
-    do i = 1-nh,nx+nh !!!  I need to know my global index range
-       do j = 1-nh,ny+nh
+    do i = 0,nx+1 !!!  I need to know my global index range
+       do j = 0,ny+1
           x = (real(i+(pi*nx),kind=rp)-0.5_rp) * dx(j,i)
           y = (real(j+(pj*ny),kind=rp)-0.5_rp) * dy(j,i)
           h(j,i) = Htot * (1._rp - 0.5_rp * exp(-(x-x0)**2._rp/(Lx/5._rp)**2._rp -(y-y0)**2._rp/(Ly/5._rp)**2._rp))

@@ -23,7 +23,7 @@ contains
     real(kind=rp)    :: rnorm,bnorm,res0,conv,rnorm0
     integer(kind=ip) :: nite
 
-    integer(kind=ip) :: nx,ny,nz,nh
+    integer(kind=ip) :: nx,ny,nz
     real(kind=rp), dimension(:,:,:), allocatable :: p0,b0
     real(kind=rp), dimension(:,:,:), pointer :: p,b,r
 
@@ -38,10 +38,9 @@ contains
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
-    nh = grid(1)%nh
 
-    allocate(p0(nz,1-nh:ny+nh,1-nh:nx+nh))
-    allocate(b0(nz,1-nh:ny+nh,1-nh:nx+nh))
+    allocate(p0(nz,0:ny+1,0:nx+1))
+    allocate(b0(nz,0:ny+1,0:nx+1))
 
     p0 = p
     b0 = b
@@ -203,7 +202,7 @@ contains
   subroutine testgalerkin(lev)
 
     real(kind=8) :: norm_c,norm_f,dummy
-    integer(kind=4) :: lev,nx,ny,nz,nh,i,j,k
+    integer(kind=4) :: lev,nx,ny,nz,i,j,k
     character(len = 16) :: filen
 
 
@@ -213,7 +212,6 @@ contains
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nh = grid(lev)%nh
 
     npx = grid(1)%npx
     npy = grid(1)%npy
@@ -276,7 +274,6 @@ contains
     nx = grid(lev-1)%nx
     ny = grid(lev-1)%ny
     nz = grid(lev-1)%nz
-    nh = grid(lev-1)%nh
     call norm(lev-1,grid(lev-1)%p,grid(lev-1)%r,nx,ny,nz,norm_f)
 
     if (myrank==0) then

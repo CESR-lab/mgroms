@@ -7,9 +7,6 @@ module mg_namelist
   !- control integer and real precision (global vparameters)
   integer(kind=4), parameter :: rp = 8, ip = 4
 
-  !- Number of point in the halo of each subdomain
-  integer(kind=ip) :: nhalo       =   1
-
   ! smallest dimension ever for the global domain
   integer(kind=ip) :: nsmall      =   8
 
@@ -35,7 +32,6 @@ module mg_namelist
   character(len=16) :: bench                   !- 'seamount'
 
   namelist/nhparam/   &
-       nhalo        , &
        nsmall       , &
        ns_coarsest  , &
        ns_pre       , &
@@ -105,7 +101,6 @@ contains
 
        if (rank == 0) then
           write(*,*)'Non hydrostatic parameters:'
-          write(*,*)'  - nhalo        : ', nhalo
           write(*,*)'  - nsmall       : ', nsmall 
           write(*,*)'  - ns_coarsest  : ', ns_coarsest
           write(*,*)'  - ns_pre       : ', ns_pre

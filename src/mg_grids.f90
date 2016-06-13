@@ -7,35 +7,46 @@ module mg_grids
   implicit none
 
   type grid_type
-     real(kind=rp),dimension(:,:,:)  ,pointer :: p,b,r,dummy3
-     integer(kind=1),dimension(:,:),pointer :: rmask
-     real(kind=rp),dimension(:,:,:,:),pointer :: cA
-     real(kind=rp),dimension(:,:),pointer :: dx
-     real(kind=rp),dimension(:,:),pointer :: dy
-     real(kind=rp),dimension(:,:),pointer :: h
-     real(kind=rp),dimension(:,:,:),pointer :: zr
-     real(kind=rp),dimension(:,:,:),pointer :: zw
+
      integer(kind=ip) :: nx,ny, nz
      integer(kind=ip) :: npx, npy, incx, incy
-     integer(kind=ip) :: nh                ! number of points in halo
      integer(kind=ip) :: gather
      integer(kind=ip) :: Ng2D, Ng, ngx, ngy
      integer(kind=ip) :: localcomm ! should be integer (output of MPI_SPLIT)
      integer(kind=ip) :: coarsening_method, smoothing_method
      integer(kind=ip) :: color,family,key
      integer(kind=ip),dimension(8)::neighb
-     real(kind=rp), dimension(:,:,:,:),pointer :: gatherbuffer2D
-     real(kind=rp), dimension(:,:,:,:,:),pointer :: gatherbuffer
-     real(kind=rp), dimension(:,:)  , pointer :: sendN2D1,recvN2D1,sendS2D1,recvS2D1
-     real(kind=rp), dimension(:,:)  , pointer :: sendE2D1,recvE2D1,sendW2D1,recvW2D1
-     real(kind=rp), dimension(:,:)  , pointer :: sendN2D2,recvN2D2,sendS2D2,recvS2D2
-     real(kind=rp), dimension(:,:)  , pointer :: sendE2D2,recvE2D2,sendW2D2,recvW2D2
-     real(kind=rp), dimension(:,:)  , pointer :: sendSW2D2,recvSW2D2,sendSE2D2,recvSE2D2
-     real(kind=rp), dimension(:,:)  , pointer :: sendNW2D2,recvNW2D2,sendNE2D2,recvNE2D2
-     real(kind=rp), dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
-     real(kind=rp), dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
-     real(kind=rp), dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
-     real(kind=rp), dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
+
+     integer(kind=1),dimension(:,:),pointer :: rmask
+
+     real(kind=rp),dimension(:,:),pointer :: sendN2D1,recvN2D1,sendS2D1,recvS2D1
+     real(kind=rp),dimension(:,:),pointer :: sendE2D1,recvE2D1,sendW2D1,recvW2D1
+
+     real(kind=rp),dimension(:,:),pointer :: sendN2D2,recvN2D2,sendS2D2,recvS2D2
+     real(kind=rp),dimension(:,:),pointer :: sendE2D2,recvE2D2,sendW2D2,recvW2D2
+     real(kind=rp),dimension(:,:),pointer :: sendSW2D2,recvSW2D2,sendSE2D2,recvSE2D2
+     real(kind=rp),dimension(:,:),pointer :: sendNW2D2,recvNW2D2,sendNE2D2,recvNE2D2
+     real(kind=rp),dimension(:,:),pointer :: dx
+     real(kind=rp),dimension(:,:),pointer :: dy
+     real(kind=rp),dimension(:,:),pointer :: h
+
+     real(kind=rp),dimension(:,:,:),pointer :: zr
+     real(kind=rp),dimension(:,:,:),pointer :: zw
+     real(kind=rp),dimension(:,:,:),pointer :: p
+     real(kind=rp),dimension(:,:,:),pointer :: b
+     real(kind=rp),dimension(:,:,:),pointer ::r
+     real(kind=rp),dimension(:,:,:),pointer :: dummy3
+     real(kind=rp),dimension(:,:,:), pointer :: sendN,recvN,sendS,recvS
+     real(kind=rp),dimension(:,:,:), pointer :: sendE,recvE,sendW,recvW
+     real(kind=rp),dimension(:,:,:), pointer :: sendSW,recvSW,sendSE,recvSE
+     real(kind=rp),dimension(:,:,:), pointer :: sendNW,recvNW,sendNE,recvNE
+
+     real(kind=rp),dimension(:,:,:,:),pointer :: cA
+     real(kind=rp),dimension(:,:,:,:),pointer :: gatherbuffer2D
+
+     real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer
+
+
   end type grid_type
 
   type(grid_type), dimension(:), pointer :: grid
@@ -59,8 +70,7 @@ contains
     integer(kind=ip), intent(in) :: npxg,npyg  ! global CPU topology
     integer(kind=ip), intent(in) :: nxl, nyl, nzl ! local dims
 
-    integer(kind=ip) :: nh, nd
-    integer(kind=ip) :: tmp_nh
+    integer(kind=ip) :: nd
 
     integer(kind=ip) :: nx, ny, nz
 
@@ -75,7 +85,6 @@ contains
     grid(1)%nx = nxl 
     grid(1)%ny = nyl
     grid(1)%nz = nzl
-    grid(1)%nh = nhalo
 
     grid(1)%npx = npxg
     grid(1)%npy = npyg
@@ -93,7 +102,6 @@ contains
        nx = grid(lev)%nx
        ny = grid(lev)%ny
        nz = grid(lev)%nz
-       nh = grid(lev)%nh
 
        if ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
 
@@ -115,22 +123,21 @@ contains
           ! todo 
        endif
 
-       allocate(grid(lev)%p(    nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%b(    nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%r(    nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%cA(nd,nz,1-nh:ny+nh,1-nh:nx+nh))
+       ! Halo point is two !
+       allocate(grid(lev)%h(      -1:ny+2,-1:nx+2))
+       allocate(grid(lev)%zr(  nz,-1:ny+2,-1:nx+2))
+       allocate(grid(lev)%zw(nz+1,-1:ny+2,-1:nx+2))
 
-       allocate(grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh))
+       ! Halo point is one !
+       allocate(grid(lev)%p(    nz,0:ny+1,0:nx+1))
+       allocate(grid(lev)%b(    nz,0:ny+1,0:nx+1))
+       allocate(grid(lev)%r(    nz,0:ny+1,0:nx+1))
+       allocate(grid(lev)%cA(nd,nz,0:ny+1,0:nx+1))
 
-       tmp_nh=nh
-       nh=2
-       allocate(grid(lev)%h(1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%zr(  nz,1-nh:ny+nh,1-nh:nx+nh))
-       allocate(grid(lev)%zw(nz+1,1-nh:ny+nh,1-nh:nx+nh))
-       nh=tmp_nh
+       allocate(grid(lev)%dx(0:ny+1,0:nx+1))
+       allocate(grid(lev)%dy(0:ny+1,0:nx+1))
 
-       allocate(grid(lev)%rmask(1-nh:ny+nh,1-nh:nx+nh))
+       allocate(grid(lev)%rmask(0:ny+1,0:nx+1))
 
        allocate(grid(lev)%sendS2D1(1,nx))
        allocate(grid(lev)%recvS2D1(1,nx))
@@ -162,25 +169,25 @@ contains
        allocate(grid(lev)%recvNW2D2(2,2))
        allocate(grid(lev)%recvNE2D2(2,2))
 
-       allocate(grid(lev)%sendS(nz,nh,nx))
-       allocate(grid(lev)%recvS(nz,nh,nx))
-       allocate(grid(lev)%sendN(nz,nh,nx))
-       allocate(grid(lev)%recvN(nz,nh,nx))
+       allocate(grid(lev)%sendS(nz,1,nx))
+       allocate(grid(lev)%recvS(nz,1,nx))
+       allocate(grid(lev)%sendN(nz,1,nx))
+       allocate(grid(lev)%recvN(nz,1,nx))
 
-       allocate(grid(lev)%sendE(nz,ny,nh))
-       allocate(grid(lev)%recvE(nz,ny,nh))
-       allocate(grid(lev)%sendW(nz,ny,nh))
-       allocate(grid(lev)%recvW(nz,ny,nh))
+       allocate(grid(lev)%sendE(nz,ny,1))
+       allocate(grid(lev)%recvE(nz,ny,1))
+       allocate(grid(lev)%sendW(nz,ny,1))
+       allocate(grid(lev)%recvW(nz,ny,1))
 
-       allocate(grid(lev)%sendSW(nz,nh,nh))
-       allocate(grid(lev)%sendSE(nz,nh,nh))
-       allocate(grid(lev)%sendNW(nz,nh,nh))
-       allocate(grid(lev)%sendNE(nz,nh,nh))
+       allocate(grid(lev)%sendSW(nz,1,1))
+       allocate(grid(lev)%sendSE(nz,1,1))
+       allocate(grid(lev)%sendNW(nz,1,1))
+       allocate(grid(lev)%sendNE(nz,1,1))
 
-       allocate(grid(lev)%recvSW(nz,nh,nh))
-       allocate(grid(lev)%recvSE(nz,nh,nh))
-       allocate(grid(lev)%recvNW(nz,nh,nh))
-       allocate(grid(lev)%recvNE(nz,nh,nh))
+       allocate(grid(lev)%recvSW(nz,1,1))
+       allocate(grid(lev)%recvSE(nz,1,1))
+       allocate(grid(lev)%recvNW(nz,1,1))
+       allocate(grid(lev)%recvNE(nz,1,1))
     enddo
 
     grid(1)%p(:,:,:) = 0._8
@@ -190,7 +197,7 @@ contains
 
   end subroutine define_grids
 
- !----------------------------------------
+  !----------------------------------------
   subroutine find_grid_levels(npxg, npyg, nx,ny,nz)
 
     integer(kind=ip) , intent(in) :: npxg, npyg
@@ -199,7 +206,7 @@ contains
     integer(kind=ip) :: nxg, nyg, nzg
 
     integer(kind=ip) :: ncoarsest,nhoriz,nzmin, nl1,nl2
-    
+
     nxg = npxg * nx
     nyg = npyg * ny
     nzg = nz
@@ -228,14 +235,13 @@ contains
   !----------------------------------------
   subroutine define_grid_dims()
 
-    integer(kind=ip) :: nx, ny, nz, nh
+    integer(kind=ip) :: nx, ny, nz
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: lev, incx, incy
 
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
-    nh = grid(1)%nh
     npx = grid(1)%npx
     npy = grid(1)%npy
 
@@ -298,7 +304,6 @@ contains
        grid(lev)%npy  = npy
        grid(lev)%incx = incx
        grid(lev)%incy = incy
-       grid(lev)%nh   = nh
 
     enddo
 
@@ -392,7 +397,6 @@ contains
   subroutine define_gather_informations()
 
     integer(kind=ip) :: nx, ny, nz, nd
-    integer(kind=ip) :: nh
     integer(kind=ip) :: npx, npy
     integer(kind=ip) :: incx, incy
 
@@ -418,7 +422,6 @@ contains
           nx = grid(lev)%nx
           ny = grid(lev)%ny
           nz = grid(lev)%nz
-          nh = grid(lev)%nh
           nd = size(grid(lev)%cA,1)
           incx=grid(lev)%incx / 2
           incy=grid(lev)%incy / 2          
@@ -453,14 +456,14 @@ contains
 
           nx = nx/ngx ! ngx is 1 or 2 (and generally 2)
           ny = ny/ngy ! ngy is 1 or 2 (and generally 2)
-          allocate(grid(lev)%dummy3(nz,1-nh:ny+nh,1-nh:nx+nh))
+          allocate(grid(lev)%dummy3(nz,0:ny+1,0:nx+1))
 
-          allocate(grid(lev)%gatherbuffer2D(1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
-          allocate(grid(lev)%gatherbuffer(nz,1-nh:ny+nh,1-nh:nx+nh,0:ngx-1,0:ngy-1))
+          allocate(grid(lev)%gatherbuffer2D(0:ny+1,0:nx+1,0:ngx-1,0:ngy-1))
+          allocate(grid(lev)%gatherbuffer(nz,0:ny+1,0:nx+1,0:ngx-1,0:ngy-1))
 
           ! number of elements of dummy3
-          grid(lev)%Ng2D=(nx+2*nh)*(ny+2*nh)
-          grid(lev)%Ng  =(nx+2*nh)*(ny+2*nh)*nz
+          grid(lev)%Ng2D=(nx+2)*(ny+2)
+          grid(lev)%Ng  =(nx+2)*(ny+2)*nz
 
        endif
     enddo
@@ -489,7 +492,7 @@ contains
     endif
 100 format (A6,I2,A,I3,A,I3,A,I3,A,I3,A,I3,A)
 
-    end subroutine print_grids
+  end subroutine print_grids
 
   !---------------------------------------------------------------------
   subroutine grids_dealloc()

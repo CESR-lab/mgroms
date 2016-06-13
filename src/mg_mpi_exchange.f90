@@ -71,7 +71,7 @@ contains
     if (present(nhalo)) then
        nh = nhalo
     else
-       nh = grid(lev)%nh
+       nh = 1
     endif
 
     south     = grid(lev)%neighb(1)
@@ -467,7 +467,7 @@ contains
     ny = grid(lev)%ny
     nz = size(p,dim=1)
 
-    nh = grid(lev)%nh
+    nh = 1
 
     south     = grid(lev)%neighb(1)
     east      = grid(lev)%neighb(2)
@@ -847,7 +847,7 @@ contains
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nh = grid(lev)%nh
+    nh = 1
 
     nd = size(cA(:,:,:,:),dim=1)
 
@@ -1106,7 +1106,7 @@ contains
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nh = grid(lev)%nh
+    nh = 1
 
     allocate(halo4D(lev)%sendS(nd,nz,nh,nx))
     allocate(halo4D(lev)%recvS(nd,nz,nh,nx))

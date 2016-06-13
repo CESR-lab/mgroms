@@ -1,6 +1,5 @@
 !- Default value are available in mg_namelist.f90 file -!
 &nhparam
-       nhalo         = 1,             !- number of ghost points
        nsmall        = 8,             !- smallest dimension ever for the global domain
        ns_coarsest   = 40,            !- 
        ns_pre        = 3,             !-

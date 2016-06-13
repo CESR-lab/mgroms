@@ -19,7 +19,7 @@ contains
     real(kind=rp),dimension(:,:,:), pointer:: b
     real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
-    integer(kind=ip) :: nx, ny, nz, nh, nd
+    integer(kind=ip) :: nx, ny, nz, nd
 
     p  => grid(lev)%p
     b  => grid(lev)%b
@@ -28,12 +28,11 @@ contains
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nh = grid(lev)%nh
     nd = size(cA(:,:,:,:),dim=1)
 
     if (grid(lev)%nz == 1) then
 
-       call relax_2D_5(lev,p,b,cA,nsweeps,nx,ny,nh)
+       call relax_2D_5(lev,p,b,cA,nsweeps,nx,ny)
 
     else
 
@@ -55,14 +54,14 @@ contains
   end subroutine relax
 
   !----------------------------------------
-  subroutine relax_2D_5(lev,p,b,cA,nsweeps,nx,ny,nh)
+  subroutine relax_2D_5(lev,p,b,cA,nsweeps,nx,ny)
 
     integer(kind=ip)                         , intent(in)   :: lev
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
     real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nsweeps
-    integer(kind=ip)                        , intent(in)   :: nx, ny, nh
+    integer(kind=ip)                        , intent(in)   :: nx, ny
 
     integer(kind=ip)           :: i,j,k, it,rb
     integer(kind=ip)            :: ib,ie,jb,je,rbb,rbe,rbi
@@ -75,7 +74,7 @@ contains
     k=1
 
     do it = 1,nsweeps
-       if (mod(it,nh) == 0) then
+       if (mod(it,1) == 0) then
           ib = 1 
           ie = nx
           jb = 1
@@ -339,7 +338,7 @@ contains
     real(kind=rp),dimension(:,:,:)  , pointer:: r
     real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
-    integer(kind=ip) :: nx, ny, nz, nh, nd
+    integer(kind=ip) :: nx, ny, nz, nd
     real(kind=rp) ::resloc
 
     p  => grid(lev)%p
@@ -350,7 +349,6 @@ contains
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nh = grid(lev)%nh
     nd = size(cA(:,:,:,:),dim=1)
 
     if (grid(lev)%nz == 1) then

@@ -44,8 +44,8 @@ contains
     real(kind=rp), dimension(:,:,:), pointer :: zrc
     real(kind=rp), dimension(:,:,:), pointer :: zwc
 
-    integer(kind=ip) :: nz,ny,nx,nh
-    integer(kind=ip) :: nzf,nyf,nxf,nhf
+    integer(kind=ip) :: nz,ny,nx
+    integer(kind=ip) :: nzf,nyf,nxf
     integer(kind=ip) :: nyc,nxc
 
     if (myrank==0) write(*,*)'- define matrices from topography (h):'
@@ -57,19 +57,17 @@ contains
        nx=grid(lev)%nx
        ny=grid(lev)%ny
        nz=grid(lev)%nz
-       nh=grid(lev)%nh
 
        if (lev == 1) then
 
-          grid(lev)%dx(1-nh:ny+nh,1-nh:nx+nh) = dx
-          grid(lev)%dy(1-nh:ny+nh,1-nh:nx+nh) = dy
-          grid(lev)%h (1-nh:ny+nh,1-nh:nx+nh) =  h
+          grid(lev)%dx(0:ny+1,0:nx+1) = dx
+          grid(lev)%dy(0:ny+1,0:nx+1) = dy
+          grid(lev)%h (0:ny+1,0:nx+1) =  h
 
        else
           nxf =grid(lev-1)%nx
           nyf =grid(lev-1)%ny
           nzf =grid(lev-1)%nz
-          nhf =grid(lev-1)%nh
 
           dxf => grid(lev-1)%dx
           dyf => grid(lev-1)%dy
@@ -79,9 +77,9 @@ contains
              nxc= nx/grid(lev)%ngx
              nyc= ny/grid(lev)%ngy
 
-             allocate(dxc(1-nh:nyc+nh,1-nh:nxc+nh))
-             allocate(dyc(1-nh:nyc+nh,1-nh:nxc+nh))
-             allocate( hc(1-nh:nyc+nh,1-nh:nxc+nh))
+             allocate(dxc(0:nyc+1,0:nxc+1))
+             allocate(dyc(0:nyc+1,0:nxc+1))
+             allocate( hc(0:nyc+1,0:nxc+1))
           else
              nxc = nx
              nyc = ny
@@ -186,7 +184,6 @@ contains
 
     integer(kind=ip):: k, j, i
     integer(kind=ip):: nx, ny, nz
-    integer(kind=ip):: nh
 
     real(kind=rp) :: Arz
     real(kind=rp), dimension(:,:,:),   pointer :: cw
@@ -195,7 +192,6 @@ contains
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nh = grid(lev)%nh
 
     cA => grid(lev)%cA 
 
