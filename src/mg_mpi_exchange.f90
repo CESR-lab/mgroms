@@ -52,7 +52,7 @@ contains
     real(kind=rp), dimension(:,:), pointer :: sendSW,recvSW,sendSE,recvSE
     real(kind=rp), dimension(:,:), pointer :: sendNW,recvNW,sendNE,recvNE
 
-    call tic(lev,'fill_halo_2D_nb')
+    call tic(lev,'fill_halo_2D')
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -415,7 +415,7 @@ contains
        endif
     endif
 
-    call toc(lev,'fill_halo_2D_nb')
+    call toc(lev,'fill_halo_2D')
 
   end subroutine fill_halo_2D
 
@@ -453,7 +453,7 @@ contains
     real(kind=rp), dimension(:)  , pointer :: sendSW,recvSW,sendSE,recvSE
     real(kind=rp), dimension(:)  , pointer :: sendNW,recvNW,sendNE,recvNE
 
-    call tic(lev,'fill_halo_3D_nb')
+    call tic(lev,'fill_halo_3D')
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -772,7 +772,7 @@ contains
        p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,1-nh:0)
     endif
 
-    call toc(lev,'fill_halo_3D_nb')
+    call toc(lev,'fill_halo_3D')
 
   end subroutine fill_halo_3D
 
