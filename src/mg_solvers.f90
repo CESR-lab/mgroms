@@ -229,7 +229,7 @@ contains
              z=(1._8*k-0.5)/nz-0.2
              cff = exp( - (x*x+y*y+z*z)*30 )
              !             grid(lev)%p(k,j,i)= cff
-             grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
+             !!NG grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
              !             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
              !             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
           enddo
@@ -274,6 +274,7 @@ contains
     nx = grid(lev-1)%nx
     ny = grid(lev-1)%ny
     nz = grid(lev-1)%nz
+
     call norm(lev-1,grid(lev-1)%p,grid(lev-1)%r,nx,ny,nz,norm_f)
 
     if (myrank==0) then
