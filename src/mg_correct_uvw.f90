@@ -19,7 +19,7 @@ contains
     real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
 
     integer(kind=ip):: k, j, i
-    integer(kind=ip):: nx, ny, nz, nh
+    integer(kind=ip):: nx, ny, nz
 
     real(kind=rp), dimension(:,:)  ,   pointer :: umask,vmask
     real(kind=rp), dimension(:,:)  ,   pointer :: dxu,dyv
@@ -29,7 +29,6 @@ contains
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
-    nh = grid(1)%nh
 
     if (myrank==0) write(*,*)'- correct u,v,w:'
 

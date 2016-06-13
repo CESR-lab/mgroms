@@ -41,6 +41,8 @@ testcuc_SOURCES =        \
 	mg_mpi_exchange.f90  \
 	mg_gather.f90        \
 	mg_define_rhs.f90    \
+	mg_compute_rhs.f90   \
+    mg_correct_uvw.f90   \
 	mg_define_matrix.f90 \
 	mg_setup_tests.f90   \
 	mg_relax.f90         \
