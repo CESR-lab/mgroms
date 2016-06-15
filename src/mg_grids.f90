@@ -6,20 +6,33 @@ module mg_grids
 
   implicit none
 
-  ! GRID_TYPE is a derived type which has the function 
-  ! to reserve memory space for all the main variables of the multigrid solver.
-  type grid_type
-     integer(kind=ip) :: nx,ny,nz               ! Subdomain dimensions (whithout halo points)
-     integer(kind=ip) :: npx, npy               ! Number of processes
-     integer(kind=ip) :: incx, incy
-     integer(kind=ip) :: Ng2D, Ng               ! Size for 2D and 3D arrays (included halo)
-     integer(kind=ip) :: gather                 ! Gathering activated (1) or not (0)
-     integer(kind=ip) :: ngx, ngy               ! Gathering in x and y (is 1 or 2 (and generally 2))
-     integer(kind=ip) :: key                    ! Gathering key
-     integer(kind=ip) :: localcomm              ! Gathering MPI comm (should be integer (output of MPI_SPLIT))
-     integer(kind=ip),dimension(8)::neighb      ! MPI: neighbours
+  !-
+  !- Derived type are created to place all grid information in one structure.
+  !- The array memory allocation is called only one time for each grid level
+  !- at the begining of the program. This avoid memory allocation and deallocation 
+  !- during the execution of the program.
+  !- Pointers are used to simplify the readability of the code.
+  !- In subroutines which use grids arrays, we use this tip to improve readability:
+  !-     real(kind=rp),dimension(:,:,:), pointer:: p
+  !-     p  => grid(lev)%p
+  !-
 
-     real(kind=rp),dimension(:,:,:,:),pointer :: cA    ! Matrix of coefficients
+  !-
+  !- GRID_TYPE is a derived type which has the function 
+  !- to reserve memory space for all the main variables of the multigrid solver.
+  !-
+  type grid_type
+     integer(kind=ip) :: nx,ny,nz                     ! Subdomain dimensions (whithout halo points)
+     integer(kind=ip) :: npx, npy                     ! Number of processes
+     integer(kind=ip) :: incx, incy                   ! ??
+     integer(kind=ip) :: Ng2D, Ng                     ! Size for 2D and 3D arrays (included halo)
+     integer(kind=ip) :: gather                       ! Gathering activated (1) or not (0)
+     integer(kind=ip) :: ngx, ngy                     ! Gathering in x and y (is 1 or 2 (and generally 2))
+     integer(kind=ip) :: key                          ! Gathering key
+     integer(kind=ip) :: localcomm                    ! Gathering MPI comm (should be integer (output of MPI_SPLIT))
+     integer(kind=ip),dimension(8)::neighb            ! MPI: neighbours
+
+     real(kind=rp),dimension(:,:,:,:),pointer :: cA   ! Matrix of coefficients
 
      real(kind=rp),dimension(:,:,:),pointer :: p      ! Pressure
      real(kind=rp),dimension(:,:,:),pointer :: b      ! Right-hand side
@@ -32,16 +45,18 @@ module mg_grids
      real(kind=rp),dimension(:,:,:),pointer :: zw     ! Mesh in z at w point   (nz+1, 2 halo points)
 
      ! Gathering buffers, allocated only if gathering is activated (coarsen grids!)
-     real(kind=rp),dimension(:,:,:)    ,pointer :: dummy3 ! A dummy 3D array for gathering
+     real(kind=rp),dimension(:,:,:)    ,pointer :: dummy3         ! A dummy 3D array for gathering
      real(kind=rp),dimension(:,:,:,:)  ,pointer :: gatherbuffer2D ! 2D
      real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer   ! 3D
 
   end type grid_type
 
-  ! MPI buffer arrays to fill the halo
+  !-
+  !- MPI_BUFFERS is a derived type which has the function 
+  !- to reserve memory for MPI exchanges at the boundaries
+  !-
   type mpi_buffers
-
-     ! MPI: 2D array buffers (halo 1 and 2)
+     ! MPI: 2D array buffers (halo=1 and halo=2 => h, zr, zw)
      real(kind=rp),dimension(:,:),pointer :: sendN2D1,recvN2D1,sendS2D1,recvS2D1
      real(kind=rp),dimension(:,:),pointer :: sendE2D1,recvE2D1,sendW2D1,recvW2D1
      real(kind=rp),dimension(:,:),pointer :: sendN2D2,recvN2D2,sendS2D2,recvS2D2
@@ -49,7 +64,7 @@ module mg_grids
      real(kind=rp),dimension(:,:),pointer :: sendSW2D2,recvSW2D2,sendSE2D2,recvSE2D2
      real(kind=rp),dimension(:,:),pointer :: sendNW2D2,recvNW2D2,sendNE2D2,recvNE2D2
 
-     ! MPI: 3D array buffers (nz and nz+1) (halo 1)
+     ! MPI: 3D array buffers (nz and nz+1) (halo=1)
      real(kind=rp),dimension(:,:),pointer :: sendN,recvN,sendS,recvS
      real(kind=rp),dimension(:,:),pointer :: sendE,recvE,sendW,recvW
      real(kind=rp),dimension(:)  ,pointer :: sendSW,recvSW,sendSE,recvSE
@@ -59,7 +74,7 @@ module mg_grids
      real(kind=rp),dimension(:)  ,pointer :: sendSWp,recvSWp,sendSEp,recvSEp
      real(kind=rp),dimension(:)  ,pointer :: sendNWp,recvNWp,sendNEp,recvNEp
 
-     ! MPI: 4D matrix coefficient buffers (halo 1)
+     ! MPI: 4D matrix coefficient buffers (halo=1)
      real(kind=rp),dimension(:,:,:),pointer :: sendN4D,recvN4D,sendS4D,recvS4D
      real(kind=rp),dimension(:,:,:),pointer :: sendE4D,recvE4D,sendW4D,recvW4D
      real(kind=rp),dimension(:,:)  ,pointer :: sendSW4D,recvSW4D,sendSE4D,recvSE4D
@@ -68,17 +83,19 @@ module mg_grids
   end type mpi_buffers
 
 
-  ! GRID is an vector of grid_type derived type which store of the informations of
-  ! all the different grid levl of the multigrid solver.
-  ! It is the main array of this application.
-  ! It is the most important to :-)
+  !-
+  !- GRID is an vector of grid_type (derived type) which stores the informations of
+  !- all the different grid levels of the multigrid solver.
+  !- It is the main array of this application.
+  !- It is the most important to :-)
+  !-
   type(grid_type)  , dimension(:), pointer :: grid
   type(mpi_buffers), dimension(:), pointer :: gbuffers
 
   ! Number of grid levels of the multigrid solver
   integer(kind=ip):: nlevs ! index of the coarsest level (1 is the finest)q
 
-  ! Parameters of the CROCO vertical grid definition
+  ! Parameters of the CROCO vertical mesh definition
   real(kind=rp) :: hlim, theta_b, theta_s
   ! CROCO mesh 
   real(kind=8), dimension(:,:)  , pointer :: dx ! Croco Mesh grid in x ( halo = 1)
@@ -131,137 +148,218 @@ contains
     ! define grid dimensions at each level
     call define_grid_dims()
 
-    ! Allocate memory for grids at each level
+    !-
+    !- Allocate memory for grids at each level
+    !- We use a lot of loops to reduce the compilation time which can be very long
+    !- if we use only one loop for these memory allocations.
+    !-
     do lev=1,nlevs
-
        nx = grid(lev)%nx
        ny = grid(lev)%ny
        nz = grid(lev)%nz
-
-       if     ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='avg')) then
-          if (nz == 1) then
-             nd = 5
-          else
-             nd = 8
-          endif
-       elseif ((trim(interp_type)=='linear' ) .and. (trim(restrict_type)=='avg')) then
-          if (nz == 1) then
-             nd = 5
-          else
-             nd = 8
-          endif
-       elseif ((trim(interp_type)=='nearest') .and. (trim(restrict_type)=='linear')) then
-          STOP
-          ! todo 
-       endif
-
        ! Halo point is two for topography and vertical mesh !
        allocate(grid(lev)%h(      -1:ny+2,-1:nx+2))
        allocate(grid(lev)%zr(  nz,-1:ny+2,-1:nx+2))
        allocate(grid(lev)%zw(nz+1,-1:ny+2,-1:nx+2))
+    enddo
 
-       ! Halo point is one for all the arrays !
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
        allocate(grid(lev)%p(    nz,0:ny+1,0:nx+1))
        allocate(grid(lev)%b(    nz,0:ny+1,0:nx+1))
        allocate(grid(lev)%r(    nz,0:ny+1,0:nx+1))
-       allocate(grid(lev)%cA(nd,nz,0:ny+1,0:nx+1))
+    enddo
 
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
+       if (nz == 1) then
+          nd = 5
+       else
+          nd = 8
+       endif
+       allocate(grid(lev)%cA(nd,nz,0:ny+1,0:nx+1))
+    enddo
+
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       ny = grid(lev)%ny
        allocate(grid(lev)%dx(0:ny+1,0:nx+1))
        allocate(grid(lev)%dy(0:ny+1,0:nx+1))
+    enddo
 
-       ! MPI exhanges for 2D arrays
+    ! MPI exhanges for 2D arrays
+    do lev=1,nlevs
+       nx = grid(lev)%nx
        allocate(gbuffers(lev)%sendS2D1(1,nx))
        allocate(gbuffers(lev)%recvS2D1(1,nx))
        allocate(gbuffers(lev)%sendN2D1(1,nx))
        allocate(gbuffers(lev)%recvN2D1(1,nx))
+    enddo
 
+    do lev=1,nlevs
+       ny = grid(lev)%ny
        allocate(gbuffers(lev)%sendE2D1(ny,1))
        allocate(gbuffers(lev)%recvE2D1(ny,1))
        allocate(gbuffers(lev)%sendW2D1(ny,1))
        allocate(gbuffers(lev)%recvW2D1(ny,1))
+    enddo
 
+    do lev=1,nlevs
+       nx = grid(lev)%nx
        allocate(gbuffers(lev)%sendS2D2(2,nx))
        allocate(gbuffers(lev)%recvS2D2(2,nx))
        allocate(gbuffers(lev)%sendN2D2(2,nx))
        allocate(gbuffers(lev)%recvN2D2(2,nx))
+    enddo
 
+    do lev=1,nlevs
+       ny = grid(lev)%ny
        allocate(gbuffers(lev)%sendE2D2(ny,2))
        allocate(gbuffers(lev)%recvE2D2(ny,2))
        allocate(gbuffers(lev)%sendW2D2(ny,2))
        allocate(gbuffers(lev)%recvW2D2(ny,2))
+    enddo
 
+    do lev=1,nlevs
        allocate(gbuffers(lev)%sendSW2D2(2,2))
        allocate(gbuffers(lev)%sendSE2D2(2,2))
        allocate(gbuffers(lev)%sendNW2D2(2,2))
        allocate(gbuffers(lev)%sendNE2D2(2,2))
+    enddo
 
+    do lev=1,nlevs
        allocate(gbuffers(lev)%recvSW2D2(2,2))
        allocate(gbuffers(lev)%recvSE2D2(2,2))
        allocate(gbuffers(lev)%recvNW2D2(2,2))
        allocate(gbuffers(lev)%recvNE2D2(2,2))
+    enddo
 
-       ! MPI exhanges for 3D arrays
+    ! MPI exhanges for 3D arrays
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%sendS(nz,nx))
        allocate(gbuffers(lev)%recvS(nz,nx))
        allocate(gbuffers(lev)%sendN(nz,nx))
        allocate(gbuffers(lev)%recvN(nz,nx))
+    enddo
 
+    do lev=1,nlevs
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%sendE(nz,ny))
        allocate(gbuffers(lev)%recvE(nz,ny))
        allocate(gbuffers(lev)%sendW(nz,ny))
        allocate(gbuffers(lev)%recvW(nz,ny))
+    enddo
 
+    do lev=1,nlevs
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%sendSW(nz))
        allocate(gbuffers(lev)%sendSE(nz))
        allocate(gbuffers(lev)%sendNW(nz))
        allocate(gbuffers(lev)%sendNE(nz))
+    enddo
 
+    do lev=1,nlevs
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%recvSW(nz))
        allocate(gbuffers(lev)%recvSE(nz))
        allocate(gbuffers(lev)%recvNW(nz))
        allocate(gbuffers(lev)%recvNE(nz))
+    enddo
 
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%sendSp(nz+1,nx))
        allocate(gbuffers(lev)%recvSp(nz+1,nx))
        allocate(gbuffers(lev)%sendNp(nz+1,nx))
        allocate(gbuffers(lev)%recvNp(nz+1,nx))
+    enddo
 
+    do lev=1,nlevs
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%sendEp(nz+1,ny))
        allocate(gbuffers(lev)%recvEp(nz+1,ny))
        allocate(gbuffers(lev)%sendWp(nz+1,ny))
        allocate(gbuffers(lev)%recvWp(nz+1,ny))
+    enddo
 
+    do lev=1,nlevs
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%sendSWp(nz+1))
        allocate(gbuffers(lev)%sendSEp(nz+1))
        allocate(gbuffers(lev)%sendNWp(nz+1))
        allocate(gbuffers(lev)%sendNEp(nz+1))
+    enddo
 
+    do lev=1,nlevs
+       nz = grid(lev)%nz
        allocate(gbuffers(lev)%recvSWp(nz+1))
        allocate(gbuffers(lev)%recvSEp(nz+1))
        allocate(gbuffers(lev)%recvNWp(nz+1))
        allocate(gbuffers(lev)%recvNEp(nz+1))
+    enddo
 
-      ! MPI exhanges for 4D CA array
+    ! MPI exhanges for 4D CA array
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       nz = grid(lev)%nz
+       if (nz == 1) then
+          nd = 5
+       else
+          nd = 8
+       endif
        allocate(gbuffers(lev)%sendS4D(nd,nz,nx))
        allocate(gbuffers(lev)%recvS4D(nd,nz,nx))
        allocate(gbuffers(lev)%sendN4D(nd,nz,nx))
        allocate(gbuffers(lev)%recvN4D(nd,nz,nx))
+    enddo
 
+    do lev=1,nlevs
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
+       if (nz == 1) then
+          nd = 5
+       else
+          nd = 8
+       endif
        allocate(gbuffers(lev)%sendE4D(nd,nz,ny))
        allocate(gbuffers(lev)%recvE4D(nd,nz,ny))
        allocate(gbuffers(lev)%sendW4D(nd,nz,ny))
        allocate(gbuffers(lev)%recvW4D(nd,nz,ny))
+    enddo
 
+    do lev=1,nlevs
+       nz = grid(lev)%nz
+       if (nz == 1) then
+          nd = 5
+       else
+          nd = 8
+       endif
        allocate(gbuffers(lev)%sendSW4D(nd,nz))
        allocate(gbuffers(lev)%sendSE4D(nd,nz))
        allocate(gbuffers(lev)%sendNW4D(nd,nz))
        allocate(gbuffers(lev)%sendNE4D(nd,nz))
+    enddo
 
+    do lev=1,nlevs
+       nz = grid(lev)%nz
+       if (nz == 1) then
+          nd = 5
+       else
+          nd = 8
+       endif
        allocate(gbuffers(lev)%recvSW4D(nd,nz))
        allocate(gbuffers(lev)%recvSE4D(nd,nz))
        allocate(gbuffers(lev)%recvNW4D(nd,nz))
        allocate(gbuffers(lev)%recvNE4D(nd,nz))
-
     enddo
 
     ! Initialize pressure to zero
