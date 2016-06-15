@@ -72,4 +72,7 @@ mpirun -np 4 /usr/bin/ocount --events=CPU_CLK_UNHALTED,INST_RETIRED ./testseamou
 
 Cache misses :
 -------------
-valgrind --tool=cachegrind mpirun -np 4 testseamount
+mpirun -np 4 valgrind --tool=cachegrind testseamount
+cg_annotate cachegrind.out.xxxxx 
+cg_annotate cachegrind.out.xxxxx /home/grima/NH_MultiGrid/mgroms/src/mg_relax.f90
+kcachegrind cachegrind.out.xxxxx 
