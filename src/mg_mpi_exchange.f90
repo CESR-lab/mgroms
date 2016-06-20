@@ -68,6 +68,10 @@ contains
     north     = grid(lev)%neighb(3)
     west      = grid(lev)%neighb(4)
 
+    !- 
+    !- With nhalo = 1 it is not necessary to fille the 4 corners
+    !- but with nhalo = 2 it is necessary
+    !-
     if (nh==1) then
 
        sendS => gbuffers(lev)%sendS2D1
@@ -125,6 +129,34 @@ contains
        neswtag = 106
        nwsetag = 107
     endif
+
+!-
+! Fill_halo routine in mg_mpi_exchange.f90
+!-
+! With a halo of 1
+! ... | D | C   | B      | A      | *           <= initial state
+! ... | D | C   | B      | A      | A           <= fill_halo 1
+! ... |   | B­D | A­C    | A­B    | A           <= calculation x +1  – x ­1  (1 to n)
+! ... |   | B­D | A­C    | A­B    | A­B         <= fill_halo 1
+! ... |   |     | A­2B+D | ­B+C   | A­B         <= calculation x +1  – x ­1  (1 to n)
+!
+! With a halo of 2
+! ... | D | C   | B      | A      | *     | *   <= initial state
+! ... | D | C   | B      | A      | A     | ?   <= fill_halo 2
+! ... |   | B­D | A­C    | A­B    | ?­A   | ?   <= calculation x +1  – x ­1  (0 to n+1)
+! ... |   |     | A­2B+D | ?­2A+C | ?­A+B | ?   <= calculation x +1  – x ­1  (0 to n+1)
+!
+! What is the value of ?: 
+! ? ­ 2A + C = ­B + C
+! ? = +2A – C – B + C
+! ? = 2A – B
+!
+! Verification: (halo of 2)
+! ... | D | C   | B      | A      | *     | *      <= initial state
+! ... | D | C   | B      | A      | A     | 2A­B   <= fill_halo 2
+! ... |   | B­D | A­C    | A­B    | A­B   | 2A­B   <= calculation x +1  – x ­1  (0 to n+1) in define_matrix
+! ... |   |     | A­2B+D | ­B+C   | A     | 2A­B   <= calculation x +1  – x ­1  (0 to n+1) in define_matrix
+!-
 
     !-----------------------!
     !- Nonblocking RECEIVE -!
