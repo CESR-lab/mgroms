@@ -57,9 +57,9 @@ program mg_testcuc
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
-  allocate(u(nz,ny,1:nx+1))
-  allocate(v(nz,1:ny+1,nx))
-  allocate(w(1:nz+1,ny,nx))
+  allocate(u(nz  ,0:ny+1,0:nx+1))
+  allocate(v(nz  ,0:ny+1,0:nx+1))
+  allocate(w(nz+1,0:ny+1,0:nx+1))
 
   u(:,:,:)    =  0._8
   v(:,:,:)    =  0._8

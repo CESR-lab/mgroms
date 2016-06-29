@@ -454,10 +454,11 @@ contains
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!
   !-----------------------------!
-  subroutine fill_halo_3D(lev,p)
+  subroutine fill_halo_3D(lev,p,lbc_null)
 
     integer(kind=ip), intent(in):: lev
     real(kind=rp), dimension(:,:,:), pointer, intent(inout)::p
+    character(len=1), optional, intent(in) :: lbc_null
 
     integer(kind=ip) :: nx, ny, nz
     integer(kind=ip) :: nh
@@ -466,6 +467,9 @@ contains
 
     integer(kind=ip) :: sntag, ewtag, nstag, wetag
     integer(kind=ip) :: swnetag, senwtag, nwsetag, neswtag
+
+    logical :: lbc
+    character(len=1) :: cuv
 
     integer(kind=ip) :: i, j
     integer(kind=ip) :: icount
@@ -486,6 +490,13 @@ contains
     real(kind=rp), dimension(:)  , pointer :: sendNW,recvNW,sendNE,recvNE
 
     call tic(lev,'fill_halo_3D')
+
+    if (present(lbc_null)) then
+       cuv=trim(lbc_null)
+       lbc=.true.
+    else
+       lbc=.false.
+    endif
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -568,6 +579,8 @@ contains
             recvS,nz*nx,MPI_DOUBLE_PRECISION,south, &
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
+    elseif ((lbc).and.(trim(cuv)=='v')) then
+       p(:,1,1:nx) = 0._8
     else !!Homogenous Neumann  
        p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
     endif
@@ -577,7 +590,9 @@ contains
             recvE,nz*ny,MPI_DOUBLE_PRECISION,east, &
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
-    else !!Homogenous Neumann
+    elseif ((lbc).and.(trim(cuv)=='u')) then
+       p(:,1:ny,nx+1:nx+nh) = 0._8
+    else  !!Homogenous Neumann
        p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
     endif
 
@@ -586,7 +601,9 @@ contains
             recvN,nz*nx,MPI_DOUBLE_PRECISION,north, &
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
-    else !!Homogenous Neumann  
+    elseif ((lbc).and.(trim(cuv)=='v')) then 
+       p(:,ny+1:ny+nh,1:nx) = 0._8
+    else  !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
     endif
 
@@ -595,7 +612,9 @@ contains
             recvW,nz*ny,MPI_DOUBLE_PRECISION,west, &
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
-    else !!Homogenous Neumann
+    elseif ((lbc).and.(trim(cuv)=='u')) then
+       p(:,1:ny,1) = 0._8
+    else   !!Homogenous Neumann
        p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
     endif
 
@@ -610,6 +629,8 @@ contains
        flag_sw_s = .true.
     elseif (west.ne.MPI_PROC_NULL) then
        flag_sw_w = .true.
+    elseif (lbc) then
+       p(:,1-nh:0,1-nh:0) = 0._8
     else !!Homogenous Neumann  
        p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
     endif
@@ -625,7 +646,9 @@ contains
        flag_se_s = .true.
     elseif (east.ne.MPI_PROC_NULL) then
        flag_se_e = .true.
-    else !!Homogenous Neumann  
+    elseif (lbc) then
+       p(:,1-nh:0,nx+1:nx+nh) = 0._8
+    else!!Homogenous Neumann  
        p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
     endif
 
@@ -640,7 +663,9 @@ contains
        flag_ne_n = .true.
     elseif (east.ne.MPI_PROC_NULL) then
        flag_ne_e = .true.
-    else !!Homogenous Neumann  
+    elseif (lbc) then
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._8
+    else!!Homogenous Neumann  
        p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     endif
 
@@ -655,6 +680,8 @@ contains
        flag_nw_n = .true.
     elseif (west.ne.MPI_PROC_NULL) then
        flag_nw_w = .true.
+    elseif (lbc) then
+       p(:,ny+1:ny+nh,1-nh:0) = 0._8
     else !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
     endif

@@ -4,6 +4,8 @@ module nhydro
   use mg_grids
   use mg_namelist
   use mg_setup_tests
+  use mg_compute_rhs
+  use mg_correct_uvw
   use mg_solvers
   use mg_mpi_exchange
   use mg_netcdf_out
@@ -59,6 +61,12 @@ contains
     real(kind=rp)    :: tol = 1.e-12
     integer(kind=ip) :: maxite = 50
 
+    call compute_rhs(u, v, w)
+
+   if (netcdf_output) then
+       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='first_rhs.nc',rank=myrank)
+    endif
+
     grid(1)%p(:,:,:) = 0._rp
 
     call solve(tol,maxite)
@@ -69,6 +77,21 @@ contains
     endif
 
   end subroutine nhydro_solve
+
+  !--------------------------------------------------------------
+  subroutine nhydro_correct(u,v,w)
+
+    real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
+
+    call correct_uvw(u,v,w)
+
+    call check_correction(u,v,w)
+
+    if (netcdf_output) then
+       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
+    endif
+
+  end subroutine nhydro_correct
 
   !--------------------------------------------------------------
   subroutine nhydro_clean()

@@ -268,8 +268,8 @@ contains
                ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
                                 ! from i,k cross terms
                - qrt * ( &
-               ( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1) - &
-               ( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i) )
+               ( hlf * (zr(k,j  ,i  )-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1) - &
+               ( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i  ) ) * dy(j,i) )
           ! only for k==1, couples with j+1,i-1
           cA(5,k,j,i) = &
                + hlf * &
