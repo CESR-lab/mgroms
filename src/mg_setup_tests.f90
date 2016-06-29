@@ -2,10 +2,7 @@ module mg_setup_tests
 
   use mg_mpi 
   use mg_tictoc
-  use mg_grids
-  use mg_zr_zw
   use mg_mpi_exchange
-  use mg_define_matrix
   use mg_netcdf_out
 
   implicit none
@@ -13,31 +10,30 @@ module mg_setup_tests
 contains
 
   !-------------------------------------------------------------------------     
-  subroutine setup_cuc(inc)
+  subroutine setup_cuc(nx, ny, nz, npxg, npyg, inc, dx, dy, h)
 
-    integer(kind=4):: npxg,npyg
-    integer(kind=4):: nx,ny,nz
+    integer(kind=ip), intent(in) :: nx,ny,nz  ! local dims
+    integer(kind=ip), intent(in) :: npxg,npyg ! nb procs
+    integer(kind=4), intent(in):: inc
+    real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, h
+
     integer(kind=4):: is_err,nc_id,varid
-    integer(kind=4):: i,j,i0,j0,pi,pj,inc
+    integer(kind=4):: i,j,i0,j0,pi,pj
     real(kind=8), dimension(:,:), allocatable   :: dummy2d
     integer(kind=4), dimension(2)   :: starts,counts
 
     character*80 :: file,varname
 
-    npxg = grid(1)%npx
-    npyg = grid(1)%npy
-
-    nx = grid(1)%nx
-    ny = grid(1)%ny
-    nz = grid(1)%nz
+!!$    npxg = grid(1)%npx
+!!$    npyg = grid(1)%npy
+!!$
+!!$    nx = grid(1)%nx
+!!$    ny = grid(1)%ny
+!!$    nz = grid(1)%nz
 
     pj = myrank/npxg
     pi = mod(myrank,npxg)
 
-    ! grid definition
-    allocate(h(0:ny+1,0:nx+1))
-    allocate(dx(0:ny+1,0:nx+1))
-    allocate(dy(0:ny+1,0:nx+1))
     ! dummy 2D to read from netcdf
     allocate(dummy2d(1:nx*inc,1:ny*inc))
 
@@ -112,32 +108,25 @@ contains
   end subroutine setup_cuc
 
   !-------------------------------------------------------------------------     
-  subroutine setup_seamount()
+  subroutine setup_seamount(nx, ny, nz, npxg, npyg, Lx, Ly, Htot, dx, dy, h)
+
+    integer(kind=ip), intent(in) :: nx,ny,nz  ! local dims
+    integer(kind=ip), intent(in) :: npxg,npyg ! nb procs
+    real(kind=rp)   , intent(in) :: Lx, Ly, Htot
+    real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, h
 
     integer(kind=4), parameter :: ip=4, rp=8
-    integer(kind=ip):: npxg,npyg ! nb procs
     integer(kind=ip):: nxg, nyg  ! global dims
-    integer(kind=ip):: nx,ny,nz  ! local dims
     integer(kind=ip):: pi, pj
     integer(kind=ip):: i,j
 
     real(kind=rp) :: x, y
     real(kind=rp) :: x0, y0
 
-    npxg = grid(1)%npx
-    npyg = grid(1)%npy
-
-    nx = grid(1)%nx
-    ny = grid(1)%ny
-    nz = grid(1)%nz
-
     nxg = npxg * nx
     nyg = npyg * ny
 
     ! grid definition
-    allocate( h(0:ny+1,0:nx+1))
-    allocate(dx(0:ny+1,0:nx+1))
-    allocate(dy(0:ny+1,0:nx+1))
 
     dx(:,:) = Lx/real(nxg,kind=rp)
     dy(:,:) = Ly/real(nyg,kind=rp)

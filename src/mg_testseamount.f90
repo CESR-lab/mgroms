@@ -2,7 +2,8 @@ program mg_testseamount
 
   use mg_mpi
   use mg_tictoc
-  use mg_define_rhs
+  use mg_setup_tests
+  use mg_mpi_exchange
   use nhydro
 
   implicit none
@@ -16,9 +17,14 @@ program mg_testseamount
 
   integer(kind=ip) :: nx, ny, nz  ! local dimensions
 
-  real(kind=rp), dimension(:,:,:), pointer :: u,v,w
+  real(kind=rp), dimension(:,:,:), allocatable, target :: u,v,w
+  real(kind=rp), dimension(:,:,:), pointer :: up,vp,wp
+  real(kind=rp) :: Lx, Ly, Htot
 
   integer(kind=ip) :: np, ierr, rank
+
+  real(kind=rp), dimension(:,:), pointer :: dx, dy, h
+  real(kind=rp) :: hc, theta_b, theta_s
 
   call tic(1,'mg_bench_seamount')
 
@@ -34,6 +40,10 @@ program mg_testseamount
   Ly   =  1.e4_rp
   Htot =  4.e3_rp 
 
+  hc      = 0._8
+  theta_b = 0._8
+  theta_s = 0._8
+
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
   call mpi_comm_size(mpi_comm_world, np, ierr)
@@ -47,26 +57,21 @@ program mg_testseamount
   ny = nyg / npyg
   nz = nzg
 
+  allocate(h(0:ny+1,0:nx+1))
+  allocate(dx(0:ny+1,0:nx+1))
+  allocate(dy(0:ny+1,0:nx+1))
+
+  call setup_seamount(nx, ny, nz, npxg, npyg, Lx, Ly, Htot, dx, dy, h)
+
   !---------------------!
   !- Initialise nhydro -!
   !---------------------!
   if (rank == 0) write(*,*)'Initialise NHydro (grids, cA, params, etc) '
-  call nhydro_init(nx, ny, nz, npxg, npyg, test='seamount')
+  call nhydro_init(nx, ny, nz, npxg, npyg, dx, dy, h, hc, theta_b, theta_s, test='seamount')
 
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
-
-!!$  u(:,:,:)    =  0._8
-!!$  v(:,:,:)    =  0._8
-!!$  w(2:nz,:,:) = -1._8
-!!$  w(1,:,:)    =  0._8
-!!$  w(nz+1,:,:) =  0._8
-!!$  !--------------------------!
-!!$  !- RHS initialisation (b) -!
-!!$  !--------------------------!
-!!$  if (rank == 0) write(*,*)'RHS initialisation'
-!!$  call rhs_seamount()
 
   allocate(u(nz  ,0:ny+1,0:nx+1))
   allocate(v(nz  ,0:ny+1,0:nx+1))
@@ -74,27 +79,34 @@ program mg_testseamount
 
   call random_number(u)
   u = 2._8 * u - 1._8
-  call fill_halo(1,u)
+  up => u
+  call fill_halo(1,up)
 
   call random_number(v)
   v = 2._8 * v - 1._8
-  call fill_halo(1,v)
+  vp => v
+  call fill_halo(1,vp)
 
   call random_number(w)
   w = 2._8 * w - 1._8
-  call fill_halo(1,w)
+  wp => w
+  call fill_halo(1,wp)
 
   !----------------------!
   !- Call nhydro solver -!
   !----------------------!
   if (rank == 0) write(*,*)'Call nhydro solver'
-  call nhydro_solve(u,v,w)
+  call nhydro_solve(nx,ny,nz,u,v,w)
 
   !------------------------------------------------------------!
   !- Call nhydro correct to check if nh correction is correct -!
   !------------------------------------------------------------!
   if (rank == 0) write(*,*)'Call nhydro correct'
-  call nhydro_correct(u,v,w)
+  call check_correction(nx,ny,nz,u,v,w)
+
+  if (netcdf_output) then
+     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
+  endif
 
   !----------------------!
   !- End Bench-seamount -!

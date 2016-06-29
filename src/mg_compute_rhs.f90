@@ -39,6 +39,7 @@ contains
     real(kind=rp), parameter :: qrt  = 0.25_rp
     real(kind=rp), parameter :: zero = 0._rp
 
+    write(*,*)'rhs -> Lbound(v):',lbound(v)
 
     nx = grid(1)%nx
     ny = grid(1)%ny

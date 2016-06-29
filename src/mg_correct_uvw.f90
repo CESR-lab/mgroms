@@ -14,7 +14,6 @@ contains
   !-------------------------------------------------------------------------     
   subroutine correct_uvw(u,v,w)
 
-
     real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
 
     integer(kind=ip):: k, j, i
@@ -95,12 +94,22 @@ contains
   end subroutine correct_uvw
 
   !-------------------------------------------------------------------------     
-  subroutine check_correction(u,v,w)
+  subroutine check_correction(nx,ny,nz,ua,va,wa)
 
+    integer(kind=ip), intent(in) :: nx, ny, nz
+    real(kind=rp), dimension(nz  ,0:ny+1,0:nx+1), target, intent(in) :: ua
+    real(kind=rp), dimension(nz  ,0:ny+1,0:nx+1), target, intent(in) :: va
+    real(kind=rp), dimension(nz+1,0:ny+1,0:nx+1), target, intent(in) :: wa
 
-    real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
+    real(kind=rp), dimension(:,:,:), pointer :: u, v, w
 
     if (myrank==0) write(*,*)'- check correction:'
+
+    u => ua
+    v => va
+    w => wa
+
+    write(*,*)'check_correction -> Lbound(v):',lbound(v)
 
     call compute_rhs(u,v,w)
 
