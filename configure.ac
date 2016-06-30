@@ -39,7 +39,7 @@ AC_PREREQ([2.59])
 #
 ## Initialize autoconf with name of project, version, bug report 
 ## and support email address.
-AC_INIT([mgroms],[0.2.8],[nmolem@atmos.ucla.edu, Guillaume.Roullet@univ-brest.fr, Nicolas.Ducousso@univ-brest.fr, Nicolas.Grima@univ-brest.fr ],[mgroms],[https://github.com/nmolem/mgroms])
+AC_INIT([mgroms],[0.2.9],[nmolem@atmos.ucla.edu, Guillaume.Roullet@univ-brest.fr, Nicolas.Ducousso@univ-brest.fr, Nicolas.Grima@univ-brest.fr ],[mgroms],[https://github.com/nmolem/mgroms])
 #
 ## Set the directory that contains support scripts such as install-sh
 ## and config.guess
