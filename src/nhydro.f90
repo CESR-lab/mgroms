@@ -72,8 +72,6 @@ contains
     v => va
     w => wa
 
-    write(*,*)'nhydro -> Lbound(v):',lbound(v)
-
     !- Step 1 - 
     call compute_rhs(u, v, w)
 

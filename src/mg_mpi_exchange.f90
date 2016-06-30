@@ -580,7 +580,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     elseif ((lbc).and.(trim(cuv)=='v')) then
-       p(:,1,1:nx) = 0._8
+       p(:,1,:) = 0._8
     else !!Homogenous Neumann  
        p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
     endif
@@ -591,7 +591,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     elseif ((lbc).and.(trim(cuv)=='u')) then
-       p(:,1:ny,nx+1:nx+nh) = 0._8
+       p(:,:,nx+1) = 0._8
     else  !!Homogenous Neumann
        p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
     endif
@@ -602,7 +602,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     elseif ((lbc).and.(trim(cuv)=='v')) then 
-       p(:,ny+1:ny+nh,1:nx) = 0._8
+       p(:,ny+1,:) = 0._8
     else  !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
     endif
@@ -613,7 +613,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     elseif ((lbc).and.(trim(cuv)=='u')) then
-       p(:,1:ny,1) = 0._8
+       p(:,:,1) = 0._8
     else   !!Homogenous Neumann
        p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
     endif

@@ -169,9 +169,9 @@ contains
        nx = grid(lev)%nx
        ny = grid(lev)%ny
        nz = grid(lev)%nz
-       allocate(grid(lev)%p(    nz,0:ny+1,0:nx+1))
-       allocate(grid(lev)%b(    nz,0:ny+1,0:nx+1))
-       allocate(grid(lev)%r(    nz,0:ny+1,0:nx+1))
+       allocate(grid(lev)%p(nz,0:ny+1,0:nx+1))
+       allocate(grid(lev)%b(nz,0:ny+1,0:nx+1))
+       allocate(grid(lev)%r(nz,0:ny+1,0:nx+1))
     enddo
 
     do lev=1,nlevs

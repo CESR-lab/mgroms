@@ -161,6 +161,8 @@ contains
     allocate(vf(nz  ,0:ny+1,0:nx+1))
     allocate(wf(nz+1,0:ny+1,0:nx+1))
 
+   if (myrank==0) write(*,*)'- compute rhs: uf'
+
     do i = 1,nx+1
        do j = 1,ny
 
@@ -199,7 +201,7 @@ contains
                + zxdy(k,j,i  )*       dzw(k  ,j,i  )*w(i  ,j,k  -1) &
                + zxdy(k,j,i  )* two * dzw(k+1,j,i  )*w(i  ,j,k+1-1) &
                + zxdy(k,j,i-1)*       dzw(k  ,j,i-1)*w(i-1,j,k  -1) &
-               + zxdy(k,j,i-1)* two * dzw(k+1,j,i-1)*w(i-1,j,k-1-1) &
+               + zxdy(k,j,i-1)* two * dzw(k+1,j,i-1)*w(i-1,j,k+1-1) &
                )  ! umask
 
        enddo
@@ -207,6 +209,7 @@ contains
 
     call fill_halo(1,uf,lbc_null='u')
 
+   if (myrank==0) write(*,*)'- compute rhs: vf'
     do i = 1,nx
        do j = 1,ny+1
 
@@ -255,6 +258,8 @@ contains
     enddo
 
     call fill_halo(1,vf,lbc_null='v')
+
+   if (myrank==0) write(*,*)'- compute rhs: wf'
 
     do i = 1,nx
        do j = 1,ny
@@ -319,12 +324,18 @@ contains
        enddo
     enddo
 
+    deallocate(uf)
+    deallocate(vf)
+    deallocate(wf)
+
     deallocate(Arx)
     deallocate(Ary)
     deallocate(Arz)
     deallocate(zxdy)
     deallocate(zydx)
     deallocate(cw)
+
+    if (myrank==0) write(*,*)'- compute rhs (finish)'
 
   end subroutine compute_rhs
 

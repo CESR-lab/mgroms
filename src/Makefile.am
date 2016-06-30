@@ -59,6 +59,7 @@ testseamount_SOURCES=    \
 	mg_netcdf_out.f90    \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
+	mg_mpi_exchange_ijk.f90  \
 	mg_gather.f90        \
 	mg_compute_rhs.f90   \
     mg_correct_uvw.f90   \

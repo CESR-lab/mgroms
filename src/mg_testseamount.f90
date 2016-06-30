@@ -3,7 +3,7 @@ program mg_testseamount
   use mg_mpi
   use mg_tictoc
   use mg_setup_tests
-  use mg_mpi_exchange
+  use mg_mpi_exchange_ijk
   use nhydro
 
   implicit none
@@ -33,8 +33,8 @@ program mg_testseamount
   nyg   = 64
   nzg   = 64
 
-  npxg  = 1
-  npyg  = 1
+  npxg  = 2
+  npyg  = 2
 
   Lx   =  1.e4_rp
   Ly   =  1.e4_rp
@@ -57,7 +57,7 @@ program mg_testseamount
   ny = nyg / npyg
   nz = nzg
 
-  allocate(h(0:ny+1,0:nx+1))
+  allocate( h(0:ny+1,0:nx+1))
   allocate(dx(0:ny+1,0:nx+1))
   allocate(dy(0:ny+1,0:nx+1))
 
@@ -72,7 +72,7 @@ program mg_testseamount
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
-
+ if (rank == 0) write(*,*)'U, V, W initialisation...'
   allocate(u(1:nx+1,0:ny+1,1:nz))
   allocate(v(0:nx+1,1:ny+1,1:nz))
   allocate(w(0:nx+1,0:ny+1,0:nz))
@@ -80,17 +80,23 @@ program mg_testseamount
   call random_number(u)
   u = 2._8 * u - 1._8
   up => u
-  !call fill_halo(1,up)
+  call fill_halo_ijk(nx,ny,nz,up,'u') ! depend of mg_grids for MPI neighbours !
 
   call random_number(v)
   v = 2._8 * v - 1._8
   vp => v
-  !call fill_halo(1,vp)
+  call fill_halo_ijk(nx,ny,nz,vp,'v') ! depend of mg_grids for MPI neighbours !
 
   call random_number(w)
   w = 2._8 * w - 1._8
   wp => w
-  !call fill_halo(1,wp)
+  call fill_halo_ijk(nx,ny,nz,wp,'w') ! depend of mg_grids for MPI neighbours !
+
+  if (netcdf_output) then
+     call write_netcdf(up,vname='u',netcdf_file_name='model.nc',rank=myrank)
+     call write_netcdf(vp,vname='v',netcdf_file_name='model.nc',rank=myrank)
+     call write_netcdf(wp,vname='w',netcdf_file_name='model.nc',rank=myrank)
+  endif
 
   !----------------------!
   !- Call nhydro solver -!
