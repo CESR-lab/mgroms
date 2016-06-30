@@ -73,24 +73,24 @@ program mg_testseamount
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
 
-  allocate(u(nz  ,0:ny+1,0:nx+1))
-  allocate(v(nz  ,0:ny+1,0:nx+1))
-  allocate(w(nz+1,0:ny+1,0:nx+1))
+  allocate(u(1:nx+1,0:ny+1,1:nz))
+  allocate(v(0:nx+1,1:ny+1,1:nz))
+  allocate(w(0:nx+1,0:ny+1,0:nz))
 
   call random_number(u)
   u = 2._8 * u - 1._8
   up => u
-  call fill_halo(1,up)
+  !call fill_halo(1,up)
 
   call random_number(v)
   v = 2._8 * v - 1._8
   vp => v
-  call fill_halo(1,vp)
+  !call fill_halo(1,vp)
 
   call random_number(w)
   w = 2._8 * w - 1._8
   wp => w
-  call fill_halo(1,wp)
+  !call fill_halo(1,wp)
 
   !----------------------!
   !- Call nhydro solver -!

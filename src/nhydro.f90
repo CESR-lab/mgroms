@@ -59,13 +59,9 @@ contains
   subroutine nhydro_solve(nx,ny,nz,ua,va,wa)
 
     integer(kind=ip), intent(in) :: nx, ny, nz
-!!$    real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
-!!$    real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
-!!$    real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
-
-    real(kind=rp), dimension(nz  ,0:ny+1,0:nx+1), target, intent(inout) :: ua
-    real(kind=rp), dimension(nz  ,0:ny+1,0:nx+1), target, intent(inout) :: va
-    real(kind=rp), dimension(nz+1,0:ny+1,0:nx+1), target, intent(inout) :: wa
+    real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
+    real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
+    real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
 
     real(kind=rp), dimension(:,:,:), pointer :: u, v, w
 

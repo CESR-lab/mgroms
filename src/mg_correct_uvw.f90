@@ -75,8 +75,8 @@ contains
     do i = 1,nx+1
        do j = 1,ny+1 
           do k = 1,nz
-             u(k,j,i) = u(k,j,i) - one / dxu(j,i)*(p(k,j,i)-p(k,j,i-1))
-             v(k,j,i) = v(k,j,i) - one / dyv(j,i)*(p(k,j,i)-p(k,j-1,i))
+             u(i,j,k) = u(i,j,k) - one / dxu(j,i)*(p(k,j,i)-p(k,j,i-1))
+             v(i,j,k) = v(i,j,k) - one / dyv(j,i)*(p(k,j,i)-p(k,j-1,i))
           enddo
        enddo
     enddo
@@ -84,10 +84,10 @@ contains
     do i = 1,nx
        do j = 1,ny 
           do k = 2,nz !interior and upper levels
-             w(k,j,i) = w(k,j,i) - one / dzw(k,j,i)*(p(k,j,i)-p(k-1,j,i))
+             w(i,j,k-1) = w(i,j,k-1) - one / dzw(k,j,i)*(p(k,j,i)-p(k-1,j,i))
           enddo
           k = nz+1 !surface
-          w(k,j,i) = w(k,j,i) - one / dzw(k,j,i)*(-p(k-1,j,i))
+          w(i,j,k-1) = w(i,j,k-1) - one / dzw(k,j,i)*(-p(k-1,j,i))
        enddo
     enddo
 
@@ -97,9 +97,9 @@ contains
   subroutine check_correction(nx,ny,nz,ua,va,wa)
 
     integer(kind=ip), intent(in) :: nx, ny, nz
-    real(kind=rp), dimension(nz  ,0:ny+1,0:nx+1), target, intent(in) :: ua
-    real(kind=rp), dimension(nz  ,0:ny+1,0:nx+1), target, intent(in) :: va
-    real(kind=rp), dimension(nz+1,0:ny+1,0:nx+1), target, intent(in) :: wa
+    real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
+    real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
+    real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
 
     real(kind=rp), dimension(:,:,:), pointer :: u, v, w
 
@@ -108,8 +108,6 @@ contains
     u => ua
     v => va
     w => wa
-
-    write(*,*)'check_correction -> Lbound(v):',lbound(v)
 
     call compute_rhs(u,v,w)
 

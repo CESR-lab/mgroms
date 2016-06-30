@@ -39,8 +39,6 @@ contains
     real(kind=rp), parameter :: qrt  = 0.25_rp
     real(kind=rp), parameter :: zero = 0._rp
 
-    write(*,*)'rhs -> Lbound(v):',lbound(v)
-
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
@@ -168,40 +166,40 @@ contains
 
           k = 1 !lower level
 
-          uf(k,j,i) =  Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(k,j,i) &
+          uf(k,j,i) =  Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(i,j,k) &
                - qrt * ( &
-               + zxdy(k,j,i  )*dzw(k+1,j,i  )*w(k+1,j,i  )   &
-               + zxdy(k,j,i-1)*dzw(k+1,j,i-1)*w(k+1,j,i-1) ) &
+               + zxdy(k,j,i  )*dzw(k+1,j,i  )*w(i  ,j,k+1-1)   &
+               + zxdy(k,j,i-1)*dzw(k+1,j,i-1)*w(i-1,j,k+1-1) ) &
                
                -( &
                + zxdy(k,j,i  )*zxdy(k,j,i  )/(cw(k,j,i  )+cw(k+1,j,i  )) &
-               + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) ) * dxu(j,i)*u(k,j,i) &
+               + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) ) * dxu(j,i)*u(i,j,k) &
                
                -( & 
-               + zxdy(k,j,i  )*zydx(k,j,i  )/(cw(k,j,i  )+cw(k+1,j,i  ))   &
-               * hlf * (dyv(j,i  )*v(k,j,i  ) + dyv(j+1,i  )*v(k,j+1,i  )) & 
+               + zxdy(k,j,i  )*zydx(k,j,i  )/(cw(k,j,i  )+cw(k+1,j,i  )) &
+               * hlf * (dyv(j,i  )*v(i,j,k ) + dyv(j+1,i  )*v(i,j+1,k )) & 
                + zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))   &
-               * hlf * (dyv(j,i-1)*v(k,j,i-1) + dyv(j+1,i-1)*v(k,j+1,i-1)) )
+               * hlf * (dyv(j,i-1)*v(i-1,j,k) + dyv(j+1,i-1)*v(i-1,j+1,k)) )
 
           do k = 2,nz-1 !interior levels
 
-             uf(k,j,i) =  Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(k,j,i) &
+             uf(k,j,i) =  Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(i,j,k) &
                   - qrt * ( &
-                  + zxdy(k,j,i  )*dzw(k  ,j,i  )*w(k  ,j,i  ) &
-                  + zxdy(k,j,i  )*dzw(k+1,j,i  )*w(k+1,j,i  ) &
-                  + zxdy(k,j,i-1)*dzw(k  ,j,i-1)*w(k  ,j,i-1) &
-                  + zxdy(k,j,i-1)*dzw(k+1,j,i-1)*w(k+1,j,i-1) &
+                  + zxdy(k,j,i  )*dzw(k  ,j,i  )*w(i  ,j,k  -1) &
+                  + zxdy(k,j,i  )*dzw(k+1,j,i  )*w(i  ,j,k+1-1) &
+                  + zxdy(k,j,i-1)*dzw(k  ,j,i-1)*w(i-1,j,k  -1) &
+                  + zxdy(k,j,i-1)*dzw(k+1,j,i-1)*w(i-1,j,k+1-1) &
                   )  ! umask
           enddo
 
           k = nz !upper level
 
-          uf(k,j,i) = Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(k,j,i) &
+          uf(k,j,i) = Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(i,j,k) &
                - qrt * ( &
-               + zxdy(k,j,i  )*       dzw(k  ,j,i  )*w(k  ,j,i  ) &
-               + zxdy(k,j,i  )* two * dzw(k+1,j,i  )*w(k+1,j,i  ) &
-               + zxdy(k,j,i-1)*       dzw(k  ,j,i-1)*w(k  ,j,i-1) &
-               + zxdy(k,j,i-1)* two * dzw(k+1,j,i-1)*w(k+1,j,i-1) &
+               + zxdy(k,j,i  )*       dzw(k  ,j,i  )*w(i  ,j,k  -1) &
+               + zxdy(k,j,i  )* two * dzw(k+1,j,i  )*w(i  ,j,k+1-1) &
+               + zxdy(k,j,i-1)*       dzw(k  ,j,i-1)*w(i-1,j,k  -1) &
+               + zxdy(k,j,i-1)* two * dzw(k+1,j,i-1)*w(i-1,j,k-1-1) &
                )  ! umask
 
        enddo
@@ -214,43 +212,43 @@ contains
 
           k = 1 !lower level
 
-          vf(k,j,i) = Ary(k,j,i)/dyv(j,i) * dyv(j,i) * v(k,j,i) &
+          vf(k,j,i) = Ary(k,j,i)/dyv(j,i) * dyv(j,i) * v(i,j,k) &
                - qrt * ( &
-               + zydx(k,j  ,i)*dzw(k+1,j  ,i)*w(k+1,j  ,i) &
-               + zydx(k,j-1,i)*dzw(k+1,j-1,i)*w(k+1,j-1,i) &
+               + zydx(k,j  ,i)*dzw(k+1,j  ,i)*w(i,j  ,k+1-1) &
+               + zydx(k,j-1,i)*dzw(k+1,j-1,i)*w(i,j-1,k+1-1) &
                ) &
                
                -( &
                + zydx(k,j  ,i)*zydx(k,j  ,i)/(cw(k,j  ,i)+cw(k+1,j  ,i)) &
-               + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) ) * dyv(j,i)*v(k,j,i) &
+               + zydx(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) ) * dyv(j,i)*v(i,j,k) &
                
                - ( &
                + zxdy(k,j  ,i)*zydx(k,j  ,i)/(cw(k,j  ,i)+cw(k+1,j  ,i))  &
-               * hlf * (dxu(j  ,i)*u(k,j  ,i) + dxu(j  ,i+1)*u(k,j  ,i+1)) &
+               * hlf * (dxu(j  ,i)*u(i,j,k) + dxu(j  ,i+1)*u(i+1,j,k)) &
                + zxdy(k,j-1,i)*zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))   &
-               * hlf * (dxu(j-1,i)*u(k,j-1,i) + dxu(j-1,i+1)*u(k,j-1,i+1)) &
+               * hlf * (dxu(j-1,i)*u(i,j-1,k) + dxu(j-1,i+1)*u(i+1,j-1,k)) &
                ) 
 
           do k = 2,nz !interior levels
 
-             vf(k,j,i) = Ary(k,j,i)/dyv(j,i) * dyv(j,i) * v(k,j,i) &
+             vf(k,j,i) = Ary(k,j,i)/dyv(j,i) * dyv(j,i) * v(i,j,k) &
                   - qrt * ( &
-                  + zydx(k,j  ,i)*dzw(k  ,j  ,i)*w(k  ,j  ,i) &
-                  + zydx(k,j  ,i)*dzw(k+1,j  ,i)*w(k+1,j  ,i) &
-                  + zydx(k,j-1,i)*dzw(k  ,j-1,i)*w(k  ,j-1,i) &
-                  + zydx(k,j-1,i)*dzw(k+1,j-1,i)*w(k+1,j-1,i) &
+                  + zydx(k,j  ,i)*dzw(k  ,j  ,i)*w(i,j  ,k  -1) &
+                  + zydx(k,j  ,i)*dzw(k+1,j  ,i)*w(i,j  ,k+1-1) &
+                  + zydx(k,j-1,i)*dzw(k  ,j-1,i)*w(i,j-1,k  -1) &
+                  + zydx(k,j-1,i)*dzw(k+1,j-1,i)*w(i,j-1,k+1-1) &
                   )  !* vmask(j,i)
 
           enddo
 
           k = nz !upper level
 
-          vf(k,j,i) =  Ary(k,j,i)/dyv(j,i) * dyv(j,i) * v(k,j,i) &
+          vf(k,j,i) =  Ary(k,j,i)/dyv(j,i) * dyv(j,i) * v(i,j,k) &
                - qrt * ( &
-               + zydx(k,j  ,i)*       dzw(k  ,j  ,i)*w(k  ,j  ,i) &
-               + zydx(k,j  ,i)* two * dzw(k+1,j  ,i)*w(k+1,j  ,i) &
-               + zydx(k,j-1,i)*       dzw(k  ,j-1,i)*w(k  ,j-1,i) &
-               + zydx(k,j-1,i)* two * dzw(k+1,j-1,i)*w(k+1,j-1,i) &
+               + zydx(k,j  ,i)*       dzw(k  ,j  ,i)*w(i,j  ,k  -1) &
+               + zydx(k,j  ,i)* two * dzw(k+1,j  ,i)*w(i,j  ,k+1-1) &
+               + zydx(k,j-1,i)*       dzw(k  ,j-1,i)*w(i,j-1,k  -1) &
+               + zydx(k,j-1,i)* two * dzw(k+1,j-1,i)*w(i,j-1,k+1-1) &
                ) !* vmask(j,i)
 
        enddo
@@ -267,32 +265,32 @@ contains
 
           do k = 2,nz !interior levels
 
-             wf(k,j,i) = cw(k,j,i) * dzw(k,j,i) * w(k,j,i) &
+             wf(k,j,i) = cw(k,j,i) * dzw(k,j,i) * w(i,j,k-1) &
                   
                   - qrt * ( &
-                  + zxdy(k  ,j,i)*dxu(j,i  )*u(k  ,j,i  ) &
-                  + zxdy(k  ,j,i)*dxu(j,i+1)*u(k  ,j,i+1) &
-                  + zxdy(k-1,j,i)*dxu(j,i  )*u(k-1,j,i  ) &
-                  + zxdy(k-1,j,i)*dxu(j,i+1)*u(k-1,j,i+1) ) &
+                  + zxdy(k  ,j,i)*dxu(j,i  )*u(i  ,j,k  ) &
+                  + zxdy(k  ,j,i)*dxu(j,i+1)*u(i+1,j,k  ) &
+                  + zxdy(k-1,j,i)*dxu(j,i  )*u(i  ,j,k-1) &
+                  + zxdy(k-1,j,i)*dxu(j,i+1)*u(i+1,j,k-1) ) &
                   
                   - qrt * ( &
-                  + zydx(k  ,j,i)*dyv(j  ,i)*v(k  ,j  ,i) &
-                  + zydx(k  ,j,i)*dyv(j+1,i)*v(k  ,j+1,i) &
-                  + zydx(k-1,j,i)*dyv(j  ,i)*v(k-1,j  ,i) &
-                  + zydx(k-1,j,i)*dyv(j+1,i)*v(k-1,j+1,i) )
+                  + zydx(k  ,j,i)*dyv(j  ,i)*v(i,j  ,k  ) &
+                  + zydx(k  ,j,i)*dyv(j+1,i)*v(i,j+1,k  ) &
+                  + zydx(k-1,j,i)*dyv(j  ,i)*v(i,j  ,k-1) &
+                  + zydx(k-1,j,i)*dyv(j+1,i)*v(i,j+1,k-1) )
           enddo
 
           k = nz+1 !surface
 
-          wf(k,j,i) = cw(k,j,i) * dzw(k,j,i) * w(k,j,i)&
+          wf(k,j,i) = cw(k,j,i) * dzw(k,j,i) * w(i,j,k-1)&
                
                - hlf *( &
-               + zxdy(k-1,j,i)*dxu(j,i  )*u(k-1,j,i  ) &
-               + zxdy(k-1,j,i)*dxu(j,i+1)*u(k-1,j,i+1) ) &
+               + zxdy(k-1,j,i)*dxu(j,i  )*u(i  ,j,k-1) &
+               + zxdy(k-1,j,i)*dxu(j,i+1)*u(i+1,j,k-1) ) &
                
                - hlf *( &
-               + zydx(k-1,j,i)*dyv(j  ,i)*v(k-1,j  ,i) &
-               + zydx(k-1,j,i)*dyv(j+1,i)*v(k-1,j+1,i) )
+               + zydx(k-1,j,i)*dyv(j  ,i)*v(i,j  ,k-1) &
+               + zydx(k-1,j,i)*dyv(j+1,i)*v(i,j+1,k-1) )
 
        enddo
     enddo
@@ -302,7 +300,6 @@ contains
        call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank)
        call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank)
     endif
-
 
     !! Divergence
     rhs => grid(1)%b
