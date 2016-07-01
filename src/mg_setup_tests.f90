@@ -2,7 +2,7 @@ module mg_setup_tests
 
   use mg_mpi 
   use mg_tictoc
-  use mg_mpi_exchange
+  use mg_mpi_exchange_ijk
   use mg_netcdf_out
 
   implicit none
@@ -10,11 +10,10 @@ module mg_setup_tests
 contains
 
   !-------------------------------------------------------------------------     
-  subroutine setup_cuc(nx, ny, nz, npxg, npyg, inc, dx, dy, h)
+  subroutine setup_cuc(nx, ny, nz, npxg, npyg, dx, dy, h)
 
     integer(kind=ip), intent(in) :: nx,ny,nz  ! local dims
     integer(kind=ip), intent(in) :: npxg,npyg ! nb procs
-    integer(kind=4), intent(in):: inc
     real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, h
 
     integer(kind=4):: is_err,nc_id,varid
@@ -23,27 +22,23 @@ contains
     integer(kind=4), dimension(2)   :: starts,counts
 
     character*80 :: file,varname
+    integer(kind=ip) :: ierr
 
-!!$    npxg = grid(1)%npx
-!!$    npyg = grid(1)%npy
-!!$
-!!$    nx = grid(1)%nx
-!!$    ny = grid(1)%ny
-!!$    nz = grid(1)%nz
+    call mpi_comm_rank(mpi_comm_world, myrank, ierr)
 
     pj = myrank/npxg
     pi = mod(myrank,npxg)
 
     ! dummy 2D to read from netcdf
-    allocate(dummy2d(1:nx*inc,1:ny*inc))
+    allocate(dummy2d(1:nx,1:ny))
 
-    i0=2+pi*nx*inc
-    j0=2+pj*ny*inc
+    i0=2+pi*nx
+    j0=2+pj*ny
 
     starts(1)=i0
     starts(2)=j0
-    counts(1)=nx*inc
-    counts(2)=ny*inc
+    counts(1)=nx
+    counts(2)=ny
 
     !!------------------------------------------------!!
     !! Here enter the directory where cuc_nhgrd.nc is !!
@@ -64,7 +59,7 @@ contains
 
     do i=1,nx
        do j=1,ny
-          h(j,i)=dummy2d((i-1)*inc+1,(j-1)*inc+1)
+          h(j,i)=dummy2d((i-1)+1,(j-1)+1)
        enddo
     enddo
 
@@ -75,7 +70,7 @@ contains
 
     do i=1,nx
        do j=1,ny
-          dy(j,i)=1._8/dummy2d((i-1)*inc+1,(j-1)*inc+1)
+          dy(j,i)=1._8/dummy2d((i-1)+1,(j-1)+1)
        enddo
     enddo
 
@@ -86,24 +81,22 @@ contains
 
     do i=1,nx
        do j=1,ny
-          dx(j,i)=1._8/dummy2d((i-1)*inc+1,(j-1)*inc+1)
+          dx(j,i)=1._8/dummy2d((i-1)+1,(j-1)+1)
        enddo
     enddo
 
     is_err = nf90_close(nc_id)
 
-    call fill_halo(1, dx)
-    call fill_halo(1, dy)
-    call fill_halo(1, h )
+    call fill_halo_ijk(nx,ny,npxg,npyg,dx)
+    call fill_halo_ijk(nx,ny,npxg,npyg,dy)
+    call fill_halo_ijk(nx,ny,npxg,npyg, h)
 
-    do i= 0,nx+1
-       do j= 0,ny+1
-          dx(j,i)=max(1.,dx(j,i))
-          dy(j,i)=max(1.,dy(j,i))
+    do i= 1,nx
+       do j= 1,ny
+          dx(j,i)=max(1._8,dx(j,i))
+          dy(j,i)=max(1._8,dy(j,i))
        enddo
     enddo
-
-    grid(1)%p(:,:,:)=0._8
 
   end subroutine setup_cuc
 

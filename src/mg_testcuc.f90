@@ -2,7 +2,7 @@ program mg_testcuc
 
   use mg_mpi 
   use mg_tictoc
-  use mg_define_rhs
+  use mg_setup_tests
   use nhydro
 
   implicit none
@@ -14,19 +14,22 @@ program mg_testcuc
   integer(kind=4):: npyg       ! number of processes in y
   integer(kind=4):: nx, ny, nz ! local dimensions
 
-  integer(kind=4):: ierr, np, rank,inc
+  integer(kind=4):: ierr, np, rank
 
   real(kind=8), dimension(:,:,:), pointer :: u,v,w
+
+  real(kind=rp) :: Lx, Ly, Htot
+  real(kind=rp) :: hc, theta_b, theta_s
+  real(kind=rp), dimension(:,:), pointer :: dx, dy, h
 
   call tic(1,'mg_testcuc')
 
   !---------------!
   !- Ocean model -!
   !---------------!
-  inc  = 1
-  nxg  = 1024/inc
-  nyg  = 1024/inc
-  nzg  =   64/inc
+  nxg  = 1024
+  nyg  = 1024
+  nzg  =   64
 
   Lx   = 200d3
   Ly   = 200d3
@@ -54,37 +57,56 @@ program mg_testcuc
   ny = nyg / npyg
   nz = nzg
 
-  !-------------------------------------!
-  !- U,V,W initialisation (model vars) -!
-  !-------------------------------------!
-  allocate(u(nz  ,0:ny+1,0:nx+1))
-  allocate(v(nz  ,0:ny+1,0:nx+1))
-  allocate(w(nz+1,0:ny+1,0:nx+1))
 
-  u(:,:,:)    =  0._8
-  v(:,:,:)    =  0._8
-  w(2:nz,:,:) = -1._8
-  w(1,:,:)    =  0._8
-  w(nz+1,:,:) =  0._8
+ !-------------------------------------------------!
+  !- dx,dy,h and U,V,W initialisation (model vars) -!
+  !-------------------------------------------------!
+  allocate( h(0:ny+1,0:nx+1))
+  allocate(dx(0:ny+1,0:nx+1))
+  allocate(dy(0:ny+1,0:nx+1))
+
+  call setup_cuc(nx, ny, nz, npxg, npyg, dx, dy, h)
 
   !---------------------!
   !- Initialise nhydro -!
   !---------------------!
   if (rank == 0) write(*,*)'Initialise NHydro (grids, cA, params, etc) '
-  call nhydro_init(nx, ny, nz, npxg, npyg, test='cuc')
+  call nhydro_init(&
+       nx, ny, nz, &
+       npxg, npyg, &
+       dx, dy, h,  &
+       hc, theta_b, theta_s, &
+       test='cuc' )
 
-  !--------------------------!
-  !- RHS initialisation (b) -!
-  !--------------------------!
-  if (rank == 0) write(*,*)'RHS initialisation'
-  !! call setup_random_patches()
-  call rhs_random()
-  
+  !-------------------------------------!
+  !- U,V,W initialisation (model vars) -!
+  !-------------------------------------!
+  allocate(u(0:nx+1,0:ny+1,  nz))
+  allocate(v(0:nx+1,0:ny+1,  nz))
+  allocate(w(0:nx+1,0:ny+1,0:nz))
+
+  u(:,:,:)      =  0._8
+  v(:,:,:)      =  0._8
+
+  w(:,:,0)      =  0._8
+  w(:,:,1:nz-1) = -1._8
+  w(:,:,nz)     =  0._8
+
   !----------------------!
   !- Call nhydro solver -!
   !----------------------!
   if (rank == 0) write(*,*)'Call nhydro solver'
-  call  nhydro_solve(u,v,w)
+  call  nhydro_solve(nx,ny,nz,u,v,w)
+
+  !------------------------------------------------------------!
+  !- Call nhydro correct to check if nh correction is correct -!
+  !------------------------------------------------------------!
+  if (rank == 0) write(*,*)'Call nhydro correct'
+  call check_correction(nx,ny,nz,u,v,w)
+
+  if (netcdf_output) then
+     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
+  endif
 
   !------------------!
   !- End test-model -!

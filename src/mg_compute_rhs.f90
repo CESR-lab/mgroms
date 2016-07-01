@@ -163,10 +163,10 @@ contains
 
    if (myrank==0) write(*,*)'- compute rhs: uf'
 
-    do i = 1,nx+1
-       do j = 1,ny
+    do i = 1,nx+1  ! West  to East
+       do j = 1,ny ! South to North
 
-          k = 1 !lower level
+          k = 1 ! lower level
 
           uf(k,j,i) =  Arx(k,j,i)/dxu(j,i) * dxu(j,i) * u(i,j,k) &
                - qrt * ( &
@@ -178,8 +178,8 @@ contains
                + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) ) * dxu(j,i)*u(i,j,k) &
                
                -( & 
-               + zxdy(k,j,i  )*zydx(k,j,i  )/(cw(k,j,i  )+cw(k+1,j,i  )) &
-               * hlf * (dyv(j,i  )*v(i,j,k ) + dyv(j+1,i  )*v(i,j+1,k )) & 
+               + zxdy(k,j,i  )*zydx(k,j,i  )/(cw(k,j,i  )+cw(k+1,j,i  ))   &
+               * hlf * (dyv(j,i  )*v(i,j,k ) + dyv(j+1,i  )*v(i,j+1,k ))   & 
                + zxdy(k,j,i-1)*zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))   &
                * hlf * (dyv(j,i-1)*v(i-1,j,k) + dyv(j+1,i-1)*v(i-1,j+1,k)) )
 

@@ -93,8 +93,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am_testcuc_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_zr_zw.$(OBJEXT) mg_namelist.$(OBJEXT) \
 	mg_netcdf_out.$(OBJEXT) mg_grids.$(OBJEXT) \
-	mg_mpi_exchange.$(OBJEXT) mg_gather.$(OBJEXT) \
-	mg_define_rhs.$(OBJEXT) mg_compute_rhs.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_mpi_exchange_ijk.$(OBJEXT) \
+	mg_gather.$(OBJEXT) mg_compute_rhs.$(OBJEXT) \
 	mg_correct_uvw.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
 	mg_setup_tests.$(OBJEXT) mg_relax.$(OBJEXT) \
 	mg_intergrids.$(OBJEXT) mg_solvers.$(OBJEXT) nhydro.$(OBJEXT) \
@@ -317,8 +317,8 @@ testcuc_SOURCES = \
 	mg_netcdf_out.f90    \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
+	mg_mpi_exchange_ijk.f90 \
 	mg_gather.f90        \
-	mg_define_rhs.f90    \
 	mg_compute_rhs.f90   \
     mg_correct_uvw.f90   \
 	mg_define_matrix.f90 \
@@ -337,7 +337,7 @@ testseamount_SOURCES = \
 	mg_netcdf_out.f90    \
 	mg_grids.f90         \
 	mg_mpi_exchange.f90  \
-	mg_mpi_exchange_ijk.f90  \
+	mg_mpi_exchange_ijk.f90 \
 	mg_gather.f90        \
 	mg_compute_rhs.f90   \
     mg_correct_uvw.f90   \

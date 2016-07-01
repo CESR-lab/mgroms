@@ -7,10 +7,205 @@ module mg_mpi_exchange_ijk
 
   interface fill_halo_ijk
      module procedure        &
+          fill_halo_2D     , &
           fill_halo_3D_ijk
   end interface fill_halo_ijk
 
 contains
+
+  !----------------------------------------------------------------------------
+  !- Nonblocking MPI exchanges -!
+  !-----------------------------!
+  subroutine fill_halo_2D(nx,ny,npx,npy, a2D)
+
+    integer(kind=ip), intent(in):: nx,ny
+    integer(kind=ip), intent(in):: npx,npy
+    real(kind=rp), dimension(:,:), pointer, intent(inout)::a2D
+
+    integer(kind=ip) :: south, east, north, west
+    integer(kind=ip) :: sntag, ewtag, nstag, wetag
+
+    integer(kind=ip) :: i, j
+    integer(kind=ip) :: icount
+    integer(kind=ip) :: indx
+    integer(kind=ip),dimension(16) :: req
+    integer(kind=ip),dimension(16) :: comm
+    integer(kind=ip),dimension(MPI_STATUS_SIZE) :: status
+    integer(kind=ip) :: ierr
+
+    real(kind=rp), dimension(:), allocatable :: sendN,recvN,sendS,recvS
+    real(kind=rp), dimension(:), allocatable :: sendE,recvE,sendW,recvW
+
+    integer(kind=ip) :: pi, pj
+
+    call mpi_comm_rank(mpi_comm_world, myrank, ierr)
+
+    pj = myrank/npx
+    pi = mod(myrank,npx)
+
+    if (pj >= 1) then ! south
+       south = (pj-1)*npx+pi
+    else
+       south = MPI_PROC_NULL
+    endif
+
+    if (pi < npx-1) then ! east
+       east = pj*npx+pi+1
+    else
+       east = MPI_PROC_NULL
+    endif
+
+    if (pj < npy-1) then ! north
+       north = (pj+1)*npx+pi
+    else
+       north = MPI_PROC_NULL
+    endif
+
+    if (pi >= 1) then ! west
+       west = pj*npx+pi-1
+    else
+       west = MPI_PROC_NULL
+    endif
+
+    allocate(sendN(nx))
+    allocate(recvN(nx))
+    allocate(sendS(nx))
+    allocate(recvS(nx))
+
+    allocate(sendE(ny))
+    allocate(recvE(ny))
+    allocate(sendW(ny))
+    allocate(recvW(ny))
+
+    comm(:) = 0
+    req(:)  = MPI_REQUEST_NULL
+
+    !- Tag coherency is very important between isend and irecv -!
+    sntag   = 100
+    ewtag   = 101
+    nstag   = 102
+    wetag   = 103
+
+
+    !-----------------------!
+    !- Nonblocking RECEIVE -!
+    !-----------------------!
+
+    if (south.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                           &
+            recvS,nx,MPI_DOUBLE_PRECISION,south, &
+            nstag,MPI_COMM_WORLD,req(1),ierr)
+       comm(1)=1
+    else !!Homogenous Neumann  
+       a2D(0,1:nx) = a2D(1,1:nx)
+    endif
+
+    if (east.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                          &
+            recvE,ny,MPI_DOUBLE_PRECISION,east, &
+            wetag,MPI_COMM_WORLD,req(2),ierr)
+       comm(2)=2
+    else !!Homogenous Neumann
+       a2D(1:ny,nx+1) = a2D(1:ny,nx)
+    endif
+
+    if (north.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                           &
+            recvN,nx,MPI_DOUBLE_PRECISION,north, &
+            sntag,MPI_COMM_WORLD,req(3),ierr)
+       comm(3)=3
+    else !!Homogenous Neumann  
+       a2D(ny+1,1:nx) = a2D(ny,1:nx)
+    endif
+
+    if (west.ne.MPI_PROC_NULL) then
+       call MPI_IRecv(                          &
+            recvW,ny,MPI_DOUBLE_PRECISION,west, &
+            ewtag,MPI_COMM_WORLD,req(4),ierr)
+       comm(4)=4
+    else !!Homogenous Neumann
+       a2D(1:ny,0) = a2D(1:ny,1)
+    endif
+
+    !--------------------!
+    !- Nonblocking SEND -!
+    !--------------------!
+
+    if (south.ne.MPI_PROC_NULL) then
+       sendS(:) = a2D(1,1:nx)  
+       call MPI_ISend(                           &
+            sendS,nx,MPI_DOUBLE_PRECISION,south, &
+            sntag,MPI_COMM_WORLD,req(9),ierr)
+       comm(9)=9
+    endif
+
+    if (east.ne.MPI_PROC_NULL) then
+       sendE(:) = a2D(1:ny,nx) 
+       call MPI_ISend(                          &
+            sendE,ny,MPI_DOUBLE_PRECISION,east, &
+            ewtag,MPI_COMM_WORLD,req(10),ierr)
+       comm(10)=10
+    endif
+
+    if (north.ne.MPI_PROC_NULL) then
+       sendN(:) = a2D(ny,1:nx)
+       call MPI_ISend(                           &
+            sendN,nx,MPI_DOUBLE_PRECISION,north, &
+            nstag,MPI_COMM_WORLD,req(11),ierr)
+       comm(11)=11
+    endif
+
+    if (west.ne.MPI_PROC_NULL) then
+       sendW(:) = a2D(1:ny,1)  
+       call MPI_ISend(                          &
+            sendW,ny,MPI_DOUBLE_PRECISION,west, &
+            wetag,MPI_COMM_WORLD,req(12),ierr)
+       comm(12)=12
+    endif
+
+
+    !- Wait for completion of receive and fill ghost points
+
+    icount=0                       ! Compress arrays "comm" and
+    do i=1,16                      ! "req" to disregard directions
+       if (comm(i).gt.0) then      ! in which no message was sent
+          icount=icount+1          ! or is expected from.  At the
+          if (icount.lt.i) then    ! end of this segment icount
+             comm(icount)=comm(i)  ! is equal to the actual number
+             req(icount)=req(i)    ! of messages sent and received, 
+          endif                    ! arrays comm,req(1:icount)
+       endif                       ! store directional indices
+    enddo
+
+    do while (icount > 0)
+
+       call MPI_Waitany(icount, req, j, status, ierr)
+
+       indx=comm(j)           ! Save directional index for
+       icount=icount-1        ! message received and ready to
+       do i=j,icount          ! unpack, then erase its "req"
+          req(i)=req(i+1)     ! and "comm" and "req" by 
+          comm(i)=comm(i+1)   ! by compressing the arrays, so
+       enddo                  ! that the same message will 
+
+       ! be unpacked only once.
+       if (indx.eq.1) then ! south
+          a2D(0,1:nx)  = recvS(:)
+
+       elseif (indx.eq.2) then ! east
+          a2D(1:ny,nx+1) = recvE(:)
+
+       elseif (indx.eq.3) then ! north
+          a2D(ny+1,1:nx)  = recvN (:)
+
+       elseif (indx.eq.4) then ! west
+          a2D(1:ny,0) = recvW(:)
+       endif
+
+    enddo      !<-- while
+
+  end subroutine fill_halo_2D
+
 
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!

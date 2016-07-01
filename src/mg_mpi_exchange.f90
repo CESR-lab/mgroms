@@ -19,7 +19,7 @@ contains
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!
   !-----------------------------!
-  subroutine fill_halo_2D(lev,a2D,nhalo)
+  subroutine fill_halo_2D(lev, a2D, nhalo)
 
     integer(kind=ip), intent(in):: lev
     real(kind=rp), dimension(:,:), pointer, intent(inout)::a2D

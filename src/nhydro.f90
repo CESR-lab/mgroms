@@ -3,11 +3,12 @@ module nhydro
   use mg_mpi
   use mg_grids
   use mg_namelist
+  use mg_mpi_exchange
+  use mg_netcdf_out
   use mg_compute_rhs
   use mg_correct_uvw
   use mg_solvers
-  use mg_mpi_exchange
-  use mg_netcdf_out
+
 
   implicit none
 
@@ -23,11 +24,9 @@ contains
 
     integer(kind=ip), intent(in) :: nx, ny, nz
     integer(kind=ip), intent(in) :: npxg, npyg
-    real(kind=rp), dimension(:,:), intent(in) :: dx, dy, h
+    real(kind=rp), dimension(:,:), intent(inout) :: dx, dy, h
     real(kind=rp),  intent(in) :: hc, theta_b, theta_s
     character(len=*), optional :: test
-
-    integer(kind=ip) :: inc=1
 
     call mg_mpi_init()
 
@@ -50,7 +49,7 @@ contains
           bench = 'seamount'
        endif
     endif
- 
+
     call define_matrices(dx, dy, h)
 
   end subroutine nhydro_init
