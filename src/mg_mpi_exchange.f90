@@ -625,12 +625,12 @@ contains
             recvSW,nz,MPI_DOUBLE_PRECISION,southwest, &
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
+    elseif (lbc) then
+       p(:,1-nh:0,1-nh:0) = 0._8
     elseif (south.ne.MPI_PROC_NULL) then
        flag_sw_s = .true.
     elseif (west.ne.MPI_PROC_NULL) then
        flag_sw_w = .true.
-    elseif (lbc) then
-       p(:,1-nh:0,1-nh:0) = 0._8
     else !!Homogenous Neumann  
        p(:,1-nh:0,1-nh:0) = p(:,nh:1:-1,nh:1:-1)
     endif
@@ -642,12 +642,12 @@ contains
             recvSE,nz,MPI_DOUBLE_PRECISION,southeast, &
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
+    elseif (lbc) then
+       p(:,1-nh:0,nx+1:nx+nh) = 0._8
     elseif (south.ne.MPI_PROC_NULL) then
        flag_se_s = .true.
     elseif (east.ne.MPI_PROC_NULL) then
        flag_se_e = .true.
-    elseif (lbc) then
-       p(:,1-nh:0,nx+1:nx+nh) = 0._8
     else!!Homogenous Neumann  
        p(:,1-nh:0,nx+1:nx+nh) = p(:,nh:1:-1,nx:nx-nh+1:-1)
     endif
@@ -659,12 +659,12 @@ contains
             recvNE,nz,MPI_DOUBLE_PRECISION,northeast, &
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
+    elseif (lbc) then
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._8
     elseif (north.ne.MPI_PROC_NULL) then
        flag_ne_n = .true.
     elseif (east.ne.MPI_PROC_NULL) then
        flag_ne_e = .true.
-    elseif (lbc) then
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._8
     else!!Homogenous Neumann  
        p(:,ny+1:ny+nh,nx+1:nx+nh) = p(:,ny:ny-nh+1:-1,nx:nx-nh+1:-1)
     endif
@@ -676,12 +676,12 @@ contains
             recvNW,nz,MPI_DOUBLE_PRECISION,northwest, &
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
+    elseif (lbc) then
+       p(:,ny+1:ny+nh,1-nh:0) = 0._8
     elseif (north.ne.MPI_PROC_NULL) then
        flag_nw_n = .true.
     elseif (west.ne.MPI_PROC_NULL) then
        flag_nw_w = .true.
-    elseif (lbc) then
-       p(:,ny+1:ny+nh,1-nh:0) = 0._8
     else !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1-nh:0) = p(:,ny:ny-nh+1:-1,nh:1:-1)
     endif
