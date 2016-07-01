@@ -39,11 +39,11 @@ contains
     ny = grid(1)%ny
     nz = grid(1)%nz
 
-    allocate(p0(nz,0:ny+1,0:nx+1))
-    allocate(b0(nz,0:ny+1,0:nx+1))
-
-    p0 = p
-    b0 = b
+!!$    allocate(p0(nz,0:ny+1,0:nx+1))
+!!$    allocate(b0(nz,0:ny+1,0:nx+1))
+!!$
+!!$    p0 = p
+!!$    b0 = b
 
     call tic(1,'solve')
     call cpu_time(tstart)

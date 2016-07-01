@@ -161,7 +161,7 @@ contains
     allocate(vf(nz  ,0:ny+1,0:nx+1))
     allocate(wf(nz+1,0:ny+1,0:nx+1))
 
-   if (myrank==0) write(*,*)'- compute rhs: uf'
+    if (myrank==0) write(*,*)'- compute rhs: uf'
 
     do i = 1,nx+1  ! West  to East
        do j = 1,ny ! South to North
@@ -209,7 +209,7 @@ contains
 
     call fill_halo(1,uf,lbc_null='u')
 
-   if (myrank==0) write(*,*)'- compute rhs: vf'
+    if (myrank==0) write(*,*)'- compute rhs: vf'
     do i = 1,nx
        do j = 1,ny+1
 
@@ -259,7 +259,7 @@ contains
 
     call fill_halo(1,vf,lbc_null='v')
 
-   if (myrank==0) write(*,*)'- compute rhs: wf'
+    if (myrank==0) write(*,*)'- compute rhs: wf'
 
     do i = 1,nx
        do j = 1,ny
@@ -324,16 +324,25 @@ contains
        enddo
     enddo
 
-    deallocate(uf)
-    deallocate(vf)
-    deallocate(wf)
+    deallocate(dz)
+    deallocate(dzw)
+    deallocate(dxu)
+    deallocate(dyv)
 
     deallocate(Arx)
     deallocate(Ary)
     deallocate(Arz)
+    deallocate(zx)
+    deallocate(zy)
     deallocate(zxdy)
     deallocate(zydx)
+    deallocate(zyw)
+    deallocate(zxw)
     deallocate(cw)
+
+    deallocate(uf)
+    deallocate(vf)
+    deallocate(wf)
 
     if (myrank==0) write(*,*)'- compute rhs (finish)'
 

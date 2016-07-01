@@ -91,6 +91,10 @@ contains
        enddo
     enddo
 
+    deallocate(dzw)
+    deallocate(dxu)
+    deallocate(dyv)
+
   end subroutine correct_uvw
 
   !-------------------------------------------------------------------------     
