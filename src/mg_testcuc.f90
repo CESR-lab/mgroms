@@ -108,6 +108,12 @@ program mg_testcuc
      call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
   endif
 
+  !---------------------!
+  !- Deallocate memory -!
+  !---------------------!
+  if (rank == 0) write(*,*)'Cleaning memory before to finish the program.'
+  call nhydro_clean()
+
   !------------------!
   !- End test-model -!
   !------------------!

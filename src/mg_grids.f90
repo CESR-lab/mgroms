@@ -32,22 +32,22 @@ module mg_grids
      integer(kind=ip) :: localcomm                    ! Gathering MPI comm (should be integer (output of MPI_SPLIT))
      integer(kind=ip),dimension(8)::neighb            ! MPI: neighbours
 
-     real(kind=rp),dimension(:,:,:,:),pointer :: cA   ! Matrix of coefficients
+     real(kind=rp),dimension(:,:,:,:),pointer :: cA => null() ! Matrix of coefficients
 
-     real(kind=rp),dimension(:,:,:),pointer :: p      ! Pressure
-     real(kind=rp),dimension(:,:,:),pointer :: b      ! Right-hand side
-     real(kind=rp),dimension(:,:,:),pointer :: r      ! Residual
+     real(kind=rp),dimension(:,:,:),pointer :: p => null()    ! Pressure
+     real(kind=rp),dimension(:,:,:),pointer :: b => null()    ! Right-hand side
+     real(kind=rp),dimension(:,:,:),pointer :: r => null()    ! Residual
 
-     real(kind=rp),dimension(:,:)  ,pointer :: dx     ! Mesh in x  (1 halo point)
-     real(kind=rp),dimension(:,:)  ,pointer :: dy     ! Mesh in y  (1 halo point)
-     real(kind=rp),dimension(:,:)  ,pointer :: h      ! Topography (2 halo points)
-     real(kind=rp),dimension(:,:,:),pointer :: zr     ! Mesh in z at rho point (nz  , 2 halo points)
-     real(kind=rp),dimension(:,:,:),pointer :: zw     ! Mesh in z at w point   (nz+1, 2 halo points)
+     real(kind=rp),dimension(:,:)  ,pointer :: dx => null()   ! Mesh in x  (1 halo point)
+     real(kind=rp),dimension(:,:)  ,pointer :: dy => null()   ! Mesh in y  (1 halo point)
+     real(kind=rp),dimension(:,:)  ,pointer :: h  => null()   ! Topography (2 halo points)
+     real(kind=rp),dimension(:,:,:),pointer :: zr => null()   ! Mesh in z at rho point (nz  , 2 halo points)
+     real(kind=rp),dimension(:,:,:),pointer :: zw => null()   ! Mesh in z at w point   (nz+1, 2 halo points)
 
      ! Gathering buffers, allocated only if gathering is activated (coarsen grids!)
-     real(kind=rp),dimension(:,:,:)    ,pointer :: dummy3         ! A dummy 3D array for gathering
-     real(kind=rp),dimension(:,:,:,:)  ,pointer :: gatherbuffer2D ! 2D
-     real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer   ! 3D
+     real(kind=rp),dimension(:,:,:)    ,pointer :: dummy3 => null()        ! A dummy 3D array for gathering
+     real(kind=rp),dimension(:,:,:,:)  ,pointer :: gatherbuffer2D => null()! 2D
+     real(kind=rp),dimension(:,:,:,:,:),pointer :: gatherbuffer => null()  ! 3D
 
   end type grid_type
 
@@ -678,6 +678,116 @@ contains
     integer(kind=ip) :: lev
 
     ! TODO in coherence with the number of grids and the derived type type_grid
+
+    if (associated(grid)) then
+
+       do lev = 1, nlevs
+
+          if (associated(grid(lev)%cA))             deallocate(grid(lev)%cA)
+          if (associated(grid(lev)%p))              deallocate(grid(lev)%p)
+          if (associated(grid(lev)%b))              deallocate(grid(lev)%b)
+          if (associated(grid(lev)%r))              deallocate(grid(lev)%r)
+          if (associated(grid(lev)%dx))             deallocate(grid(lev)%dx)
+          if (associated(grid(lev)%dy))             deallocate(grid(lev)%dy)
+          if (associated(grid(lev)%h))              deallocate(grid(lev)%h)
+          if (associated(grid(lev)%zr))             deallocate(grid(lev)%zr)
+          if (associated(grid(lev)%zw))             deallocate(grid(lev)%zw)
+          if (associated(grid(lev)%dummy3))         deallocate(grid(lev)%dummy3)
+          if (associated(grid(lev)%gatherbuffer2D)) deallocate(grid(lev)%gatherbuffer2D)
+          if (associated(grid(lev)%gatherbuffer))   deallocate(grid(lev)%gatherbuffer)
+
+       enddo
+
+       deallocate(grid)
+
+    endif
+
+    if (associated(gbuffers)) then
+
+       do lev = 1, nlevs
+          if (associated(gbuffers(lev)%sendN2D1)) deallocate(gbuffers(lev)%sendN2D1)
+          if (associated(gbuffers(lev)%recvN2D1)) deallocate(gbuffers(lev)%recvN2D1)
+          if (associated(gbuffers(lev)%sendS2D1)) deallocate(gbuffers(lev)%sendS2D1)
+          if (associated(gbuffers(lev)%recvS2D1)) deallocate(gbuffers(lev)%recvS2D1)
+          if (associated(gbuffers(lev)%sendE2D1)) deallocate(gbuffers(lev)%sendE2D1)
+          if (associated(gbuffers(lev)%recvE2D1)) deallocate(gbuffers(lev)%recvE2D1)
+          if (associated(gbuffers(lev)%sendW2D1)) deallocate(gbuffers(lev)%sendW2D1)
+          if (associated(gbuffers(lev)%recvW2D1)) deallocate(gbuffers(lev)%recvW2D1)
+          if (associated(gbuffers(lev)%sendN2D2)) deallocate(gbuffers(lev)%sendN2D2)
+          if (associated(gbuffers(lev)%recvN2D2)) deallocate(gbuffers(lev)%recvN2D2)
+          if (associated(gbuffers(lev)%sendS2D2)) deallocate(gbuffers(lev)%sendS2D2)
+          if (associated(gbuffers(lev)%recvS2D2)) deallocate(gbuffers(lev)%recvS2D2)
+          if (associated(gbuffers(lev)%sendE2D2)) deallocate(gbuffers(lev)%sendE2D2)
+          if (associated(gbuffers(lev)%recvE2D2)) deallocate(gbuffers(lev)%recvE2D2)
+          if (associated(gbuffers(lev)%sendW2D2)) deallocate(gbuffers(lev)%sendW2D2)
+          if (associated(gbuffers(lev)%recvW2D2)) deallocate(gbuffers(lev)%recvW2D2)
+          if (associated(gbuffers(lev)%sendSW2D2)) deallocate(gbuffers(lev)%sendSW2D2)
+          if (associated(gbuffers(lev)%recvSW2D2)) deallocate(gbuffers(lev)%recvSW2D2)
+          if (associated(gbuffers(lev)%sendSE2D2)) deallocate(gbuffers(lev)%sendSE2D2)
+          if (associated(gbuffers(lev)%recvSE2D2)) deallocate(gbuffers(lev)%recvSE2D2)
+          if (associated(gbuffers(lev)%sendNW2D2)) deallocate(gbuffers(lev)%sendNW2D2)
+          if (associated(gbuffers(lev)%recvNW2D2)) deallocate(gbuffers(lev)%recvNW2D2)
+          if (associated(gbuffers(lev)%sendNE2D2)) deallocate(gbuffers(lev)%sendNE2D2)
+          if (associated(gbuffers(lev)%recvNE2D2)) deallocate(gbuffers(lev)%recvNE2D2)
+
+          if (associated(gbuffers(lev)%sendN)) deallocate(gbuffers(lev)%sendN)
+          if (associated(gbuffers(lev)%recvN)) deallocate(gbuffers(lev)%recvN)
+          if (associated(gbuffers(lev)%sendS)) deallocate(gbuffers(lev)%sendS)
+          if (associated(gbuffers(lev)%recvS)) deallocate(gbuffers(lev)%recvS)
+          if (associated(gbuffers(lev)%sendE)) deallocate(gbuffers(lev)%sendE)
+          if (associated(gbuffers(lev)%recvE)) deallocate(gbuffers(lev)%recvE)
+          if (associated(gbuffers(lev)%sendW)) deallocate(gbuffers(lev)%sendW)
+          if (associated(gbuffers(lev)%recvW)) deallocate(gbuffers(lev)%recvW)
+          if (associated(gbuffers(lev)%sendSW)) deallocate(gbuffers(lev)%sendSW)
+          if (associated(gbuffers(lev)%recvSW)) deallocate(gbuffers(lev)%recvSW)
+          if (associated(gbuffers(lev)%sendSE)) deallocate(gbuffers(lev)%sendSE)
+          if (associated(gbuffers(lev)%recvSE)) deallocate(gbuffers(lev)%recvSE)
+          if (associated(gbuffers(lev)%sendNW)) deallocate(gbuffers(lev)%sendNW)
+          if (associated(gbuffers(lev)%recvNW)) deallocate(gbuffers(lev)%recvNW)
+          if (associated(gbuffers(lev)%sendNE)) deallocate(gbuffers(lev)%sendNE)
+          if (associated(gbuffers(lev)%recvNE)) deallocate(gbuffers(lev)%recvNE)
+          if (associated(gbuffers(lev)%sendNp)) deallocate(gbuffers(lev)%sendNp)
+          if (associated(gbuffers(lev)%recvNp)) deallocate(gbuffers(lev)%recvNp)
+          if (associated(gbuffers(lev)%sendSp)) deallocate(gbuffers(lev)%sendSp)
+          if (associated(gbuffers(lev)%recvSp)) deallocate(gbuffers(lev)%recvSp)
+          if (associated(gbuffers(lev)%sendEp)) deallocate(gbuffers(lev)%sendEp)
+          if (associated(gbuffers(lev)%recvEp)) deallocate(gbuffers(lev)%recvEp)
+          if (associated(gbuffers(lev)%sendWp)) deallocate(gbuffers(lev)%sendWp)
+          if (associated(gbuffers(lev)%recvWp)) deallocate(gbuffers(lev)%recvWp)
+          if (associated(gbuffers(lev)%sendSWp)) deallocate(gbuffers(lev)%sendSWp)
+          if (associated(gbuffers(lev)%recvSWp)) deallocate(gbuffers(lev)%recvSWp)
+          if (associated(gbuffers(lev)%sendSEp)) deallocate(gbuffers(lev)%sendSEp)
+          if (associated(gbuffers(lev)%recvSEp)) deallocate(gbuffers(lev)%recvSEp)
+          if (associated(gbuffers(lev)%sendNWp)) deallocate(gbuffers(lev)%sendNWp)
+          if (associated(gbuffers(lev)%recvNWp)) deallocate(gbuffers(lev)%recvNWp)
+          if (associated(gbuffers(lev)%sendNEp)) deallocate(gbuffers(lev)%sendNEp)
+          if (associated(gbuffers(lev)%recvNEp)) deallocate(gbuffers(lev)%recvNEp)
+
+          if (associated(gbuffers(lev)%sendN4D)) deallocate(gbuffers(lev)%sendN4D)
+          if (associated(gbuffers(lev)%recvN4D)) deallocate(gbuffers(lev)%recvN4D)
+
+          if (associated(gbuffers(lev)%sendS4D)) deallocate(gbuffers(lev)%sendS4D)
+          if (associated(gbuffers(lev)%recvS4D)) deallocate(gbuffers(lev)%recvS4D)
+          if (associated(gbuffers(lev)%sendE4D)) deallocate(gbuffers(lev)%sendE4D)
+          if (associated(gbuffers(lev)%recvE4D)) deallocate(gbuffers(lev)%recvE4D)
+          if (associated(gbuffers(lev)%sendW4D)) deallocate(gbuffers(lev)%sendW4D)
+          if (associated(gbuffers(lev)%recvW4D)) deallocate(gbuffers(lev)%recvW4D)
+
+          if (associated(gbuffers(lev)%sendSW4D)) deallocate(gbuffers(lev)%sendSW4D)
+          if (associated(gbuffers(lev)%recvSW4D)) deallocate(gbuffers(lev)%recvSW4D)
+          if (associated(gbuffers(lev)%sendSE4D)) deallocate(gbuffers(lev)%sendSE4D)
+          if (associated(gbuffers(lev)%recvSE4D)) deallocate(gbuffers(lev)%recvSE4D)
+
+          if (associated(gbuffers(lev)%sendNW4D)) deallocate(gbuffers(lev)%sendNW4D)
+          if (associated(gbuffers(lev)%recvNW4D)) deallocate(gbuffers(lev)%recvNW4D)
+          if (associated(gbuffers(lev)%sendNE4D)) deallocate(gbuffers(lev)%sendNE4D)
+          if (associated(gbuffers(lev)%recvNE4D)) deallocate(gbuffers(lev)%recvNE4D)
+
+       enddo
+
+       deallocate(gbuffers)
+
+    endif
 
   end subroutine grids_dealloc
 

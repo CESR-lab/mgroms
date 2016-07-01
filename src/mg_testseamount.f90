@@ -72,7 +72,7 @@ program mg_testseamount
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
- if (rank == 0) write(*,*)'U, V, W initialisation...'
+  if (rank == 0) write(*,*)'U, V, W initialisation...'
   allocate(u(1:nx+1,0:ny+1,1:nz))
   allocate(v(0:nx+1,1:ny+1,1:nz))
   allocate(w(0:nx+1,0:ny+1,0:nz))
@@ -113,6 +113,12 @@ program mg_testseamount
   if (netcdf_output) then
      call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
   endif
+
+  !---------------------!
+  !- Deallocate memory -!
+  !---------------------!
+  if (rank == 0) write(*,*)'Cleaning memory before to finish the program.'
+  call nhydro_clean()
 
   !----------------------!
   !- End Bench-seamount -!
