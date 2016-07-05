@@ -210,9 +210,9 @@ contains
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!
   !-----------------------------!
-  subroutine fill_halo_3D_ijk(nx,ny,nz,p,type)
+  subroutine fill_halo_3D_ijk(nx,ny,p,type)
 
-    integer(kind=ip), intent(in):: nx,ny,nz
+   integer(kind=ip),intent(in) :: nx,ny
     real(kind=rp), dimension(:,:,:), pointer, intent(inout)::p
     character(len=1) :: type
 
@@ -231,6 +231,8 @@ contains
     integer(kind=ip),dimension(MPI_STATUS_SIZE) :: status
     integer(kind=ip) :: ierr
 
+    integer(kind=ip) :: nz
+
     logical :: flag_sw_s, flag_sw_w
     logical :: flag_se_s, flag_se_e
     logical :: flag_ne_n, flag_ne_e
@@ -242,6 +244,8 @@ contains
     real(kind=rp), dimension(:)  , allocatable :: sendNW,recvNW,sendNE,recvNE
 
     lev = 1
+
+    nz = size(p,dim=3)
 
     flag_sw_s = .false.
     flag_sw_w = .false.
