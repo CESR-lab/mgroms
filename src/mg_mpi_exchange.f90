@@ -625,7 +625,7 @@ contains
             recvSW,nz,MPI_DOUBLE_PRECISION,southwest, &
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
-    elseif (lbc) then
+    elseif ((lbc).and.(west.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')) then
        p(:,1-nh:0,1-nh:0) = 0._8
     elseif (south.ne.MPI_PROC_NULL) then
        flag_sw_s = .true.
@@ -642,7 +642,7 @@ contains
             recvSE,nz,MPI_DOUBLE_PRECISION,southeast, &
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
-    elseif (lbc) then
+    elseif ((lbc).and.(east.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')) then
        p(:,1-nh:0,nx+1:nx+nh) = 0._8
     elseif (south.ne.MPI_PROC_NULL) then
        flag_se_s = .true.
@@ -659,7 +659,8 @@ contains
             recvNE,nz,MPI_DOUBLE_PRECISION,northeast, &
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
-    elseif (lbc) then
+    elseif (((lbc).and.(east.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')).or. &
+         ((lbc).and.(trim(cuv)=='v')) ) then
        p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._8
     elseif (north.ne.MPI_PROC_NULL) then
        flag_ne_n = .true.
@@ -676,7 +677,8 @@ contains
             recvNW,nz,MPI_DOUBLE_PRECISION,northwest, &
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
-    elseif (lbc) then
+    elseif ( ((lbc).and.(west.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')).or. &
+         ((lbc).and.(trim(cuv)=='v')) ) then
        p(:,ny+1:ny+nh,1-nh:0) = 0._8
     elseif (north.ne.MPI_PROC_NULL) then
        flag_nw_n = .true.
