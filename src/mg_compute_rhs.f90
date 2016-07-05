@@ -39,6 +39,10 @@ contains
     real(kind=rp), parameter :: qrt  = 0.25_rp
     real(kind=rp), parameter :: zero = 0._rp
 
+    integer(kind=ip), save :: iter=0
+
+    iter = iter + 1
+
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
@@ -155,8 +159,10 @@ contains
        enddo
     enddo
 
-
     !! Fluxes
+    !!NG: TODO using grid(1)%p for uf and vf
+    !!NG: for wf ???
+    !!NG: or using a global array in this module of the wf shape
     allocate(uf(nz  ,0:ny+1,0:nx+1))
     allocate(vf(nz  ,0:ny+1,0:nx+1))
     allocate(wf(nz+1,0:ny+1,0:nx+1))
@@ -210,6 +216,7 @@ contains
     call fill_halo(1,uf,lbc_null='u')
 
     if (myrank==0) write(*,*)'- compute rhs: vf'
+
     do i = 1,nx
        do j = 1,ny+1
 
@@ -301,9 +308,9 @@ contains
     enddo
 
     if (netcdf_output) then
-       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank)
-       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank)
-       call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank)
+       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
+       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
+       call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank,iter=iter)
     endif
 
     !! Divergence

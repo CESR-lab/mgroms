@@ -115,6 +115,9 @@ contains
 
     real(kind=rp) :: x, y
     real(kind=rp) :: x0, y0
+    integer(kind=ip) :: ierr
+
+   call mpi_comm_rank(mpi_comm_world, myrank, ierr)
 
     nxg = npxg * nx
     nyg = npyg * ny

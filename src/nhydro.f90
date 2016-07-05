@@ -75,7 +75,13 @@ contains
     call compute_rhs(u, v, w)
 
     if (netcdf_output) then
-       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='first_rhs.nc',rank=myrank)
+       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=1)
+    endif
+
+    if (netcdf_output) then
+       call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=1)
+       call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=1)
+       call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=1)
     endif
 
     grid(1)%p(:,:,:) = 0._rp
