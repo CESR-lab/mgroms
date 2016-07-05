@@ -18,6 +18,7 @@ program mg_testseamount
   integer(kind=ip) :: nx, ny, nz  ! local dimensions
 
   real(kind=rp), dimension(:,:,:), allocatable, target :: u,v,w
+  real(kind=rp), dimension(:,:,:), allocatable, target :: tmp_rnd
   real(kind=rp), dimension(:,:,:), pointer :: up,vp,wp
   real(kind=rp) :: Lx, Ly, Htot
 
@@ -25,6 +26,9 @@ program mg_testseamount
 
   real(kind=rp), dimension(:,:), pointer :: dx, dy, h
   real(kind=rp) :: hc, theta_b, theta_s
+
+  integer(kind=ip) :: pi, pj
+  integer(kind=ip) :: ib, ie, jb, je, kb, ke
 
   call tic(1,'mg_bench_seamount')
 
@@ -72,30 +76,56 @@ program mg_testseamount
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
-  if (rank == 0) write(*,*)'U, V, W initialisation...'
+  if (rank == 0) write(*,*)'u, v, w initialisation...'
+
   allocate(u(1:nx+1,0:ny+1,1:nz))
   allocate(v(0:nx+1,1:ny+1,1:nz))
   allocate(w(0:nx+1,0:ny+1,0:nz))
 
-  call random_number(u)
-  u = 2._8 * u - 1._8
+  pj = myrank/npxg
+  pi = mod(myrank,npxg)
+
+  ib = 1 + pi * nx
+  jb = 1 + pj * ny
+
+  ie = ib + nx - 1
+  je = jb + ny - 1
+
+  kb = 1
+  ke = nz
+
+  allocate(tmp_rnd(1:nxg,1:nyg,1:nzg))
+
+  call random_number(tmp_rnd)
+  tmp_rnd = 2._8 * tmp_rnd - 1._8
+  u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
   up => u
-  call fill_halo_ijk(nx,ny,nz,up,'u') ! depend of mg_grids for MPI neighbours !
+  call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
 
-  call random_number(v)
-  v = 2._8 * v - 1._8
+  call random_number(tmp_rnd)
+  tmp_rnd = 2._8 * tmp_rnd - 1._8
+  v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
   vp => v
-  call fill_halo_ijk(nx,ny,nz,vp,'v') ! depend of mg_grids for MPI neighbours !
+  call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
 
-  call random_number(w)
-  w = 2._8 * w - 1._8
+  deallocate(tmp_rnd)
+  allocate(tmp_rnd(1:nxg,1:nyg,0:nzg))
+
+  kb = 0
+  ke = nz
+
+  call random_number(tmp_rnd)
+  tmp_rnd = 2._8 * tmp_rnd - 1._8
+  w(1:nx,1:ny,0:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
   wp => w
-  call fill_halo_ijk(nx,ny,nz,wp,'w') ! depend of mg_grids for MPI neighbours !
+  call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
+
+  deallocate(tmp_rnd)
 
   if (netcdf_output) then
-     call write_netcdf(up,vname='u',netcdf_file_name='model.nc',rank=myrank)
-     call write_netcdf(vp,vname='v',netcdf_file_name='model.nc',rank=myrank)
-     call write_netcdf(wp,vname='w',netcdf_file_name='model.nc',rank=myrank)
+     call write_netcdf(up,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=0)
+     call write_netcdf(vp,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=0)
+     call write_netcdf(wp,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=0)
   endif
 
   !----------------------!
@@ -104,11 +134,23 @@ program mg_testseamount
   if (rank == 0) write(*,*)'Call nhydro solver'
   call nhydro_solve(nx,ny,nz,u,v,w)
 
+  if (netcdf_output) then
+     call write_netcdf(up,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=2)
+     call write_netcdf(vp,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=2)
+     call write_netcdf(wp,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=2)
+  endif
+
   !------------------------------------------------------------!
   !- Call nhydro correct to check if nh correction is correct -!
   !------------------------------------------------------------!
   if (rank == 0) write(*,*)'Call nhydro correct'
   call check_correction(nx,ny,nz,u,v,w)
+
+  if (netcdf_output) then
+     call write_netcdf(up,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=3)
+     call write_netcdf(vp,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=3)
+     call write_netcdf(wp,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=3)
+  endif
 
   if (netcdf_output) then
      call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
