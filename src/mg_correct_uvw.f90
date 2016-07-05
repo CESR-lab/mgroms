@@ -62,6 +62,7 @@ contains
           dxu(j,i) = hlf * (dx(j,i)+dx(j,i-1))
        enddo
     enddo
+
     allocate(dyv(ny+1,0:nx+1))
     do i = 0,nx+1
        do j = 1,ny+1
@@ -73,16 +74,23 @@ contains
     p => grid(1)%p
 
     do i = 1,nx+1
-       do j = 1,ny+1 
+       do j = 0,ny+1 
           do k = 1,nz
              u(i,j,k) = u(i,j,k) - one / dxu(j,i)*(p(k,j,i)-p(k,j,i-1))
-             v(i,j,k) = v(i,j,k) - one / dyv(j,i)*(p(k,j,i)-p(k,j-1,i))
           enddo
        enddo
     enddo
 
-    do i = 1,nx
-       do j = 1,ny 
+   do i = 0,nx+1
+       do j = 1,ny+1 
+          do k = 1,nz
+             v(i,j,k) = v(i,j,k) - one / dyv(j,i)*(p(k,j,i)-p(k,j-1,i  ))
+          enddo
+       enddo
+    enddo
+
+    do i = 0,nx+1
+       do j = 0,ny+1
           do k = 2,nz !interior and upper levels
              w(i,j,k-1) = w(i,j,k-1) - one / dzw(k,j,i)*(p(k,j,i)-p(k-1,j,i))
           enddo
