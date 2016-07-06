@@ -24,7 +24,6 @@ contains
     integer(kind=ip) :: nite
 
     integer(kind=ip) :: nx,ny,nz
-    real(kind=rp), dimension(:,:,:), allocatable :: p0,b0
     real(kind=rp), dimension(:,:,:), pointer :: p,b,r
 
     real(kind = lg) :: tstart,tend,perf
@@ -38,12 +37,6 @@ contains
     nx = grid(1)%nx
     ny = grid(1)%ny
     nz = grid(1)%nz
-
-!!$    allocate(p0(nz,0:ny+1,0:nx+1))
-!!$    allocate(b0(nz,0:ny+1,0:nx+1))
-!!$
-!!$    p0 = p
-!!$    b0 = b
 
     call tic(1,'solve')
     call cpu_time(tstart)
