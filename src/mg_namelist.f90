@@ -14,6 +14,9 @@ module mg_namelist
   integer(kind=ip) :: ns_pre      =   3
   integer(kind=ip) :: ns_post     =   2
 
+  real(kind=rp)    :: solver_prec    = 1.d-6  !- solver precision 
+  integer(kind=ip) :: solver_maxiter = 50      !- maximum of solver iterations
+
   character(len=16) :: cmatrix='real'          !- 'real' or 'simple'
 
   logical           :: red_black = .true.      !- .false. or .true.

@@ -37,8 +37,8 @@ program mg_testseamount
   nyg   = 64
   nzg   = 64
 
-  npxg  = 2
-  npyg  = 2
+  npxg  = 1
+  npyg  = 1
 
   Lx   =  1.e4_rp
   Ly   =  1.e4_rp
@@ -153,7 +153,7 @@ program mg_testseamount
   endif
 
   if (netcdf_output) then
-     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
+     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=2)
   endif
 
   !---------------------!

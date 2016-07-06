@@ -44,6 +44,13 @@ module mg_grids
      real(kind=rp),dimension(:,:,:),pointer :: zr => null()   ! Mesh in z at rho point (nz  , 2 halo points)
      real(kind=rp),dimension(:,:,:),pointer :: zw => null()   ! Mesh in z at w point   (nz+1, 2 halo points)
 
+     ! All these variables are dependante of dx, dy, zr and zw
+     ! they are computed in define matrices and used in compute rhs to only for the first level.
+     real(kind=rp),dimension(:,:,:),pointer :: dzw  => null() ! Cell heights
+     real(kind=rp),dimension(:,:,:),pointer :: zxdy => null() ! Slopes in y-direction defined at rho-points
+     real(kind=rp),dimension(:,:,:),pointer :: zydx => null() ! Slopes in x-direction defined at rho-points
+     real(kind=rp),dimension(:,:,:),pointer :: cw   => null() ! 
+
      ! Gathering buffers, allocated only if gathering is activated (coarsen grids!)
      real(kind=rp),dimension(:,:,:)    ,pointer :: dummy3 => null()        ! A dummy 3D array for gathering
      real(kind=rp),dimension(:,:,:,:)  ,pointer :: gatherbuffer2D => null()! 2D
@@ -163,8 +170,18 @@ contains
        allocate(grid(lev)%h(      -1:ny+2,-1:nx+2))
        allocate(grid(lev)%zr(  nz,-1:ny+2,-1:nx+2))
        allocate(grid(lev)%zw(nz+1,-1:ny+2,-1:nx+2))
+       allocate(grid(lev)%cw(  nz+1,0:ny+1,0:nx+1))
     enddo
 
+    ! Some intermediate arrays for define matrices and compute rhs
+    lev = 1
+    nx = grid(lev)%nx
+    ny = grid(lev)%ny
+    nz = grid(lev)%nz
+    allocate(grid(lev)%dzw( nz+1,0:ny+1,0:nx+1))
+    allocate(grid(lev)%zxdy(nz  ,0:ny+1,0:nx+1))
+    allocate(grid(lev)%zydx(nz  ,0:ny+1,0:nx+1))
+ 
     do lev=1,nlevs
        nx = grid(lev)%nx
        ny = grid(lev)%ny

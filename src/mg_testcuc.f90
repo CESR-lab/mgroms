@@ -58,7 +58,7 @@ program mg_testcuc
   nz = nzg
 
 
- !-------------------------------------------------!
+  !-------------------------------------------------!
   !- dx,dy,h and U,V,W initialisation (model vars) -!
   !-------------------------------------------------!
   allocate( h(0:ny+1,0:nx+1))
@@ -92,11 +92,23 @@ program mg_testcuc
   w(:,:,1:nz-1) = -1._8
   w(:,:,nz)     =  0._8
 
+  if (netcdf_output) then
+     call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=0)
+     call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=0)
+     call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=0)
+  endif
+
   !----------------------!
   !- Call nhydro solver -!
   !----------------------!
   if (rank == 0) write(*,*)'Call nhydro solver'
   call  nhydro_solve(nx,ny,nz,u,v,w)
+
+  if (netcdf_output) then
+     call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=2)
+     call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=2)
+     call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=2)
+  endif
 
   !------------------------------------------------------------!
   !- Call nhydro correct to check if nh correction is correct -!
@@ -105,7 +117,7 @@ program mg_testcuc
   call check_correction(nx,ny,nz,u,v,w)
 
   if (netcdf_output) then
-     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check_correction.nc',rank=myrank)
+     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=2)
   endif
 
   !---------------------!

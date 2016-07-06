@@ -60,6 +60,8 @@ contains
 
        if (lev == 1) then
 
+          !NG: WARNING dx, dy and h model have to be defined 
+          !NG: on (ny,nx) and not on (nx,ny) !!
           grid(lev)%dx(0:ny+1,0:nx+1) = dx
           grid(lev)%dy(0:ny+1,0:nx+1) = dy
           grid(lev)%h (0:ny+1,0:nx+1) =  h
@@ -187,6 +189,8 @@ contains
     integer(kind=ip):: nx, ny, nz
 
     real(kind=rp) :: Arz
+    real(kind=rp), dimension(:,:,:),   pointer :: dzw
+    real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
     real(kind=rp), dimension(:,:,:),   pointer :: cw
     real(kind=rp), dimension(:,:,:,:), pointer :: cA
 
@@ -196,7 +200,32 @@ contains
 
     cA => grid(lev)%cA 
 
-    allocate(cw(nz+1,0:ny+1,0:nx+1))
+    if (lev == 1) then
+       dzw => grid(lev)%dzw
+       do i = 0,nx+1
+          do j = 0,ny+1
+             dzw(1,j,i) = zr(1,j,i) - zw(1,j,i) !!
+             do k = 2,nz
+                dzw(k,j,i) = zr(k,j,i) - zr(k-1,j,i) !!  cell height at w-points
+             enddo
+             dzw(nz+1,j,i) = zw(nz+1,j,i) - zr(nz,j,i) !!
+          enddo
+       enddo
+
+       !! Slopes in x- and y-direction defined at rho-points
+       zxdy => grid(lev)%zxdy
+       zydx => grid(lev)%zydx
+       do i = 0,nx+1
+          do j = 0,ny+1
+             do k = 1, nz
+                zydx(k,j,i) = hlf * (( zr(k,j+1,i  ) - zr(k,j-1,i  ) ) / dy(j,i) ) * dx(j,i)
+                zxdy(k,j,i) = hlf * (( zr(k,j  ,i+1) - zr(k,j  ,i-1) ) / dx(j,i) ) * dy(j,i)
+             enddo
+          enddo
+       enddo
+    endif
+
+    cw => grid(lev)%cw
     do i = 0,nx+1
        do j = 0,ny+1
 
@@ -387,8 +416,6 @@ contains
                - cA(5,k,j,i)
        enddo ! j
     enddo ! i
-
-    deallocate(cw)
 
     if (netcdf_output) then
        if (myrank==0) write(*,*)'       write cA in a netcdf file'
