@@ -200,6 +200,7 @@ contains
 
     cA => grid(lev)%cA 
 
+    !- Used in compute_rhs -!
     if (lev == 1) then
        dzw => grid(lev)%dzw
        do i = 0,nx+1
@@ -225,6 +226,7 @@ contains
        enddo
     endif
 
+    !- Used also in compute_rhs -!
     cw => grid(lev)%cw
     do i = 0,nx+1
        do j = 0,ny+1

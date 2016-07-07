@@ -21,12 +21,9 @@ contains
     real(kind=rp), dimension(:,:)  , pointer :: dx,dy
     real(kind=rp), dimension(:,:,:), pointer :: zr,zw
 
-    real(kind=rp), dimension(:,:)  , pointer :: dxu,dyv
-
     real(kind=rp) :: Arx, Ary
     real(kind=rp), dimension(:,:,:), pointer :: dzw
     real(kind=rp), dimension(:,:,:), pointer :: zydx,zxdy
-    real(kind=rp) :: zxw,zyw
     real(kind=rp), dimension(:,:,:), pointer :: cw
     real(kind=rp), dimension(:,:,:), pointer :: uf,vf,wf,rhs
 
@@ -52,24 +49,31 @@ contains
 
     if (myrank==0) write(*,*)'- compute rhs:'
 
-    !! Cell heights
+    !- Cell heights (computed in define matices)
     dzw => grid(1)%dzw
 
-    !! Slopes in x- and y-direction defined at rho-points
+    !- Slopes in x- and y-direction defined at rho-points (computed in define matices)
     zxdy => grid(1)%zxdy
     zydx => grid(1)%zydx
 
+    !- (computed in define matices)
     cw  => grid(1)%cw
 
-    !! Fluxes
-    !!NG: TODO using grid(1)%p for uf and vf
-    !!NG: for wf ???
-    !!NG: or using a global array in this module of the wf shape
-    allocate(uf(nz  ,0:ny+1,0:nx+1))
-    allocate(vf(nz  ,0:ny+1,0:nx+1))
-    allocate(wf(nz+1,0:ny+1,0:nx+1))
+    !--------------!
+    !- DIVERGENCE -!
+    !--------------!
+    !- Divergence is stored in rhs array pointer
+    !- It is calculated progressively using first uf, 
+    !- then using vf and at the e wf
+    rhs => grid(1)%b
+    rhs(:,:,:) = zero
 
-    if (myrank==0) write(*,*)'- compute rhs: uf'
+    !------!
+    !- UF -!
+    !------!
+    !- if (myrank==0) write(*,*)'- compute rhs: uf'
+
+    uf => grid(1)%dummy3Dnz
 
     do i = 1,nx+1  ! West  to East
        do j = 1,ny ! South to North
@@ -134,7 +138,28 @@ contains
 
     call fill_halo(1,uf,lbc_null='u')
 
-    if (myrank==0) write(*,*)'- compute rhs: vf'
+    if (netcdf_output) then
+       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
+    endif
+
+    do i = 1,nx
+       do j = 1,ny 
+          do k = 1,nz
+
+             rhs(k,j,i) = uf(k  ,j  ,i+1) - uf(k,j,i) 
+
+          enddo
+       enddo
+    enddo
+
+    uf => null()
+
+    !------!
+    !- VF -!
+    !------!
+    !- if (myrank==0) write(*,*)'- compute rhs: vf'
+
+    vf => grid(1)%dummy3Dnz
 
     do i = 1,nx
        do j = 1,ny+1
@@ -202,7 +227,28 @@ contains
 
     call fill_halo(1,vf,lbc_null='v')
 
-    if (myrank==0) write(*,*)'- compute rhs: wf'
+    if (netcdf_output) then
+       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
+    endif
+
+    do i = 1,nx
+       do j = 1,ny 
+          do k = 1,nz
+
+             rhs(k,j,i) =  rhs(k,j,i) + vf(k  ,j+1,i  ) - vf(k,j,i)
+
+          enddo
+       enddo
+    enddo
+
+    vf => null()
+
+    !------!
+    !- WF -!
+    !------!
+    !- if (myrank==0) write(*,*)'- compute rhs: wf'
+
+    wf => grid(1)%dummy3Dnzp
 
     do i = 1,nx
        do j = 1,ny
@@ -244,34 +290,22 @@ contains
     enddo
 
     if (netcdf_output) then
-       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
-       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
        call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank,iter=iter)
     endif
-
-    !! Divergence
-    rhs => grid(1)%b
-
-    rhs(:,:,:) = zero
 
     do i = 1,nx
        do j = 1,ny 
           do k = 1,nz
 
-             rhs(k,j,i) =                       &
-                  + uf(k  ,j  ,i+1) - uf(k,j,i) &
-                  + vf(k  ,j+1,i  ) - vf(k,j,i) &
-                  + wf(k+1,j  ,i  ) - wf(k,j,i)
+             rhs(k,j,i) = rhs(k,j,i) + wf(k+1,j  ,i  ) - wf(k,j,i)
 
           enddo
        enddo
     enddo
 
-    deallocate(uf)
-    deallocate(vf)
-    deallocate(wf)
+    wf => null()
 
-    if (myrank==0) write(*,*)'- compute rhs (finish)'
+    !- if (myrank==0) write(*,*)'- compute rhs (finish)'
 
   end subroutine compute_rhs
 

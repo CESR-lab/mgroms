@@ -46,10 +46,15 @@ module mg_grids
 
      ! All these variables are dependante of dx, dy, zr and zw
      ! they are computed in define matrices and used in compute rhs to only for the first level.
-     real(kind=rp),dimension(:,:,:),pointer :: dzw  => null() ! Cell heights
-     real(kind=rp),dimension(:,:,:),pointer :: zxdy => null() ! Slopes in y-direction defined at rho-points
-     real(kind=rp),dimension(:,:,:),pointer :: zydx => null() ! Slopes in x-direction defined at rho-points
-     real(kind=rp),dimension(:,:,:),pointer :: cw   => null() ! 
+     real(kind=rp),dimension(:,:,:),pointer :: dzw  => null() ! Cell heights (lev =1)
+     real(kind=rp),dimension(:,:,:),pointer :: zxdy => null() ! Slopes in y-direction defined at rho-points (lev =1)
+     real(kind=rp),dimension(:,:,:),pointer :: zydx => null() ! Slopes in x-direction defined at rho-points (lev =1)
+     real(kind=rp),dimension(:,:,:),pointer :: cw   => null() ! All levels
+
+     ! Dummy array to calculate uf, vf and wf
+     ! Remark: We can gain memory place using p instead of dummy3Dnz
+     real(kind=rp),dimension(:,:,:),pointer :: dummy3Dnz  => null()
+     real(kind=rp),dimension(:,:,:),pointer :: dummy3Dnzp  => null()
 
      ! Gathering buffers, allocated only if gathering is activated (coarsen grids!)
      real(kind=rp),dimension(:,:,:)    ,pointer :: dummy3 => null()        ! A dummy 3D array for gathering
@@ -181,6 +186,9 @@ contains
     allocate(grid(lev)%dzw( nz+1,0:ny+1,0:nx+1))
     allocate(grid(lev)%zxdy(nz  ,0:ny+1,0:nx+1))
     allocate(grid(lev)%zydx(nz  ,0:ny+1,0:nx+1))
+
+    allocate(grid(lev)%dummy3Dnz( nz  ,0:ny+1,0:nx+1))
+    allocate(grid(lev)%dummy3Dnzp(nz+1,0:ny+1,0:nx+1))
  
     do lev=1,nlevs
        nx = grid(lev)%nx
@@ -709,6 +717,12 @@ contains
           if (associated(grid(lev)%h))              deallocate(grid(lev)%h)
           if (associated(grid(lev)%zr))             deallocate(grid(lev)%zr)
           if (associated(grid(lev)%zw))             deallocate(grid(lev)%zw)
+          if (associated(grid(lev)%dzw))            deallocate(grid(lev)%dzw)
+          if (associated(grid(lev)%zxdy))           deallocate(grid(lev)%zxdy)
+          if (associated(grid(lev)%zydx))           deallocate(grid(lev)%zydx)
+          if (associated(grid(lev)%cw))             deallocate(grid(lev)%cw)
+          if (associated(grid(lev)%dummy3Dnz))      deallocate(grid(lev)%dummy3Dnz)
+          if (associated(grid(lev)%dummy3Dnzp))     deallocate(grid(lev)%dummy3Dnzp)
           if (associated(grid(lev)%dummy3))         deallocate(grid(lev)%dummy3)
           if (associated(grid(lev)%gatherbuffer2D)) deallocate(grid(lev)%gatherbuffer2D)
           if (associated(grid(lev)%gatherbuffer))   deallocate(grid(lev)%gatherbuffer)
