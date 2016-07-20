@@ -1,6 +1,5 @@
 module mg_tictoc
-  ! intrinsec fortran funciton
-  ! cpu_time(time)  time in second
+  ! intrinsec fortran function
 
   implicit none
 
@@ -8,12 +7,13 @@ module mg_tictoc
 
   integer(kind=st), parameter :: levmax=32, submax=32
 
-  integer(kind = lg)  , dimension(levmax,submax) :: ntic
-  integer(kind = lg)  , dimension(levmax,submax) :: ntoc
-  real(kind = lg)  , dimension(levmax,submax) :: time
-  integer(kind=st) , dimension(levmax,submax) :: calls
-  character(len=32),dimension(submax)         :: subname
-  integer(kind=st) :: nblev = 0, nbsub = 0
+  integer(kind = lg) , dimension(levmax,submax) :: ntic
+  integer(kind = lg) , dimension(levmax,submax) :: ntoc
+  real(kind = lg)    , dimension(levmax,submax) :: time
+  integer(kind=st)   , dimension(levmax,submax) :: calls
+  character(len=32)  ,dimension(submax)         :: subname
+  integer(kind=st)                              :: nblev = 0
+  integer(kind=st)                              :: nbsub = 0
 
 contains
 
@@ -48,7 +48,7 @@ contains
           subname(nbsub)=TRIM(string)
 !          call cpu_time(ntic(lev,nbsub))
           call system_clock(ntic(lev,nbsub))
-          time(lev,nbsub)  = 0._8
+          time(lev,nbsub)  = 0._lg
           calls(lev,nbsub) = 0
        endif
 
@@ -61,7 +61,7 @@ contains
 !       call cpu_time(ntic(lev,nbsub))
        call system_clock(ntic(lev,nbsub))
 
-       time(lev,nbsub)  = 0._8
+       time(lev,nbsub)  = 0._lg
        calls(lev,nbsub) = 0
     endif
 
@@ -77,9 +77,8 @@ contains
     integer(kind=st) :: ns
     logical :: flag 
 
-    real*8:: rate
-    integer*8:: cr
-
+    real(kind=lg)   :: rate
+    integer(kind=st):: cr
 
     call system_clock(count_rate=cr)
 !    call system_clock(count_max=cm)

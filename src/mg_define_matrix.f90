@@ -18,7 +18,7 @@ module mg_define_matrix
 
   !NG comment: constants in a mg_cst.f90 file ?
   real(kind=rp), parameter :: one  = 1._rp
-  real(kind=rp), parameter :: eigh = one/8._8
+  real(kind=rp), parameter :: eigh = one/8._rp
   real(kind=rp), parameter :: qrt  = 0.25_rp
   real(kind=rp), parameter :: hlf  = 0.5_rp
 

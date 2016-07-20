@@ -575,7 +575,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     elseif ((lbc).and.(trim(cuv)=='v')) then
-       p(:,1,:) = 0._8
+       p(:,1,:) = 0._rp
     else !!Homogenous Neumann  
        p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
     endif
@@ -586,7 +586,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     elseif ((lbc).and.(trim(cuv)=='u')) then
-       p(:,:,nx+1) = 0._8
+       p(:,:,nx+1) = 0._rp
     else  !!Homogenous Neumann
        p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
     endif
@@ -597,7 +597,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     elseif ((lbc).and.(trim(cuv)=='v')) then 
-       p(:,ny+1,:) = 0._8
+       p(:,ny+1,:) = 0._rp
     else  !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
     endif
@@ -608,7 +608,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     elseif ((lbc).and.(trim(cuv)=='u')) then
-       p(:,:,1) = 0._8
+       p(:,:,1) = 0._rp
     else   !!Homogenous Neumann
        p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
     endif
@@ -621,7 +621,7 @@ contains
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     elseif ((lbc).and.(west.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')) then
-       p(:,1-nh:0,1-nh:0) = 0._8
+       p(:,1-nh:0,1-nh:0) = 0._rp
     elseif (south.ne.MPI_PROC_NULL) then
        flag_sw_s = .true.
     elseif (west.ne.MPI_PROC_NULL) then
@@ -638,7 +638,7 @@ contains
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
     elseif ((lbc).and.(east.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')) then
-       p(:,1-nh:0,nx+1:nx+nh) = 0._8
+       p(:,1-nh:0,nx+1:nx+nh) = 0._rp
     elseif (south.ne.MPI_PROC_NULL) then
        flag_se_s = .true.
     elseif (east.ne.MPI_PROC_NULL) then
@@ -656,7 +656,7 @@ contains
        comm(7)=7
     elseif (((lbc).and.(east.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')).or. &
          ((lbc).and.(trim(cuv)=='v')) ) then
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._8
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._rp
     elseif (north.ne.MPI_PROC_NULL) then
        flag_ne_n = .true.
     elseif (east.ne.MPI_PROC_NULL) then
@@ -674,7 +674,7 @@ contains
        comm(8)=8
     elseif ( ((lbc).and.(west.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')).or. &
          ((lbc).and.(trim(cuv)=='v')) ) then
-       p(:,ny+1:ny+nh,1-nh:0) = 0._8
+       p(:,ny+1:ny+nh,1-nh:0) = 0._rp
     elseif (north.ne.MPI_PROC_NULL) then
        flag_nw_n = .true.
     elseif (west.ne.MPI_PROC_NULL) then
@@ -957,7 +957,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     elseif ((lbc).and.(trim(cuv)=='v')) then
-       p(:,1,:) = 0._8
+       p(:,1,:) = 0._rp
     else !!Homogenous Neumann  
        p(:,1-nh:0,1:nx) = p(:,nh:1:-1,1:nx)
     endif
@@ -968,7 +968,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     elseif ((lbc).and.(trim(cuv)=='u')) then
-       p(:,:,nx+1) = 0._8
+       p(:,:,nx+1) = 0._rp
     else  !!Homogenous Neumann
        p(:,1:ny,nx+1:nx+nh) = p(:,1:ny,nx:nx-nh+1:-1)
     endif
@@ -979,7 +979,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     elseif ((lbc).and.(trim(cuv)=='v')) then 
-       p(:,ny+1,:) = 0._8
+       p(:,ny+1,:) = 0._rp
     else  !!Homogenous Neumann  
        p(:,ny+1:ny+nh,1:nx) = p(:,ny:ny-nh+1:-1,1:nx)
     endif
@@ -990,7 +990,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     elseif ((lbc).and.(trim(cuv)=='u')) then
-       p(:,:,1) = 0._8
+       p(:,:,1) = 0._rp
     else   !!Homogenous Neumann
        p(:,1:ny,1-nh:0) = p(:,1:ny,nh:1:-1)
     endif
@@ -1003,7 +1003,7 @@ contains
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     elseif ((lbc).and.(west.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')) then
-       p(:,1-nh:0,1-nh:0) = 0._8
+       p(:,1-nh:0,1-nh:0) = 0._rp
     elseif (south.ne.MPI_PROC_NULL) then
        flag_sw_s = .true.
     elseif (west.ne.MPI_PROC_NULL) then
@@ -1020,7 +1020,7 @@ contains
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
     elseif ((lbc).and.(east.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')) then
-       p(:,1-nh:0,nx+1:nx+nh) = 0._8
+       p(:,1-nh:0,nx+1:nx+nh) = 0._rp
     elseif (south.ne.MPI_PROC_NULL) then
        flag_se_s = .true.
     elseif (east.ne.MPI_PROC_NULL) then
@@ -1038,7 +1038,7 @@ contains
        comm(7)=7
     elseif (((lbc).and.(east.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')).or. &
          ((lbc).and.(trim(cuv)=='v')) ) then
-       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._8
+       p(:,ny+1:ny+nh,nx+1:nx+nh) = 0._rp
     elseif (north.ne.MPI_PROC_NULL) then
        flag_ne_n = .true.
     elseif (east.ne.MPI_PROC_NULL) then
@@ -1056,7 +1056,7 @@ contains
        comm(8)=8
     elseif ( ((lbc).and.(west.eq.MPI_PROC_NULL).and.(trim(cuv)=='u')).or. &
          ((lbc).and.(trim(cuv)=='v')) ) then
-       p(:,ny+1:ny+nh,1-nh:0) = 0._8
+       p(:,ny+1:ny+nh,1-nh:0) = 0._rp
     elseif (north.ne.MPI_PROC_NULL) then
        flag_nw_n = .true.
     elseif (west.ne.MPI_PROC_NULL) then
@@ -1300,7 +1300,7 @@ contains
             nstag,MPI_COMM_WORLD,req(1),ierr)
        comm(1)=1
     else !!Homogenous Neumann  
-       cA(:,:,0,1:nx) = 0._8 
+       cA(:,:,0,1:nx) = 0._rp 
     endif
 
     if (east.ne.MPI_PROC_NULL) then
@@ -1309,7 +1309,7 @@ contains
             wetag,MPI_COMM_WORLD,req(2),ierr)
        comm(2)=2
     else !!Homogenous Neumann
-       cA(:,:,1:ny,nx+1) = 0._8
+       cA(:,:,1:ny,nx+1) = 0._rp
     endif
 
     if (north.ne.MPI_PROC_NULL) then
@@ -1318,7 +1318,7 @@ contains
             sntag,MPI_COMM_WORLD,req(3),ierr)
        comm(3)=3
     else !!Homogenous Neumann  
-       cA(:,:,ny+1,1:nx) = 0._8
+       cA(:,:,ny+1,1:nx) = 0._rp
     endif
 
     if (west.ne.MPI_PROC_NULL) then
@@ -1327,7 +1327,7 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     else !!Homogenous Neumann
-       cA(:,:,1:ny,0) = 0._8
+       cA(:,:,1:ny,0) = 0._rp
     endif
 
     if (southwest.ne.MPI_PROC_NULL) then
@@ -1336,7 +1336,7 @@ contains
             neswtag,MPI_COMM_WORLD,req(5),ierr)
        comm(5)=5
     else !!Homogenous Neumann  
-       cA(:,:,0,0) = 0._8
+       cA(:,:,0,0) = 0._rp
     endif
 
     if (southeast.ne.MPI_PROC_NULL) then
@@ -1345,7 +1345,7 @@ contains
             nwsetag,MPI_COMM_WORLD,req(6),ierr)
        comm(6)=6
     else !!Homogenous Neumann  
-       cA(:,:,0,nx+1) = 0._8
+       cA(:,:,0,nx+1) = 0._rp
     endif
 
     if (northeast.ne.MPI_PROC_NULL) then
@@ -1354,7 +1354,7 @@ contains
             swnetag,MPI_COMM_WORLD,req(7),ierr)
        comm(7)=7
     else !!Homogenous Neumann  
-       cA(:,:,ny+1,nx+1) = 0._8
+       cA(:,:,ny+1,nx+1) = 0._rp
     endif
 
     if (northwest.ne.MPI_PROC_NULL) then
@@ -1363,7 +1363,7 @@ contains
             senwtag,MPI_COMM_WORLD,req(8),ierr)
        comm(8)=8
     else !!Homogenous Neumann  
-       cA(:,:,ny+1,0) = 0._8
+       cA(:,:,ny+1,0) = 0._rp
     endif
 
     !--------------------!

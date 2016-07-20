@@ -390,7 +390,7 @@ contains
     enddo
 
     ! Initialize pressure to zero
-    grid(1)%p(:,:,:) = 0._8
+    grid(1)%p(:,:,:) = 0._rp
 
     if (myrank==0) write(*,*)'  - define gather informations'
     ! Call the routine which calculate gather informations
@@ -426,9 +426,9 @@ contains
     ! we have 
     ! nhoriz = ncoarsest * 2^(nlevs-1)
     ! thus nlevs = ...
-    nl1 = 1+floor( log( nhoriz*1._8 / ncoarsest*1._8) / log(2._8) )
+    nl1 = 1+floor( log( nhoriz*1._rp / ncoarsest*1._rp) / log(2._rp) )
 
-    nl2 = 1+floor( log( nzg*1._8 / nzmin*1._8) / log(2._8) )
+    nl2 = 1+floor( log( nzg*1._rp / nzmin*1._rp) / log(2._rp) )
 
     ! NLEVS: global variable which store the number of grid levels
     nlevs = min(nl1,nl2) 
