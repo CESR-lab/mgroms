@@ -52,11 +52,8 @@ contains
        call fine2coarse_2D(r,b,nx,ny)
 
     else
-       call tic(lev,'fine2coarse_3D')
 
        call fine2coarse_3D(r,b,nx,ny,nz)
-
-      call toc(lev,'fine2coarse_3D')
 
     end if
 

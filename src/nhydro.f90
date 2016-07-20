@@ -3,6 +3,7 @@ module nhydro
   use mg_mpi
   use mg_grids
   use mg_namelist
+  use mg_tictoc
   use mg_mpi_exchange
   use mg_netcdf_out
   use mg_compute_rhs
@@ -63,9 +64,13 @@ contains
     real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
 
     real(kind=rp), dimension(:,:,:), pointer :: u, v, w
+    real(kind=rp), dimension(:,:,:), allocatable, target :: ub, vb, wb
 
     real(kind=rp)    :: tol
     integer(kind=ip) :: maxite
+    integer(kind=ip) :: i, j, k
+
+    call tic(1,'nhydro_solve')
 
     tol    = solver_prec    ! solver_prec    is defined in the namelist file
     maxite = solver_maxiter ! solver_maxiter is defined in the namelist file
@@ -75,7 +80,9 @@ contains
     w => wa
 
     !- Step 1 - 
+    call tic(1,'compute_rhs')
     call compute_rhs(u, v, w)
+    call toc(1,'compute_rhs')
 
     if (netcdf_output) then
        call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=1)
@@ -99,6 +106,8 @@ contains
 
     !- Step 3 -
     call correct_uvw(u,v,w)
+
+    call toc(1,'nhydro_solve')
 
   end subroutine nhydro_solve
 

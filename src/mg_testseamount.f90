@@ -33,12 +33,12 @@ program mg_testseamount
   call tic(1,'mg_bench_seamount')
 
   ! global domain dimensions
-  nxg   = 64
-  nyg   = 64
+  nxg   = 128
+  nyg   = 128
   nzg   = 64
 
-  npxg  = 2
-  npyg  = 2
+  npxg  = 1
+  npyg  = 1
 
   Lx   =  1.e4_rp
   Ly   =  1.e4_rp

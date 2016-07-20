@@ -26,7 +26,7 @@ contains
     integer(kind=ip) :: nx,ny,nz
     real(kind=rp), dimension(:,:,:), pointer :: p,b,r
 
-    real(kind = lg) :: tstart,tend,perf
+    real(kind=lg) :: tstart,tend,perf
     real(kind=rp) :: rnxg,rnyg,rnzg
     real(kind=rp) :: rnpxg,rnpyg
 
@@ -85,7 +85,7 @@ contains
        rnzg=real(grid(1)%nz,kind=rp)
        ! the rescaled time should be expressed in terms of error reduction,
        ! therefore the ratio rnorm/rnorm0 [the rnorm0 was missing prior Dec 11th]
-       perf = (tend-tstart)*(rnpxg*rnpyg)/(-log(rnorm/rnorm0)/log(10._8))/(rnxg*rnyg*rnzg)
+       perf = (tend-tstart)*(rnpxg*rnpyg)/(-log(rnorm/rnorm0)/log(10._rp))/(rnxg*rnyg*rnzg)
        write(*,*)'--- summary ---'
        write(*,'(A,F8.3,A)')"time spent to solve :",tend-tstart," s"
        write(*,'(A,E10.3)')"rescaled performance:",perf
@@ -101,6 +101,8 @@ contains
 
     integer(kind=ip):: lev,maxlev
 
+    call tic(1,'Fcycle')
+
     maxlev=nlevs
 
     do lev=1,maxlev-1
@@ -114,6 +116,8 @@ contains
        call coarse2fine(lev) 
        call Vcycle(lev)
     enddo
+
+    call toc(1,'Fcycle')
 
   end subroutine Fcycle
 
@@ -172,12 +176,12 @@ contains
   subroutine norm(lev,x,y,nx,ny,nz,res)
 
     use mg_mpi_exchange
-    integer(kind=4) :: lev,i,j,k
-    integer(kind=4) :: nx,ny,nz
-    real(kind=8) :: r,res
-    real(kind=8),dimension(:,:,:)  , pointer :: x,y
+    integer(kind=ip) :: lev,i,j,k
+    integer(kind=ip) :: nx,ny,nz
+    real(kind=rp) :: r,res
+    real(kind=rp),dimension(:,:,:)  , pointer :: x,y
 
-    r=0._8
+    r=0._rp
 
     do i=1,nx
        do j=1,ny
@@ -194,13 +198,13 @@ contains
   !---------------------------------------------------------------------
   subroutine testgalerkin(lev)
 
-    real(kind=8) :: norm_c,norm_f,dummy
-    integer(kind=4) :: lev,nx,ny,nz,i,j,k
-    character(len = 16) :: filen
+    real(kind=rp) :: norm_c,norm_f,dummy
+    integer(kind=ip) :: lev,nx,ny,nz,i,j,k
+    character(len=16) :: filen
 
 
-    integer(kind=4) :: npx,npy,pi,pj
-    real(kind=8) :: x,y,z,cff
+    integer(kind=ip) :: npx,npy,pi,pj
+    real(kind=rp) :: x,y,z,cff
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
@@ -215,27 +219,27 @@ contains
 
     call random_number(grid(lev)%p)!
     do i=1,nx
-       x=(1._8*i-0.5+pi*nx)/(npx*nx) -0.3
+       x=(1._rp*i-0.5_rp+pi*nx)/(npx*nx) -0.3_rp
        do j=1,ny
-          y=(1._8*j-0.5+pj*ny)/(npy*ny)-0.4
+          y=(1._rp*j-0.5_rp+pj*ny)/(npy*ny)-0.4_rp
           do k=1,nz
-             z=(1._8*k-0.5)/nz-0.2
-             cff = exp( - (x*x+y*y+z*z)*30 )
+             z=(1._rp*k-0.5_rp)/nz-0.2_rp
+             cff = exp( - (x*x+y*y+z*z)*30._rp )
              !             grid(lev)%p(k,j,i)= cff
              !!NG grid(lev)%p(k,j,i)= grid(lev)%p(k,j,i)*grid(lev)%rmask(j,i)
-             !             grid(lev)%p(k,j,i)= 1._8*grid(lev)%rmask(j,i)
-             !             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._8*grid(lev)%rmask(j,i)
+             !             grid(lev)%p(k,j,i)= 1._rp*grid(lev)%rmask(j,i)
+             !             grid(lev)%p(k,j,i)= (i)*(nz+0.5-k)*1._rp*grid(lev)%rmask(j,i)
           enddo
        enddo
     enddo
-    !    grid(lev)%p(2,:,:)=0._8
+    !    grid(lev)%p(2,:,:)=0._rp
     call fill_halo(lev,grid(lev)%p)
 
     !    write(filen,'("p_",i1,".nc")') lev
     !    call write_netcdf(grid(lev)%p,vname='p',netcdf_file_name=filen,rank=myrank)
 
 
-    grid(lev)%b = 0._8
+    grid(lev)%b = 0._rp
     call compute_residual(lev,dummy)    
     call norm(lev,grid(lev)%p,grid(lev)%r,nx,ny,nz,norm_c)
 
@@ -247,7 +251,7 @@ contains
        call write_netcdf(grid(lev)%r,vname='r',netcdf_file_name=filen,rank=myrank)
     endif
 
-    grid(lev-1)%p = 0._8 
+    grid(lev-1)%p = 0._rp
     call coarse2fine(lev-1) ! interpolate p to r and add r to p
 
     if (netcdf_output) then
@@ -255,8 +259,8 @@ contains
        call write_netcdf(grid(lev-1)%p,vname='p',netcdf_file_name=filen,rank=myrank)
     endif
 
-    !    grid(lev-1)%p(:,:,:)= 1._8
-    grid(lev-1)%b = 0._8
+    !    grid(lev-1)%p(:,:,:)= 1._rp
+    grid(lev-1)%b = 0._rp
     call compute_residual(lev-1,dummy)
 
     if (netcdf_output) then
