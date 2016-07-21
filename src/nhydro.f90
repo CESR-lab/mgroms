@@ -57,11 +57,9 @@ contains
     real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
 
     real(kind=rp), dimension(:,:,:), pointer :: u, v, w
-    real(kind=rp), dimension(:,:,:), allocatable, target :: ub, vb, wb
 
     real(kind=rp)    :: tol
     integer(kind=ip) :: maxite
-    integer(kind=ip) :: i, j, k
 
     call tic(1,'nhydro_solve')
 
@@ -86,10 +84,10 @@ contains
     !- step 2 -
     call solve_p(tol,maxite)
 
-!!$    if (netcdf_output) then
-!!$       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
-!!$       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
-!!$    endif
+    if (netcdf_output) then
+       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
+       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
+    endif
 
     !- step 3 -
     call correct_uvw(u,v,w)
@@ -120,9 +118,9 @@ contains
 
     call compute_rhs(u,v,w)
 
-!!$    if (netcdf_output) then
-!!$       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check.nc',rank=myrank,iter=iter)
-!!$    endif
+    if (netcdf_output) then
+       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check.nc',rank=myrank,iter=iter)
+    endif
 
   end subroutine nhydro_check_nondivergence
 

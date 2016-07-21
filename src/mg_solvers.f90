@@ -30,6 +30,10 @@ contains
     real(kind=rp) :: rnxg,rnyg,rnzg
     real(kind=rp) :: rnpxg,rnpyg
 
+    if (myrank==0) write(*,*)'- solve p:'
+
+    grid(1)%p(:,:,:) = 0._rp
+
     p  => grid(1)%p
     b  => grid(1)%b
     r  => grid(1)%r

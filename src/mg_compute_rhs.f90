@@ -113,31 +113,7 @@ contains
 
              uf(k,j,i) =  qrt                                               * & 
                   ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
-                  ( dy(j,i) + dy(j,i-1) )
-
-          enddo
-
-       enddo
-    enddo
-
-   do i = 1,nx+1  ! West  to East
-       do j = 1,ny ! South to North
-
-          do k = 2,nz-1 !interior levels
-
-             uf(k,j,i) =  uf(k,j,i) * u(i,j,k) 
-
-          enddo
-
-       enddo
-    enddo
-
-    do i = 1,nx+1  ! West  to East
-       do j = 1,ny ! South to North
-
-          do k = 2,nz-1 !interior levels
-
-             uf(k,j,i) =  uf(k,j,i) &
+                  ( dy(j,i) + dy(j,i-1) ) * u(i,j,k)                          &
                   - qrt * ( &
                   + zxdy(k,j,i  ) * dzw(k  ,j,i  ) * w(i  ,j,k  -1) &
                   + zxdy(k,j,i  ) * dzw(k+1,j,i  ) * w(i  ,j,k+1-1) &
@@ -233,7 +209,9 @@ contains
 
           do k = 2,nz-1 !interior levels
 
-             vf(k,j,i) = vf(k,j,i) &
+             vf(k,j,i) = qrt * &
+                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
+                  ( dx(j,i) + dx(j-1,i) ) * v(i,j,k) &
                   - qrt * ( &
                   + zydx(k,j  ,i) * dzw(k  ,j  ,i) * w(i,j  ,k  -1) &
                   + zydx(k,j  ,i) * dzw(k+1,j  ,i) * w(i,j  ,k+1-1) &
@@ -250,10 +228,6 @@ contains
 
     do i = 1,nx
        do j = 1,ny+1
-
-          Ary = qrt * &
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-               ( dx(j,i) + dx(j-1,i) )
 
           vf(k,j,i) =  &
                qrt                                                       * &
@@ -310,29 +284,7 @@ contains
 
           do k = 2,nz !interior levels
 
-             wf(k,j,i) = cw(k,j,i) * dzw(k,j,i)
-
-          enddo
-       enddo
-    enddo
-
-    do i = 1,nx
-       do j = 1,ny
-
-          do k = 2,nz !interior levels
-
-             wf(k,j,i) = wf(k,j,i) * w(i,j,k-1) 
-
-          enddo
-       enddo
-    enddo
-
-    do i = 1,nx
-       do j = 1,ny
-
-          do k = 2,nz !interior levels
-
-             wf(k,j,i) = wf(k,j,i) &
+             wf(k,j,i) = cw(k,j,i) * dzw(k,j,i)* w(i,j,k-1) &
                   - qrt * hlf * ( &
                   + zxdy(k  ,j,i) * ( dx(j,i  ) + dx(j,i-1) ) * u(i  ,j,k  ) &
                   + zxdy(k  ,j,i) * ( dx(j,i+1) + dx(j,i  ) ) * u(i+1,j,k  ) &
