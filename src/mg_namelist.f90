@@ -32,8 +32,6 @@ module mg_namelist
 
   logical           :: netcdf_output = .false. !- .false. or .true.
 
-  character(len=16) :: bench =''               !- 'seamount'
-
   namelist/nhparam/    &
        solver_prec   , &
        solver_maxiter, &

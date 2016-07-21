@@ -88,24 +88,4 @@ contains
 
   end subroutine correct_uvw
 
-  !-------------------------------------------------------------------------     
-  subroutine check_correction(nx,ny,nz,ua,va,wa)
-
-    integer(kind=ip), intent(in) :: nx, ny, nz
-    real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
-    real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
-    real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
-
-    real(kind=rp), dimension(:,:,:), pointer :: u, v, w
-
-    if (myrank==0) write(*,*)'- check correction:'
-
-    u => ua
-    v => va
-    w => wa
-
-    call compute_rhs(u,v,w)
-
-  end subroutine check_correction
-
 end module mg_correct_uvw

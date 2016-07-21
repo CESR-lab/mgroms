@@ -14,7 +14,7 @@ module mg_solvers
 contains
 
   !---------------------------------------------------------------------
-  subroutine solve(tol,maxite)
+  subroutine solve_p(tol,maxite)
 
     real(kind=rp)   , intent(in) :: tol
     integer(kind=ip), intent(in) :: maxite
@@ -94,7 +94,7 @@ contains
 
 10  format("ite = ",I2,": res = ",E10.3," / conv = ",F10.3)
 
-  end subroutine solve
+  end subroutine solve_p
 
   !---------------------------------------------------------------------
   subroutine Fcycle()

@@ -24,7 +24,7 @@ program mg_testseamount
 
   integer(kind=ip) :: np, ierr, rank
 
-  real(kind=rp), dimension(:,:), pointer :: dx, dy, h
+  real(kind=rp), dimension(:,:), pointer :: dx, dy, zeta, h
   real(kind=rp) :: hc, theta_b, theta_s
 
   integer(kind=ip) :: pi, pj
@@ -32,21 +32,15 @@ program mg_testseamount
 
   call tic(1,'mg_bench_seamount')
 
-  ! global domain dimensions
+  !---------------------!
+  !- Global/local dim  -!
+  !---------------------!
   nxg   = 64
   nyg   = 64
   nzg   = 64
 
-  npxg  = 2
-  npyg  = 2
-
-  Lx   =  1.e4_rp
-  Ly   =  1.e4_rp
-  Htot =  4.e3_rp 
-
-  hc      = 0._8
-  theta_b = 0._8
-  theta_s = 0._8
+  npxg  = 1
+  npyg  = 1
 
   call mpi_init(ierr)
   call mpi_comm_rank(mpi_comm_world, rank, ierr)
@@ -61,105 +55,126 @@ program mg_testseamount
   ny = nyg / npyg
   nz = nzg
 
-  allocate( h(0:ny+1,0:nx+1))
-  allocate(dx(0:ny+1,0:nx+1))
-  allocate(dy(0:ny+1,0:nx+1))
-
-  call setup_seamount(nx, ny, nz, npxg, npyg, Lx, Ly, Htot, dx, dy, h)
-
   !---------------------!
   !- Initialise nhydro -!
   !---------------------!
-  if (rank == 0) write(*,*)'Initialise NHydro (grids, cA, params, etc) '
-  call nhydro_init(nx, ny, nz, npxg, npyg, dx, dy, h, hc, theta_b, theta_s, test='seamount')
+  if (rank == 0) write(*,*)'Initialise nhydro grids'
+
+  call nhydro_init(nx,ny,nz,npxg,npyg)
+
+  !---------------------!
+  !- Setup seamount    -!
+  !---------------------!
+  if (rank == 0) write(*,*)'Initialise seamount bench'
+
+  Lx   =  1.e4_rp
+  Ly   =  1.e4_rp
+  Htot =  4.e3_rp 
+
+  hc      = 20._8
+  theta_b = 0._8
+  theta_s = 1._8
+
+  allocate(  dx(0:ny+1,0:nx+1))
+  allocate(  dy(0:ny+1,0:nx+1))
+  allocate(zeta(0:ny+1,0:nx+1))
+  allocate(   h(0:ny+1,0:nx+1))
+
+  call setup_seamount(nx,ny,nz,npxg,npyg,Lx,Ly,Htot,dx,dy,zeta,h)
+
+  call nhydro_matrices(dx,dy,zeta,h,hc,theta_b,theta_s)
 
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
   !-------------------------------------!
-  if (rank == 0) write(*,*)'u, v, w initialisation...'
+  if (rank == 0) write(*,*)'Initialise u, v, w'
 
   allocate(u(1:nx+1,0:ny+1,1:nz))
   allocate(v(0:nx+1,1:ny+1,1:nz))
   allocate(w(0:nx+1,0:ny+1,0:nz))
 
-  pj = myrank/npxg
-  pi = mod(myrank,npxg)
+  u(:,:,:)      =  0._8
+  v(:,:,:)      =  0._8
 
-  ib = 1 + pi * nx
-  jb = 1 + pj * ny
+  w(:,:,0)      =  0._8
+  w(:,:,1:nz-1) = -1._8
+  w(:,:,nz)     =  0._8
 
-  ie = ib + nx - 1
-  je = jb + ny - 1
-
-  kb = 1
-  ke = nz
-
-  allocate(tmp_rnd(1:nxg,1:nyg,1:nzg))
-
-  call random_number(tmp_rnd)
-  tmp_rnd = 2._8 * tmp_rnd - 1._8
-  u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-  up => u
-  call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
-
-  call random_number(tmp_rnd)
-  tmp_rnd = 2._8 * tmp_rnd - 1._8
-  v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-  vp => v
-  call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
-
-  deallocate(tmp_rnd)
-  allocate(tmp_rnd(1:nxg,1:nyg,0:nzg))
-
-  kb = 0
-  ke = nz
-
-  call random_number(tmp_rnd)
-  tmp_rnd = 2._8 * tmp_rnd - 1._8
-  w(1:nx,1:ny,0:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-  wp => w
-  call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
-
-  deallocate(tmp_rnd)
+!!$  pj = myrank/npxg
+!!$  pi = mod(myrank,npxg)
+!!$
+!!$  ib = 1 + pi * nx
+!!$  jb = 1 + pj * ny
+!!$
+!!$  ie = ib + nx - 1
+!!$  je = jb + ny - 1
+!!$
+!!$  kb = 1
+!!$  ke = nz
+!!$
+!!$  allocate(tmp_rnd(1:nxg,1:nyg,1:nzg))
+!!$
+!!$  call random_number(tmp_rnd)
+!!$  tmp_rnd = 2._8 * tmp_rnd - 1._8
+!!$  u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+!!$  up => u
+!!$  call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
+!!$
+!!$  call random_number(tmp_rnd)
+!!$  tmp_rnd = 2._8 * tmp_rnd - 1._8
+!!$  v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+!!$  vp => v
+!!$  call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
+!!$
+!!$  deallocate(tmp_rnd)
+!!$  allocate(tmp_rnd(1:nxg,1:nyg,0:nzg))
+!!$
+!!$  kb = 0
+!!$  ke = nz
+!!$
+!!$  call random_number(tmp_rnd)
+!!$  tmp_rnd = 2._8 * tmp_rnd - 1._8
+!!$  w(1:nx,1:ny,0:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+!!$  wp => w
+!!$  call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
+!!$
+!!$  deallocate(tmp_rnd)
 
   if (netcdf_output) then
-     call write_netcdf(up,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=0)
-     call write_netcdf(vp,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=0)
-     call write_netcdf(wp,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=0)
+     call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=0)
+     call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=0)
+     call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=0)
   endif
 
   !----------------------!
   !- Call nhydro solver -!
   !----------------------!
   if (rank == 0) write(*,*)'Call nhydro solver'
+
   call nhydro_solve(nx,ny,nz,u,v,w)
 
   if (netcdf_output) then
-     call write_netcdf(up,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=2)
-     call write_netcdf(vp,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=2)
-     call write_netcdf(wp,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=2)
+     call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=1)
+     call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=1)
+     call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=1)
   endif
 
   !------------------------------------------------------------!
-  !- Call nhydro correct to check if nh correction is correct -!
+  !- Check if nh correction is correct                        -!
   !------------------------------------------------------------!
-  if (rank == 0) write(*,*)'Call nhydro correct'
-  call check_correction(nx,ny,nz,u,v,w)
+  if (rank == 0) write(*,*)'Check nondivergence'
+
+  call nhydro_check_nondivergence(nx,ny,nz,u,v,w)
 
   if (netcdf_output) then
-     call write_netcdf(up,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=3)
-     call write_netcdf(vp,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=3)
-     call write_netcdf(wp,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=3)
-  endif
-
-  if (netcdf_output) then
-     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=2)
+     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=1)
   endif
 
   !---------------------!
   !- Deallocate memory -!
   !---------------------!
-  if (rank == 0) write(*,*)'Cleaning memory before to finish the program.'
+  if (rank == 0) write(*,*)'Clean memory'
+
   call nhydro_clean()
 
   !----------------------!

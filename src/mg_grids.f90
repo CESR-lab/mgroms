@@ -40,6 +40,7 @@ module mg_grids
 
      real(kind=rp),dimension(:,:)  ,pointer :: dx => null()   ! Mesh in x  (1 halo point)
      real(kind=rp),dimension(:,:)  ,pointer :: dy => null()   ! Mesh in y  (1 halo point)
+     real(kind=rp),dimension(:,:)  ,pointer :: zeta  => null()   ! Free-surface anomaly (2 halo points)
      real(kind=rp),dimension(:,:)  ,pointer :: h  => null()   ! Topography (2 halo points)
      real(kind=rp),dimension(:,:,:),pointer :: zr => null()   ! Mesh in z at rho point (nz  , 2 halo points)
      real(kind=rp),dimension(:,:,:),pointer :: zw => null()   ! Mesh in z at w point   (nz+1, 2 halo points)
@@ -172,6 +173,7 @@ contains
        ny = grid(lev)%ny
        nz = grid(lev)%nz
        ! Halo point is two for topography and vertical mesh !
+       allocate(grid(lev)%zeta(   -1:ny+2,-1:nx+2))
        allocate(grid(lev)%h(      -1:ny+2,-1:nx+2))
        allocate(grid(lev)%zr(  nz,-1:ny+2,-1:nx+2))
        allocate(grid(lev)%zw(nz+1,-1:ny+2,-1:nx+2))

@@ -9,50 +9,43 @@ module nhydro
   use mg_correct_uvw
   use mg_solvers
 
-
   implicit none
 
 contains
 
   !--------------------------------------------------------------
-  subroutine nhydro_init(  &
-       nx, ny, nz,         &
-       npxg, npyg,         &
-       dx,dy,h,            &
-       hc,theta_b,theta_s, &
-       test)
-
+  subroutine nhydro_init(nx,ny,nz,npxg,npyg)
+      
     integer(kind=ip), intent(in) :: nx, ny, nz
     integer(kind=ip), intent(in) :: npxg, npyg
-    real(kind=rp), dimension(:,:), intent(inout) :: dx, dy, h
-    real(kind=rp),  intent(in) :: hc, theta_b, theta_s
-    character(len=*), optional :: test
 
     call mg_mpi_init()
 
-    hlim      = hc
-    nhtheta_b = theta_b
-    nhtheta_s = theta_s
-
-    !- read the NonHydro namelist file if it is present 
-    !- else default values and print them (or not).
     call read_nhnamelist(vbrank=myrank)
 
-    call define_grids(npxg, npyg, nx, ny, nz)
+    call define_grids(npxg,npyg,nx,ny,nz)
 
     call define_neighbours()
 
     call print_grids()
 
-    if (present(test)) then
-       if (trim(test)=='seamount') then
-          bench = 'seamount'
-       endif
-    endif
-
-    call define_matrices(dx, dy, h)
-
   end subroutine nhydro_init
+
+  !--------------------------------------------------------------
+  subroutine nhydro_matrices(dx,dy,zeta,h,hc,theta_b,theta_s)
+
+    real(kind=rp), dimension(:,:), intent(in) :: dx, dy, zeta, h
+    real(kind=rp),                 intent(in) :: hc, theta_b, theta_s
+
+    if (myrank==0) write(*,*)' nhydro_matrices:'
+
+    hlim      = hc
+    nhtheta_b = theta_b
+    nhtheta_s = theta_s
+
+    call define_matrices(dx,dy,zeta,h)
+
+  end subroutine nhydro_matrices
 
   !--------------------------------------------------------------
   subroutine nhydro_solve(nx,ny,nz,ua,va,wa)
@@ -74,33 +67,55 @@ contains
     v => va
     w => wa
 
-    !- Step 1 - 
-    call compute_rhs(u, v, w)
+    if (myrank==0) write(*,*)' nhydro_solve:'
+
+    !- step 1 - 
+    call compute_rhs(u,v,w)
 
     if (netcdf_output) then
-       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=1)
+       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank)
     endif
-
-    if (netcdf_output) then
-       call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=1)
-       call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=1)
-       call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=1)
-    endif
-
-    grid(1)%p(:,:,:) = 0._rp
 
     !- step 2 -
-    call solve(tol,maxite)
+    call solve_p(tol,maxite)
 
-    if (netcdf_output) then
-       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p_end.nc',rank=myrank)
-       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r_end.nc',rank=myrank)
-    endif
+!!$    if (netcdf_output) then
+!!$       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
+!!$       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
+!!$    endif
 
-    !- Step 3 -
+    !- step 3 -
     call correct_uvw(u,v,w)
 
   end subroutine nhydro_solve
+
+  !--------------------------------------------------------------
+  subroutine nhydro_check_nondivergence(nx,ny,nz,ua,va,wa)
+
+    integer(kind=ip), intent(in) :: nx, ny, nz
+
+    real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
+    real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
+    real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
+
+    real(kind=rp), dimension(:,:,:), pointer :: u, v, w
+
+    integer(kind=ip), save :: iter=0
+    iter = iter + 1
+
+    u => ua
+    v => va
+    w => wa
+
+    if (myrank==0) write(*,*)'- check non-divergence:'
+
+    call compute_rhs(u,v,w)
+
+!!$    if (netcdf_output) then
+!!$       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check.nc',rank=myrank,iter=iter)
+!!$    endif
+
+  end subroutine nhydro_check_nondivergence
 
   !--------------------------------------------------------------
   subroutine nhydro_clean()

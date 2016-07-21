@@ -43,18 +43,17 @@ contains
   end subroutine setup_zr_zw_seamount
 
   !-------------------------------------------------------------------------     
-  subroutine setup_zr_zw_croco(hlim,theta_b,theta_s,h,zr,zw,coord_type)
+  subroutine setup_zr_zw_croco(hlim,theta_b,theta_s,zeta,h,zr,zw,coord_type)
 
-    ! compute zr and zw from h(j,i)
+    ! compute zr and zw from zeta(j,i) and h(j,i)
 
     integer(kind=4),parameter :: ip=4,rp=8
 
     real(kind=rp), intent(in) :: hlim
     real(kind=rp), intent(in) :: theta_b
     real(kind=rp), intent(in) :: theta_s
-    real(kind=rp), dimension(:,:)  , pointer, intent(in)  :: h
-    real(kind=rp), dimension(:,:,:), pointer, intent(out) :: zr
-    real(kind=rp), dimension(:,:,:), pointer, intent(out) :: zw
+    real(kind=rp), dimension(:,:)  , pointer, intent(in)  :: zeta, h
+    real(kind=rp), dimension(:,:,:), pointer, intent(out) :: zr, zw
 
     character(len=*), optional, intent(in) :: coord_type
 
@@ -102,6 +101,8 @@ contains
 
              cff=one/real(nz,kind=rp)
 
+             hinv = one / (h(j,i)+hlim)
+
              do k = 1,nz
 
                 sc_r = cff*(real(k-nz,kind=rp)-hlf)
@@ -138,15 +139,31 @@ contains
                 z_w0 = cff_w + cs_w*h(j,i)
                 z_r0 = cff_r + cs_r*h(j,i)
 
-                hinv = one / (h(j,i)+hlim)
+                zw(k,j,i) = z_w0*h(j,i)*hinv + zeta(j,i)*(1.+z_w0*hinv)
+                zr(k,j,i) = z_r0*h(j,i)*hinv + zeta(j,i)*(1.+z_r0*hinv)
 
-                zw(k,j,i) = z_w0 * (h(j,i)*hinv)
-                zr(k,j,i) = z_r0 * (h(j,i)*hinv)
+             enddo
 
-             enddo ! k
+             k = nz+1
 
-             zw(nz+1,j,i) = nul
+             sc_w = cff*real(k-1-nz,kind=rp)
 
+             if (theta_s > nul) then
+                cswf=(one-cosh(theta_s*sc_w))/(cosh(theta_s)-one)
+             else
+                cswf=-sc_w**2
+             endif
+
+             if (theta_b > nul) then
+                cs_w=(exp(theta_b*cswf)-one)/(one-exp(-theta_b))
+             else
+                cs_w=cswf
+             endif
+
+             cff_w = hlim * sc_w
+             z_w0 = cff_w + cs_w*h(j,i)
+             zw(k,j,i) = z_w0*h(j,i)*hinv + zeta(j,i)*(1.+z_w0*hinv)
+             
           enddo ! j
        enddo ! i
 

@@ -34,9 +34,8 @@ contains
     real(kind=rp), parameter :: qrt  = 0.25_rp
     real(kind=rp), parameter :: zero = 0._rp
 
-    integer(kind=ip), save :: iter=0
-
-    iter = iter + 1
+!    integer(kind=ip), save :: iter=0
+!    iter = iter + 1
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -138,9 +137,9 @@ contains
 
     call fill_halo(1,uf,lbc_null='u')
 
-    if (netcdf_output) then
-       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
-    endif
+!!$    if (netcdf_output) then
+!!$       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
+!!$    endif
 
     do i = 1,nx
        do j = 1,ny 
@@ -192,7 +191,7 @@ contains
                hlf * ( dx(j-1,i+1) + dx(j-1,i  ) ) * u(i+1,j-1,k)) &
                ) 
 
-          do k = 2,nz !interior levels
+          do k = 2,nz-1 !interior levels
 
              Ary = qrt * &
                   ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
@@ -227,9 +226,9 @@ contains
 
     call fill_halo(1,vf,lbc_null='v')
 
-    if (netcdf_output) then
-       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
-    endif
+!!$    if (netcdf_output) then
+!!$       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
+!!$    endif
 
     do i = 1,nx
        do j = 1,ny 
@@ -289,9 +288,9 @@ contains
        enddo
     enddo
 
-    if (netcdf_output) then
-       call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank,iter=iter)
-    endif
+!!$    if (netcdf_output) then
+!!$       call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank,iter=iter)
+!!$    endif
 
     do i = 1,nx
        do j = 1,ny 
