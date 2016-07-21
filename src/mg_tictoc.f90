@@ -1,6 +1,5 @@
 module mg_tictoc
-  ! intrinsec fortran funciton
-  ! cpu_time(time)  time in second
+  ! intrinsec fortran function
 
   implicit none
 
@@ -8,12 +7,13 @@ module mg_tictoc
 
   integer(kind=st), parameter :: levmax=32, submax=32
 
-  real(kind = lg)  , dimension(levmax,submax) :: ntic
-  real(kind = lg)  , dimension(levmax,submax) :: ntoc
-  real(kind = lg)  , dimension(levmax,submax) :: time
-  integer(kind=st) , dimension(levmax,submax) :: calls
-  character(len=32),dimension(submax)         :: subname
-  integer(kind=st) :: nblev = 0, nbsub = 0
+  integer(kind = lg) , dimension(levmax,submax) :: ntic
+  integer(kind = lg) , dimension(levmax,submax) :: ntoc
+  real(kind = lg)    , dimension(levmax,submax) :: time
+  integer(kind=st)   , dimension(levmax,submax) :: calls
+  character(len=32)  ,dimension(submax)         :: subname
+  integer(kind=st)                              :: nblev = 0
+  integer(kind=st)                              :: nbsub = 0
 
 contains
 
@@ -33,7 +33,8 @@ contains
        !- if yes -> cpu_time(tic)
        do ns=1, nbsub
           if (TRIM(string) == subname(ns)) then
-             call cpu_time(ntic(lev,ns))
+             !call cpu_time(ntic(lev,ns))
+             call system_clock(ntic(lev,ns))
              flag = .false.
              exit
           endif
@@ -45,8 +46,9 @@ contains
        if (flag) then
           nbsub = nbsub + 1
           subname(nbsub)=TRIM(string)
-          call cpu_time(ntic(lev,nbsub))
-          time(lev,nbsub)  = 0._8
+!          call cpu_time(ntic(lev,nbsub))
+          call system_clock(ntic(lev,nbsub))
+          time(lev,nbsub)  = 0._lg
           calls(lev,nbsub) = 0
        endif
 
@@ -56,8 +58,10 @@ contains
        !- cpu_time(tic)
        nbsub = 1
        subname(nbsub)=TRIM(string)
-       call cpu_time(ntic(lev,nbsub))
-       time(lev,nbsub)  = 0._8
+!       call cpu_time(ntic(lev,nbsub))
+       call system_clock(ntic(lev,nbsub))
+
+       time(lev,nbsub)  = 0._lg
        calls(lev,nbsub) = 0
     endif
 
@@ -73,14 +77,22 @@ contains
     integer(kind=st) :: ns
     logical :: flag 
 
+    real(kind=lg)   :: rate
+    integer(kind=st):: cr
+
+    call system_clock(count_rate=cr)
+!    call system_clock(count_max=cm)
+    rate = real(cr)
+
     if (nbsub > 0) then
 
        flag = .true.
 
        do ns=1, nbsub
           if (TRIM(string) == subname(ns)) then
-             call cpu_time(ntoc(lev,ns))
-             time(lev,ns) = time(lev,ns) + ntoc(lev,ns) - ntic(lev,ns)
+!             call cpu_time(ntoc(lev,ns))
+             call system_clock(ntoc(lev,ns))
+             time(lev,ns) = time(lev,ns) + (ntoc(lev,ns) - ntic(lev,ns))/rate
              calls(lev,ns) = calls(lev,ns) + 1
              if (lev > nblev) nblev = lev
              flag = .false.

@@ -11,16 +11,16 @@ contains
   !-------------------------------------------------------------------------     
   subroutine rhs_seamount()
 
-    integer(kind=4):: nx,ny,nz
-    integer(kind=4):: i,j,k
-    integer(kind=4):: pi, pj
-    integer(kind=4):: npxg
+    integer(kind=ip):: nx,ny,nz
+    integer(kind=ip):: i,j,k
+    integer(kind=ip):: pi, pj
+    integer(kind=ip):: npxg
 
-    real(kind=8) :: bet, x, x1, z1, x2, z2
+    real(kind=rp) :: bet, x, x1, z1, x2, z2
 
-    real(kind=8), dimension(:,:,:), pointer :: rhs
-    real(kind=8), dimension(:,:,:), pointer :: zr
-    real(kind=8), dimension(:,:,:), pointer :: zw
+    real(kind=rp), dimension(:,:,:), pointer :: rhs
+    real(kind=rp), dimension(:,:,:), pointer :: zr
+    real(kind=rp), dimension(:,:,:), pointer :: zw
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -32,11 +32,11 @@ contains
     pi = myrank - pj * npxg
 
     ! rhs definition
-    bet = 600._8 / (Lx*Lx)
-    x1  = Lx   *  0.65_8
-    x2  = Lx   *  0.75_8
-    z1  = Htot * (0.75_8 - 1._8)
-    z2  = Htot * (0.65_8 - 1._8)
+    bet = 600._rp / (Lx*Lx)
+    x1  = Lx   *  0.65_rp
+    x2  = Lx   *  0.75_rp
+    z1  = Htot * (0.75_rp - 1._rp)
+    z2  = Htot * (0.65_rp - 1._rp)
 
     rhs => grid(1)%b
     zr  => grid(1)%zr
@@ -64,8 +64,8 @@ contains
   !-------------------------------------------------------------------------     
   subroutine rhs_random()
 
-    integer(kind=4):: nx,ny,nz
-    integer(kind=4):: i,j,k
+    integer(kind=ip):: nx,ny,nz
+    integer(kind=ip):: i,j,k
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -73,7 +73,7 @@ contains
 
     call random_number(grid(1)%b)
 
-    grid(1)%b = 2._8 * grid(1)%b - 1._8
+    grid(1)%b = 2._rp * grid(1)%b - 1._rp
 
     call fill_halo(1,grid(1)%b)
 
@@ -99,16 +99,16 @@ contains
     ! define the r.h.s. as a sum of random gaussian patches
     ! sign, width, location are random
 
-    integer(kind=4):: nx,ny,nz
-    integer(kind=4):: i,j,k,l
-    integer(kind=4):: npxg,npyg,pi,pj
-    integer(kind=4):: nbpatch,i0,j0,k0,sign
-    real(kind=8)   :: sigh2,sigv2,dh2,dv2,x0,y0,z0
+    integer(kind=ip):: nx,ny,nz
+    integer(kind=ip):: i,j,k,l
+    integer(kind=ip):: npxg,npyg,pi,pj
+    integer(kind=ip):: nbpatch,i0,j0,k0,sign
+    real(kind=rp)   :: sigh2,sigv2,dh2,dv2,x0,y0,z0
 
     nbpatch = 100
 
-    sigh2=10.**2
-    sigv2=3.**2
+    sigh2=10._rp**2
+    sigv2=3._rp**2
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -119,7 +119,7 @@ contains
     pj = myrank/npxg
     pi = mod(myrank,npxg)
 
-    grid(1)%b = 0._8
+    grid(1)%b = 0._rp
     do l=1,nbpatch
 
        call random_number(x0)

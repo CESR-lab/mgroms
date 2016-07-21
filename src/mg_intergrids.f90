@@ -52,11 +52,8 @@ contains
        call fine2coarse_2D(r,b,nx,ny)
 
     else
-       call tic(lev,'fine2coarse_3D')
 
        call fine2coarse_3D(r,b,nx,ny,nz)
-
-      call toc(lev,'fine2coarse_3D')
 
     end if
 
@@ -70,7 +67,7 @@ contains
 
     call fill_halo(lev+1,grid(lev+1)%b)
 
-    grid(lev+1)%p = 0._8
+    grid(lev+1)%p = 0._rp
 
   end subroutine fine2coarse
 
@@ -89,13 +86,13 @@ contains
        if(mod(k,8).eq.1)then
           do j=1,ny
              do i=1,nx               
-                y(i,j,k2) = x(i,j,k)*0.125_8
+                y(i,j,k2) = x(i,j,k)*0.125_rp
              enddo
           enddo
        else
           do j=1,ny
              do i=1,nx               
-                y(i,j,k2) = y(i,j,k2)+x(i,j,k)*0.125_8
+                y(i,j,k2) = y(i,j,k2)+x(i,j,k)*0.125_rp
              enddo
           enddo
        endif
@@ -306,9 +303,9 @@ contains
   real(kind=rp) :: a,b,c
   !
   ! weights for bilinear in (i,j)
-  a = 9._8 / 16._8
-  b = 3._8 / 16._8
-  c = 1._8 / 16._8
+  a = 9._rp / 16._rp
+  b = 3._rp / 16._rp
+  c = 1._rp / 16._rp
 
   k  = 1
   k2 = 1
@@ -377,15 +374,15 @@ contains
     real(kind=rp) :: a,b,c,d,e,f,g
     !
     ! weights for bilinear in (i,j), nearest in k
-    a = 9._8 / 16._8
-    b = 3._8 / 16._8
-    c = 1._8 / 16._8
+    a = 9._rp / 16._rp
+    b = 3._rp / 16._rp
+    c = 1._rp / 16._rp
     !
     ! weights for trilinear in (i,j,k)
-    d = 27._8 / 64._8
-    e =  9._8 / 64._8
-    f =  3._8 / 64._8
-    g =  1._8 / 64._8
+    d = 27._rp / 64._rp
+    e =  9._rp / 64._rp
+    f =  3._rp / 64._rp
+    g =  1._rp / 64._rp
     ! 
     do i2=1,nx
        i=2*i2-1
@@ -435,16 +432,16 @@ contains
           enddo
           ! top level
           k = nz*2
-          xf(k  ,j  ,i  ) =  0.5_8                       * ( &
+          xf(k  ,j  ,i  ) =  0.5_rp                      * ( &
                a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2-1) +   &
                b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2-1)   )
-          xf(k  ,j+1,i  ) =  0.5_8                       * ( &
+          xf(k  ,j+1,i  ) =  0.5_rp                      * ( &
                a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2-1) +   &
                b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2-1)   )
-          xf(k  ,j  ,i+1) =  0.5_8                       * ( &
+          xf(k  ,j  ,i+1) =  0.5_rp                      * ( &
                a * xc(k2,j2  ,i2) + c * xc(k2,j2-1,i2+1) +   &
                b * xc(k2,j2-1,i2) + b * xc(k2,j2  ,i2+1)   ) 
-          xf(k  ,j+1,i+1) =  0.5_8                       * ( &
+          xf(k  ,j+1,i+1) =  0.5_rp                      * ( &
                a * xc(k2,j2  ,i2) + c * xc(k2,j2+1,i2+1) +   &
                b * xc(k2,j2+1,i2) + b * xc(k2,j2  ,i2+1)   )
        enddo

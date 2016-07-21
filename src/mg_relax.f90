@@ -8,6 +8,8 @@ module mg_relax
 
   implicit none
 
+    real(kind=rp), dimension(200) :: zrhs, zd, zud, zgam, zxc
+
 contains
 
   !----------------------------------------
@@ -15,37 +17,37 @@ contains
     integer(kind=ip), intent(in):: lev
     integer(kind=ip), intent(in):: nsweeps
 
-    real(kind=rp),dimension(:,:,:), pointer:: p
-    real(kind=rp),dimension(:,:,:), pointer:: b
-    real(kind=rp),dimension(:,:,:,:), pointer:: cA
+!    real(kind=rp),dimension(:,:,:), pointer:: p
+!    real(kind=rp),dimension(:,:,:), pointer:: b
+!    real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
     integer(kind=ip) :: nx, ny, nz, nd
 
-    p  => grid(lev)%p
-    b  => grid(lev)%b
-    cA => grid(lev)%cA
+!    p  => grid(lev)%p
+!    b  => grid(lev)%b
+!    cA => grid(lev)%cA
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nd = size(cA(:,:,:,:),dim=1)
+!    nd = size(cA(:,:,:,:),dim=1)
 
     if (grid(lev)%nz == 1) then
 
-       call relax_2D_5(lev,p,b,cA,nsweeps,nx,ny)
+       call relax_2D_5(lev,grid(lev)%p,grid(lev)%b,grid(lev)%cA,nsweeps,nx,ny)
 
     else
 
        select case(trim(relax_method))
 
        case('Gauss-Seidel','GS')
-          call relax_3D_8_GS(lev,p,b,cA,nsweeps,nx,ny,nz)
+          call relax_3D_8_GS(lev,grid(lev)%p,grid(lev)%b,grid(lev)%cA,nsweeps,nx,ny,nz)
 
        case('Red-Black','RB')
-          call relax_3D_8_RB(lev,p,b,cA,nsweeps,nx,ny,nz)
+          call relax_3D_8_RB(lev,grid(lev)%p,grid(lev)%b,grid(lev)%cA,nsweeps,nx,ny,nz)
 
        case('Four-Color','FC')
-          call relax_3D_8_FC(lev,p,b,cA,nsweeps,nx,ny,nz)
+          call relax_3D_8_FC(lev,grid(lev)%p,grid(lev)%b,grid(lev)%cA,nsweeps,nx,ny,nz)
 
        end select
 
@@ -57,9 +59,9 @@ contains
   subroutine relax_2D_5(lev,p,b,cA,nsweeps,nx,ny)
 
     integer(kind=ip)                         , intent(in)   :: lev
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    real(kind=rp),dimension(1,0:ny+1,0:nx+1)  , intent(inout):: p
+    real(kind=rp),dimension(1,0:ny+1,0:nx+1)  , intent(in)   :: b
+    real(kind=rp),dimension(5,1,0:ny+1,0:nx+1), intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nsweeps
     integer(kind=ip)                        , intent(in)   :: nx, ny
 
@@ -67,9 +69,9 @@ contains
     integer(kind=ip)            :: ib,ie,jb,je,rbb,rbe,rbi
     real(kind=rp) :: z,gamma,g1,g2
 
-    gamma = 1._8
+    gamma = 1._rp
     g1 = gamma
-    g2 = 1._8 - gamma
+    g2 = 1._rp - gamma
 
     k=1
 
@@ -112,7 +114,7 @@ contains
           enddo
        enddo
 
-       call fill_halo(lev,p)
+       call fill_halo(lev,p,nx,ny,1)
 
     enddo
 
@@ -125,9 +127,9 @@ contains
     integer(kind=ip)                        , intent(in)   :: nsweeps
     integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
+    real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
 
     integer(kind=ip)            :: i,j,it
 
@@ -139,12 +141,12 @@ contains
        do i = 1, nx
           do j = 1, ny
 
-             call relax_3D_8_heart(p,b,cA,i,j,nz)
+             call relax_3D_8_heart(p,b,cA,i,j,nx,ny,nz)
 
           enddo ! j
        enddo    ! i
 
-       call fill_halo(lev,p)
+       call fill_halo(lev,p,nx,ny,nz)
 
     enddo  !it
 
@@ -159,9 +161,12 @@ contains
     integer(kind=ip)                        , intent(in)   :: nsweeps
     integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
+    real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
+!    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+!    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+!    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
 
     integer(kind=ip) :: i,j,it
     integer(kind=ip) :: rb
@@ -175,12 +180,16 @@ contains
           do i = 1, nx
              do j = 1+mod(i+rb,2),ny,2
 
-                call relax_3D_8_heart(p,b,cA,i,j,nz)
+                call relax_3D_8_heart(p,b,cA,i,j,nx,ny,nz)
 
              enddo ! j
           enddo    ! i
+          
+          call tic(lev,'relax_fill_halo')
 
-          call fill_halo(lev,p)
+          call fill_halo(lev,p,nx,ny,nz)
+
+          call toc(lev,'relax_fill_halo')
 
        enddo       ! red-black
 
@@ -197,9 +206,12 @@ contains
     integer(kind=ip)                        , intent(in)   :: nsweeps
     integer(kind=ip)                        , intent(in)   :: nx, ny, nz
 
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+!    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+!    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+!    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
+    real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
 
     integer(kind=ip)            :: i,j,it
     integer(kind=ip)            :: fc1,fc2
@@ -214,12 +226,12 @@ contains
              do i = 1 + mod(fc1-1,2), nx, 2
                 do j = 1 + mod(fc2-1,2), ny, 2
 
-                   call relax_3D_8_heart(p,b,cA,i,j,nz)
+                   call relax_3D_8_heart(p,b,cA,i,j,nx,ny,nz)
 
                 enddo ! j
              enddo    ! i
 
-             call fill_halo(lev,p)
+             call fill_halo(lev,p,nx,ny,nz)
 
           enddo  ! fc2
        enddo  ! fc1
@@ -231,19 +243,25 @@ contains
   end subroutine relax_3D_8_FC
 
   !----------------------------------------
-  subroutine relax_3D_8_heart(p,b,cA,i,j,nz)
+  subroutine relax_3D_8_heart(p,b,cA,i,j,nx,ny,nz)
 
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
+    real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
+    !    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    !    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    !    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
 
     integer(kind=ip)                          , intent(in)  :: i
     integer(kind=ip)                          , intent(in)  :: j
-    integer(kind=ip)                          , intent(in)  :: nz
+    integer(kind=ip)                          , intent(in)  :: nx,ny,nz
 
     !- Local -!
     integer(kind=ip) :: k
-    real(kind=rp), dimension(nz) :: rhs, d, ud
+    real(kind=rp),dimension(nz):: xc,gam
+    real(kind=rp):: d,dd,bb,bet,z
+
+    !    real(kind=rp), dimension(nz) :: zrhs, zd, zud, zgam
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -256,7 +274,7 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
     k=1 !lower level
-    rhs(k) = b(k,j,i)                                              &
+    z = b(k,j,i)                                              &
          - cA(3,k,j,i)*p(k+1,j-1,i)                                &
          - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
          - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
@@ -266,116 +284,138 @@ contains
 
     if (cmatrix == 'real') then
        !- Exception for the redefinition of the coef for the bottom level
-       rhs(k) = rhs(k) &
+       z = z &
             - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
             - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
     endif
 
-    d(k)   = cA(1,k,j,i)
-    ud(k)  = cA(2,k+1,j,i)
+!!$    zd(k)   = cA(1,k,j,i)
+!!$    zud(k)  = cA(2,k+1,j,i)
+
+    dd    = cA(2,k+1,j,i)
+    bet   = 1._rp/cA(1,k,j,i)
+    xc(1) = z*bet
 
     do k = 2,nz-1 !interior levels
-       rhs(k) = b(k,j,i) &
+       z = b(k,j,i) &
             - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
             - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
             - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
             - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
             - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
             - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
-       d(k)   = cA(1,k,j,i)
-       ud(k)  = cA(2,k+1,j,i)
+!!$       zd(k)   = cA(1,k,j,i)
+!!$       zud(k)  = cA(2,k+1,j,i)
+       gam(k)= dd*bet
+       bet     = 1._rp/(cA(1,k,j,i)-dd*gam(k))
+       xc(k) = (z-dd*xc(k-1))*bet
+       dd  = cA(2,k+1,j,i)
     enddo
 
     k=nz !upper level
-    rhs(k) = b(k,j,i)                                              &
+    z = b(k,j,i)                                              &
          - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
          - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
          - cA(5,k,j,i)*p(k-1,j-1,i)                                &
          - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
          - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
          - cA(8,k,j,i)*p(k-1,j,i-1) 
-    d(k)   = cA(1,k,j,i)
 
-    call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
+!!$    zd(k)   = cA(1,k,j,i)
+
+    gam(k)= dd*bet
+    bet     = 1._rp/(cA(1,k,j,i)-dd*gam(k))
+    xc(k) = (z-dd*xc(k-1))*bet
+
+    p(nz,j,i)=xc(nz)
+    do k=nz-1,1,-1
+       p(k,j,i) = xc(k)-gam(k+1)*p(k+1,j,i)
+    enddo
+
+!!$    call tridiag(nz,zd,zud,zrhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs    
 
   end subroutine relax_3D_8_heart
 
-  !----------------------------------------
-  subroutine tridiag(l,d,dd,b,xc)
-    !     Axc = b
-    !     Solve tridiagonal system
-    implicit none
-    !     IMPORT/EXPORT
-    integer                   ,intent(in)  :: l
-    real(kind=rp),dimension(l),intent(in)  :: d,b
-    real(kind=rp),dimension(l),intent(in)  :: dd
-    real(kind=rp),dimension(l),intent(out) :: xc
-    !     LOCAL
-    integer                  :: k
-    real(kind=rp),dimension(l):: gam
-    real(kind=rp)             :: bet
-
-    bet   = 1._8/d(1)
-    xc(1) = b(1)*bet
-    do k=2,l
-       gam(k)= dd(k-1)*bet
-       bet     = 1._8/(d(k)-dd(k-1)*gam(k))
-       xc(k) = (b(k)-dd(k-1)*xc(k-1))*bet
-    enddo
-    do k=l-1,1,-1
-       xc(k) = xc(k)-gam(k+1)*xc(k+1)
-    enddo
-    !    endif
-  end subroutine tridiag
+!!$  !----------------------------------------
+!!$  subroutine tridiag(l,d,dd,b,xc)
+!!$    !     Axc = b
+!!$    !     Solve tridiagonal system
+!!$    implicit none
+!!$    !     IMPORT/EXPORT
+!!$    integer                   ,intent(in)  :: l
+!!$    real(kind=rp),dimension(l),intent(in)  :: d,b
+!!$    real(kind=rp),dimension(l),intent(in)  :: dd
+!!$    real(kind=rp),dimension(l),intent(out) :: xc
+!!$    !     LOCAL
+!!$    integer                  :: k
+!!$    real(kind=rp),dimension(l):: gam
+!!$    real(kind=rp)             :: bet
+!!$
+!!$    bet   = 1._rp/d(1)
+!!$    xc(1) = b(1)*bet
+!!$    do k=2,l
+!!$       gam(k)= dd(k-1)*bet
+!!$       bet     = 1._rp/(d(k)-dd(k-1)*gam(k))
+!!$       xc(k) = (b(k)-dd(k-1)*xc(k-1))*bet
+!!$    enddo
+!!$    do k=l-1,1,-1
+!!$       xc(k) = xc(k)-gam(k+1)*xc(k+1)
+!!$    enddo
+!!$    !    endif
+!!$  end subroutine tridiag
 
   !----------------------------------------
   subroutine compute_residual(lev,res)
     integer(kind=ip), intent(in) :: lev
     real(kind=rp)   , intent(out):: res
 
-    real(kind=rp),dimension(:,:,:)  , pointer:: p
-    real(kind=rp),dimension(:,:,:)  , pointer:: b
-    real(kind=rp),dimension(:,:,:)  , pointer:: r
-    real(kind=rp),dimension(:,:,:,:), pointer:: cA
+!    real(kind=rp),dimension(grid(lev)%nz,0:grid(lev)%ny+1,0:grid(lev)%nx+1)  :: p
+!    real(kind=rp),dimension(:,:,:)  , pointer:: p
+!    real(kind=rp),dimension(:,:,:)  , pointer:: b
+!    real(kind=rp),dimension(:,:,:)  , pointer:: r
+!    real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
     integer(kind=ip) :: nx, ny, nz, nd
     real(kind=rp) ::resloc
 
-    p  => grid(lev)%p
-    b  => grid(lev)%b
-    r  => grid(lev)%r
-    cA => grid(lev)%cA
+!    p  => grid(lev)%p
+!    b  => grid(lev)%b
+!    r  => grid(lev)%r
+!    cA => grid(lev)%cA
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-    nd = size(cA(:,:,:,:),dim=1)
+!    nd = size(cA(:,:,:,:),dim=1)
 
     if (grid(lev)%nz == 1) then
 
-       call compute_residual_2D_5(res,p,b,r,cA,nx,ny)
+!       call compute_residual_2D_5(res,p,b,r,cA,nx,ny)
 
     else
 
-       call compute_residual_3D_8(res,p,b,r,cA,nx,ny,nz)
-
+!       call compute_residual_3D_8(res,p,b,r,cA,nx,ny,nz)
+       call tic(lev,'residual_3D_8')
+    
+       call compute_residual_3D_8(res,grid(lev)%p,grid(lev)%b,grid(lev)%r,grid(lev)%cA,nx,ny,nz)
+       call toc(lev,'residual_3D_8')
     end if
 
-    call fill_halo(lev,r)
+    call fill_halo(lev,grid(lev)%r,nx,ny,nz)
 
     if (lev >-1) then
        resloc=res
        call global_sum(lev,resloc,res)
        res = sqrt(res)
     else
-       res = -999._8
+       res = -999._rp
     endif
 
   end subroutine compute_residual
 
   !----------------------------------------
   subroutine compute_residual_2D_5(res,p,b,r,cA,nx,ny)
-
+    !TODO
     real(kind=rp)                            , intent(out)  :: res
     real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
     real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
@@ -386,7 +426,7 @@ contains
     integer(kind=ip) :: i,j,k
     real(kind=rp)  :: z
 
-    res = 0._8
+    res = 0._rp
 
     k=1
 
@@ -410,13 +450,15 @@ contains
 
   !----------------------------------------
   subroutine compute_residual_3D_8(res,p,b,r,cA,nx,ny,nz)
+!  subroutine compute_residual_3D_8(res,lev)
 
     real(kind=rp)                            , intent(out)  :: res
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout)   :: r
-    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
+    real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout)   :: r
+    real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
     integer(kind=ip)                        , intent(in)   :: nx, ny, nz
+!!$    integer(kind=ip)                        , intent(in)   :: lev
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -429,58 +471,74 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
     integer(kind=ip)           :: i,j,k
+!    integer(kind=ip)           :: nx, ny, nz
 
-    res = 0._8
+
+!    real(kind=rp),dimension(:,:,:)  , pointer:: p
+!    real(kind=rp),dimension(:,:,:)  , pointer:: b
+!    real(kind=rp),dimension(:,:,:)  , pointer:: r
+!    real(kind=rp),dimension(:,:,:,:), pointer:: cA
+!    nx = grid(lev)%nx
+!    ny = grid(lev)%ny
+!    nz = grid(lev)%nz
+
+!    p  => grid(lev)%p
+!    b  => grid(lev)%b
+!    r  => grid(lev)%r
+!    cA => grid(lev)%cA
+
+    res = 0._rp
 
     do i = 1,nx
        do j = 1,ny
 
-          k=1 !lower level
-          r(k,j,i) = b(k,j,i)                                           &
-               - cA(1,k,j,i)*p(k,j,i)                                   &
-               - cA(2,k+1,j,i)*p(k+1,j,i)                               &
-               - cA(3,k,j,i)*p(k+1,j-1,i)                               &
-               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-               - cA(5,k+1,j+1,i)*p(k+1,j+1,i)                           &
-               - cA(6,k,j,i)*p(k+1,j,i-1)                               &
-               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-               - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+             k=1 !lower level
+             r(k,j,i) = b(k,j,i)                                           &
+                  - cA(1,k,j,i)*p(k,j,i)                                   &
+                  - cA(2,k+1,j,i)*p(k+1,j,i)                               &
+                  - cA(3,k,j,i)*p(k+1,j-1,i)                               &
+                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+                  - cA(5,k+1,j+1,i)*p(k+1,j+1,i)                           &
+                  - cA(6,k,j,i)*p(k+1,j,i-1)                               &
+                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                  - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
-          if (cmatrix == 'real') then
+             if (cmatrix == 'real') then
              !- Exception for the redefinition of the coef for the bottom level
              r(k,j,i) = r(k,j,i) &
                   - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
                   - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
-          endif
-
-          res = res+r(k,j,i)*r(k,j,i)
-
-          do k = 2,nz-1 !interior levels
-             r(k,j,i) = b(k,j,i)                                           &
-                  - cA(1,k,j,i)*p(k,j,i)                                   &
-                  - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
-                  - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
-                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-                  - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
-                  - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
-                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-                  - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
+             endif
 
              res = res+r(k,j,i)*r(k,j,i)
-          enddo
 
-          k=nz !upper level
-          r(k,j,i) = b(k,j,i)                                           &
-               - cA(1,k,j,i)*p(k,j,i)                                   &
-               - cA(2,k,j,i)*p(k-1,j,i)                                 &
-               - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
-               - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
-               - cA(5,k,j,i)*p(k-1,j-1,i)                               &
-               - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
-               - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
-               - cA(8,k,j,i)*p(k-1,j,i-1)
+             do k = 2,nz-1 !interior levels
+                r(k,j,i) = b(k,j,i)                                           &
+                     - cA(1,k,j,i)*p(k,j,i)                                   &
+                     - cA(2,k,j,i)*p(k-1,j,i)   - cA(2,k+1,j,i)*p(k+1,j,i)    &
+                     - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+                     - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+                     - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i)&
+                     - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+                     - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                     - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1)
 
-          res = res+r(k,j,i)*r(k,j,i)
+                res = res+r(k,j,i)*r(k,j,i)
+             enddo
+
+             k=nz !upper level
+             r(k,j,i) = b(k,j,i)                                           &
+                  - cA(1,k,j,i)*p(k,j,i)                                   &
+                  - cA(2,k,j,i)*p(k-1,j,i)                                 &
+                  - cA(3,k-1,j+1,i)*p(k-1,j+1,i)&
+                  - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i)&
+                  - cA(5,k,j,i)*p(k-1,j-1,i)                               &
+                  - cA(6,k-1,j,i+1)*p(k-1,j,i+1)&
+                  - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1)&
+                  - cA(8,k,j,i)*p(k-1,j,i-1)
+
+             res = res+r(k,j,i)*r(k,j,i)
+
 
        enddo
     enddo

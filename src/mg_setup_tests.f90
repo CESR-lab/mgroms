@@ -16,10 +16,10 @@ contains
     integer(kind=ip), intent(in) :: npxg,npyg ! nb procs
     real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, h
 
-    integer(kind=4):: is_err,nc_id,varid
-    integer(kind=4):: i,j,i0,j0,pi,pj
-    real(kind=8), dimension(:,:), allocatable   :: dummy2d
-    integer(kind=4), dimension(2)   :: starts,counts
+    integer(kind=ip):: is_err,nc_id,varid
+    integer(kind=ip):: i,j,i0,j0,pi,pj
+    real(kind=rp), dimension(:,:), allocatable   :: dummy2d
+    integer(kind=ip), dimension(2)   :: starts,counts
 
     character*80 :: file,varname
     integer(kind=ip) :: ierr
@@ -70,7 +70,7 @@ contains
 
     do i=1,nx
        do j=1,ny
-          dy(j,i)=1._8/dummy2d((i-1)+1,(j-1)+1)
+          dy(j,i)=1._rp/dummy2d((i-1)+1,(j-1)+1)
        enddo
     enddo
 
@@ -81,7 +81,7 @@ contains
 
     do i=1,nx
        do j=1,ny
-          dx(j,i)=1._8/dummy2d((i-1)+1,(j-1)+1)
+          dx(j,i)=1._rp/dummy2d((i-1)+1,(j-1)+1)
        enddo
     enddo
 
@@ -93,8 +93,8 @@ contains
 
     do i= 1,nx
        do j= 1,ny
-          dx(j,i)=max(1._8,dx(j,i))
-          dy(j,i)=max(1._8,dy(j,i))
+          dx(j,i)=max(1._rp,dx(j,i))
+          dy(j,i)=max(1._rp,dy(j,i))
        enddo
     enddo
 
@@ -109,7 +109,7 @@ contains
 
     real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, zeta, h
 
-    integer(kind=4), parameter :: ip=4, rp=8
+    integer(kind=ip), parameter :: ip=4, rp=8
     integer(kind=ip):: nxg, nyg  ! global dims
     integer(kind=ip):: pi, pj
     integer(kind=ip):: i,j

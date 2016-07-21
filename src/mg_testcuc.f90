@@ -18,9 +18,9 @@ program mg_testcuc
 
   real(kind=8), dimension(:,:,:), pointer :: u,v,w
 
-  real(kind=rp) :: Lx, Ly, Htot
-  real(kind=rp) :: hc, theta_b, theta_s
-  real(kind=rp), dimension(:,:), pointer :: dx, dy, h
+  real(kind=8) :: Lx, Ly, Htot
+  real(kind=8) :: hc, theta_b, theta_s
+  real(kind=8), dimension(:,:), pointer :: dx, dy, h
 
   call tic(1,'mg_testcuc')
 
