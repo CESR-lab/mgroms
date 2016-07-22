@@ -322,7 +322,7 @@ contains
       enddo
     enddo
     do i = 1,nx+1
-       do j = 0,ny !+1
+       do j = 0,ny
           ! only for k==1, couples with j+1,i-1
           cA(5,k,j,i) = &
                + hlf * &
@@ -337,7 +337,7 @@ contains
     enddo
     do i = 1,nx+1
        do j = 1,ny+1
-          ! only for k==1, couples wit
+          ! only for k==1, couples with j-1,i-1
           cA(8,k,j,i) = &
                - hlf * &
                (( hlf * (zr(k,j-1,i+1)-zr(k,j-1,i-1)) / dx(j-1,i) ) * dy(j-1,i)) * &
