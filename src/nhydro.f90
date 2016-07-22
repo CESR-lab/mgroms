@@ -78,15 +78,15 @@ contains
     call toc(1,'compute_rhs')
 
     if (netcdf_output) then
-       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank)
+       call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=1)
     endif
 
     !- step 2 -
     call solve_p(tol,maxite)
 
     if (netcdf_output) then
-       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p.nc',rank=myrank)
-       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r.nc',rank=myrank)
+       call write_netcdf(grid(1)%p,vname='p',netcdf_file_name='p_end.nc',rank=myrank)
+       call write_netcdf(grid(1)%r,vname='r',netcdf_file_name='r_end.nc',rank=myrank)
     endif
 
     !- step 3 -

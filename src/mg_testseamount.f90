@@ -71,9 +71,15 @@ program mg_testseamount
   Ly   =  1.e4_rp
   Htot =  4.e3_rp 
 
-  hc      = 20._8
-  theta_b = 0._8
-  theta_s = 1._8
+  hc      = 4.e3_rp
+  theta_b =  0._8
+  theta_s =  0._8
+
+  if (myrank==0) then
+     write(*,*)''
+     write(*,*)'Lx, Ly, Htot:',Lx, Ly, Htot
+     write(*,*)'hc, theta_b, theta_s:',hc, theta_b, theta_s
+  endif
 
   allocate(  dx(0:ny+1,0:nx+1))
   allocate(  dy(0:ny+1,0:nx+1))
@@ -93,52 +99,60 @@ program mg_testseamount
   allocate(v(0:nx+1,1:ny+1,1:nz))
   allocate(w(0:nx+1,0:ny+1,0:nz))
 
-  u(:,:,:)      =  0._8
-  v(:,:,:)      =  0._8
+!!$  if (myrank==0) then
+!!$     write(*,*)''
+!!$     write(*,*)'U=0, V=0 and W=-1 except at bottom'
+!!$  endif
+!!$  u(:,:,:)      =  0._8
+!!$  v(:,:,:)      =  0._8
+!!$
+!!$  w(:,:,0)      =  0._8
+!!$  w(:,:,1:nz-1) = -1._8
+!!$
 
-  w(:,:,0)      =  0._8
-  w(:,:,1:nz-1) = -1._8
-  w(:,:,nz)     =  0._8
+  if (myrank==0) then
+     write(*,*)''
+     write(*,*)'U, V and W are initalized with random numbers /= on each process'
+  endif
+  pj = myrank/npxg
+  pi = mod(myrank,npxg)
 
-!!$  pj = myrank/npxg
-!!$  pi = mod(myrank,npxg)
-!!$
-!!$  ib = 1 + pi * nx
-!!$  jb = 1 + pj * ny
-!!$
-!!$  ie = ib + nx - 1
-!!$  je = jb + ny - 1
-!!$
-!!$  kb = 1
-!!$  ke = nz
-!!$
-!!$  allocate(tmp_rnd(1:nxg,1:nyg,1:nzg))
-!!$
-!!$  call random_number(tmp_rnd)
-!!$  tmp_rnd = 2._8 * tmp_rnd - 1._8
-!!$  u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-!!$  up => u
-!!$  call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
-!!$
-!!$  call random_number(tmp_rnd)
-!!$  tmp_rnd = 2._8 * tmp_rnd - 1._8
-!!$  v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-!!$  vp => v
-!!$  call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
-!!$
-!!$  deallocate(tmp_rnd)
-!!$  allocate(tmp_rnd(1:nxg,1:nyg,0:nzg))
-!!$
-!!$  kb = 0
-!!$  ke = nz
-!!$
-!!$  call random_number(tmp_rnd)
-!!$  tmp_rnd = 2._8 * tmp_rnd - 1._8
-!!$  w(1:nx,1:ny,0:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-!!$  wp => w
-!!$  call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
-!!$
-!!$  deallocate(tmp_rnd)
+  ib = 1 + pi * nx
+  jb = 1 + pj * ny
+
+  ie = ib + nx - 1
+  je = jb + ny - 1
+
+  kb = 1
+  ke = nz
+
+  allocate(tmp_rnd(1:nxg,1:nyg,1:nzg))
+
+  call random_number(tmp_rnd)
+  tmp_rnd = 2._8 * tmp_rnd - 1._8
+  u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+  up => u
+  call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
+
+  call random_number(tmp_rnd)
+  tmp_rnd = 2._8 * tmp_rnd - 1._8
+  v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+  vp => v
+  call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
+
+  deallocate(tmp_rnd)
+  allocate(tmp_rnd(1:nxg,1:nyg,0:nzg))
+
+  kb = 0
+  ke = nz
+
+  call random_number(tmp_rnd)
+  tmp_rnd = 2._8 * tmp_rnd - 1._8
+  w(1:nx,1:ny,0:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+  wp => w
+  call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
+
+  deallocate(tmp_rnd)
 
   if (netcdf_output) then
      call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=0)
@@ -167,7 +181,7 @@ program mg_testseamount
   call nhydro_check_nondivergence(nx,ny,nz,u,v,w)
 
   if (netcdf_output) then
-     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=1)
+     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=2)
   endif
 
   !---------------------!
