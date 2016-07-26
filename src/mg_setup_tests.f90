@@ -10,11 +10,12 @@ module mg_setup_tests
 contains
 
   !-------------------------------------------------------------------------     
-  subroutine setup_cuc(nx, ny, nz, npxg, npyg, dx, dy, h)
+  subroutine setup_cuc(nx, ny, nz, npxg, npyg, Lx, Ly, Htot, dx, dy, zeta, h)
 
     integer(kind=ip), intent(in) :: nx,ny,nz  ! local dims
     integer(kind=ip), intent(in) :: npxg,npyg ! nb procs
-    real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, h
+    real(kind=rp)   , intent(in) :: Lx, Ly, Htot
+    real(kind=rp), dimension(:,:), pointer, intent(out) :: dx, dy, zeta, h
 
     integer(kind=ip):: is_err,nc_id,varid
     integer(kind=ip):: i,j,i0,j0,pi,pj
@@ -97,6 +98,8 @@ contains
           dy(j,i)=max(1._rp,dy(j,i))
        enddo
     enddo
+
+    zeta(:,:) = 0._rp
 
   end subroutine setup_cuc
 
