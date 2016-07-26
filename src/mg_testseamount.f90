@@ -19,10 +19,13 @@ program mg_testseamount
 
   real(kind=rp), dimension(:,:,:), allocatable, target :: u,v,w
   real(kind=rp), dimension(:,:,:), allocatable, target :: tmp_rnd
+  real(kind=rp), dimension(:,:,:), allocatable, target :: tmp_rnd2
   real(kind=rp), dimension(:,:,:), pointer :: up,vp,wp
   real(kind=rp) :: Lx, Ly, Htot
 
   integer(kind=ip) :: np, ierr, rank
+
+  integer(kind=ip) :: it, nit
 
   real(kind=rp), dimension(:,:), pointer :: dx, dy, zeta, h
   real(kind=rp) :: hc, theta_b, theta_s
@@ -31,6 +34,8 @@ program mg_testseamount
   integer(kind=ip) :: ib, ie, jb, je, kb, ke
 
   call tic(1,'mg_bench_seamount')
+
+  nit = 10
 
   !---------------------!
   !- Global/local dim  -!
@@ -123,72 +128,77 @@ program mg_testseamount
   ie = ib + nx - 1
   je = jb + ny - 1
 
-  kb = 1
-  ke = nz
+  !  allocate(tmp_rnd (1:nx,1:ny,1:nz))
+  !  allocate(tmp_rnd2(1:ny,1:ny,0:nz))
 
-  allocate(tmp_rnd(1:nxg,1:nyg,1:nzg))
+  allocate(tmp_rnd (1:nxg,1:nyg,1:nzg))
+  allocate(tmp_rnd2(1:nxg,1:nyg,0:nzg))
 
-  call random_number(tmp_rnd)
-  tmp_rnd = 2._8 * tmp_rnd - 1._8
-  u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-  up => u
-  call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
+  do it = 1, nit
 
-  call random_number(tmp_rnd)
-  tmp_rnd = 2._8 * tmp_rnd - 1._8
-  v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-  vp => v
-  call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
+     kb = 1
+     ke = nz
+
+     call random_number(tmp_rnd)
+     tmp_rnd = 2._8 * tmp_rnd - 1._8
+     u(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+     up => u
+     call fill_halo_ijk(nx,ny,up,'u') ! depend of mg_grids for MPI neighbours !
+
+     call random_number(tmp_rnd)
+     tmp_rnd = 2._8 * tmp_rnd - 1._8
+     v(1:nx,1:ny,1:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
+     vp => v
+     call fill_halo_ijk(nx,ny,vp,'v') ! depend of mg_grids for MPI neighbours !
+
+     kb = 0
+     ke = nz
+
+     call random_number(tmp_rnd2)
+     tmp_rnd = 2._8 * tmp_rnd - 1._8
+     w(1:nx,1:ny,0:nz) = tmp_rnd2(ib:ie,jb:je,kb:ke)
+     wp => w
+     call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
+
+     if (netcdf_output) then
+        call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=it)
+        call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=it)
+        call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=it)
+     endif
+
+     !----------------------!
+     !- Call nhydro solver -!
+     !----------------------!
+     if (rank == 0) write(*,*)'Call nhydro solver'
+
+     call nhydro_solve(nx,ny,nz,u,v,w)
+
+     if (netcdf_output) then
+        call write_netcdf(u,vname='uc',netcdf_file_name='uc.nc',rank=myrank,iter=it)
+        call write_netcdf(v,vname='vc',netcdf_file_name='vc.nc',rank=myrank,iter=it)
+        call write_netcdf(w,vname='wc',netcdf_file_name='wc.nc',rank=myrank,iter=it)
+     endif
+
+     !------------------------------------------------------------!
+     !- Check if nh correction is correct                        -!
+     !------------------------------------------------------------!
+     if (rank == 0) write(*,*)'Check nondivergence'
+
+     call nhydro_check_nondivergence(nx,ny,nz,u,v,w)
+
+     if (netcdf_output) then
+        call write_netcdf(grid(1)%b,vname='bc',netcdf_file_name='bc.nc',rank=myrank,iter=it)
+     endif
+
+  enddo
 
   deallocate(tmp_rnd)
-  allocate(tmp_rnd(1:nxg,1:nyg,0:nzg))
-
-  kb = 0
-  ke = nz
-
-  call random_number(tmp_rnd)
-  tmp_rnd = 2._8 * tmp_rnd - 1._8
-  w(1:nx,1:ny,0:nz) = tmp_rnd(ib:ie,jb:je,kb:ke)
-  wp => w
-  call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
-
-  deallocate(tmp_rnd)
-
-  if (netcdf_output) then
-     call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=0)
-     call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=0)
-     call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=0)
-  endif
-
-  !----------------------!
-  !- Call nhydro solver -!
-  !----------------------!
-  if (rank == 0) write(*,*)'Call nhydro solver'
-
-  call nhydro_solve(nx,ny,nz,u,v,w)
-
-  if (netcdf_output) then
-     call write_netcdf(u,vname='u',netcdf_file_name='u.nc',rank=myrank,iter=1)
-     call write_netcdf(v,vname='v',netcdf_file_name='v.nc',rank=myrank,iter=1)
-     call write_netcdf(w,vname='w',netcdf_file_name='w.nc',rank=myrank,iter=1)
-  endif
-
-  !------------------------------------------------------------!
-  !- Check if nh correction is correct                        -!
-  !------------------------------------------------------------!
-  if (rank == 0) write(*,*)'Check nondivergence'
-
-  call nhydro_check_nondivergence(nx,ny,nz,u,v,w)
-
-  if (netcdf_output) then
-     call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='b.nc',rank=myrank,iter=2)
-  endif
+  deallocate(tmp_rnd2)
 
   !---------------------!
   !- Deallocate memory -!
   !---------------------!
-  if (rank == 0) write(*,*)'Clean memory'
-
+  if (rank == 0) write(*,*)'Clean memory before to finish the program.'
   call nhydro_clean()
 
   !----------------------!
