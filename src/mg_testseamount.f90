@@ -77,8 +77,8 @@ program mg_testseamount
   Htot =  4.e3_rp 
 
   hc      = 4.e3_rp
-  theta_b =  0._8
-  theta_s =  0._8
+  theta_b =  0._rp
+  theta_s =  0._rp
 
   if (myrank==0) then
      write(*,*)''

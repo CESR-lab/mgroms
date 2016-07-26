@@ -184,12 +184,8 @@ contains
 
              enddo ! j
           enddo    ! i
-          
-          call tic(lev,'relax_fill_halo')
 
           call fill_halo(lev,p,nx,ny,nz)
-
-          call toc(lev,'relax_fill_halo')
 
        enddo       ! red-black
 
