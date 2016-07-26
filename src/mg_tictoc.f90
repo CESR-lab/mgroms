@@ -11,7 +11,7 @@ module mg_tictoc
   integer(kind = lg) , dimension(levmax,submax) :: ntoc
   real(kind = lg)    , dimension(levmax,submax) :: time
   integer(kind=st)   , dimension(levmax,submax) :: calls
-  character(len=32)  ,dimension(submax)         :: subname
+  character(len=32)  , dimension(submax)        :: subname
   integer(kind=st)                              :: nblev = 0
   integer(kind=st)                              :: nbsub = 0
 
@@ -78,11 +78,9 @@ contains
     logical :: flag 
 
     real(kind=lg)   :: rate
-    integer(kind=st):: cr
 
-    call system_clock(count_rate=cr)
+    call system_clock(count_rate=rate)
 !    call system_clock(count_max=cm)
-    rate = real(cr)
 
     if (nbsub > 0) then
 
@@ -92,7 +90,7 @@ contains
           if (TRIM(string) == subname(ns)) then
 !             call cpu_time(ntoc(lev,ns))
              call system_clock(ntoc(lev,ns))
-             time(lev,ns) = time(lev,ns) + (ntoc(lev,ns) - ntic(lev,ns))/rate
+             time(lev,ns) = time(lev,ns) + real(ntoc(lev,ns) - ntic(lev,ns),kind=lg)/rate
              calls(lev,ns) = calls(lev,ns) + 1
              if (lev > nblev) nblev = lev
              flag = .false.
