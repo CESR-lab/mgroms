@@ -155,7 +155,7 @@ program mg_testseamount
      ke = nz
 
      call random_number(tmp_rnd2)
-     tmp_rnd = 2._8 * tmp_rnd - 1._8
+     tmp_rnd2 = 2._8 * tmp_rnd2 - 1._8
      w(1:nx,1:ny,0:nz) = tmp_rnd2(ib:ie,jb:je,kb:ke)
      wp => w
      call fill_halo_ijk(nx,ny,wp,'w') ! depend of mg_grids for MPI neighbours !
