@@ -33,10 +33,11 @@ contains
   end subroutine nhydro_init
 
   !--------------------------------------------------------------
-  subroutine nhydro_matrices(dx,dy,zeta,h,hc,theta_b,theta_s)
+  subroutine nhydro_matrices(dx,dy,zeta,h,rmask,hc,theta_b,theta_s)
 
-    real(kind=rp), dimension(:,:), intent(in) :: dx, dy, zeta, h
-    real(kind=rp),                 intent(in) :: hc, theta_b, theta_s
+    real(kind=rp), dimension(:,:)         , intent(in) :: dx, dy, zeta, h
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: rmask
+    real(kind=rp)                         , intent(in) :: hc, theta_b, theta_s
 
     if (myrank==0) write(*,*)' nhydro_matrices:'
 
@@ -44,18 +45,20 @@ contains
     nhtheta_b = theta_b
     nhtheta_s = theta_s
 
-    call define_matrices(dx,dy,zeta,h)
+    call define_matrices(dx,dy,zeta,h,rmask)
 
   end subroutine nhydro_matrices
 
   !--------------------------------------------------------------
-  subroutine nhydro_solve(nx,ny,nz,ua,va,wa)
+  subroutine nhydro_solve(nx,ny,nz,rmaska,ua,va,wa)
 
     integer(kind=ip), intent(in) :: nx, ny, nz
+    real(kind=rp), dimension(0:nx+1,0:ny+1)     , target, intent(inout) :: rmaska
     real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
     real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
     real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
 
+    real(kind=rp), dimension(:,:)  , pointer :: rmask
     real(kind=rp), dimension(:,:,:), pointer :: u, v, w
 
     real(kind=rp)    :: tol
@@ -66,6 +69,8 @@ contains
     tol    = solver_prec    ! solver_prec    is defined in the namelist file
     maxite = solver_maxiter ! solver_maxiter is defined in the namelist file
 
+    rmask => rmaska
+
     u => ua
     v => va
     w => wa
@@ -74,7 +79,7 @@ contains
 
     !- step 1 - 
     call tic(1,'compute_rhs')
-    call compute_rhs(u, v, w)
+    call compute_rhs(rmask,u, v, w)
     call toc(1,'compute_rhs')
 
     if (netcdf_output) then
@@ -90,25 +95,29 @@ contains
     endif
 
     !- step 3 -
-    call correct_uvw(u,v,w)
+    call correct_uvw(rmask,u,v,w)
 
     call toc(1,'nhydro_solve')
 
   end subroutine nhydro_solve
 
   !--------------------------------------------------------------
-  subroutine nhydro_check_nondivergence(nx,ny,nz,ua,va,wa)
+  subroutine nhydro_check_nondivergence(nx,ny,nz,rmaska,ua,va,wa)
 
     integer(kind=ip), intent(in) :: nx, ny, nz
 
+    real(kind=rp), dimension(0:nx+1,0:ny+1)     , target, intent(inout) :: rmaska
     real(kind=rp), dimension(1:nx+1,0:ny+1,1:nz), target, intent(inout) :: ua
     real(kind=rp), dimension(0:nx+1,1:ny+1,1:nz), target, intent(inout) :: va
     real(kind=rp), dimension(0:nx+1,0:ny+1,0:nz), target, intent(inout) :: wa
 
+    real(kind=rp), dimension(:,:)  , pointer :: rmask
     real(kind=rp), dimension(:,:,:), pointer :: u, v, w
 
     integer(kind=ip), save :: iter=0
     iter = iter + 1
+
+    rmask => rmaska
 
     u => ua
     v => va
@@ -116,7 +125,7 @@ contains
 
     if (myrank==0) write(*,*)'- check non-divergence:'
 
-    call compute_rhs(u,v,w)
+    call compute_rhs(rmask,u,v,w)
 
     if (netcdf_output) then
        call write_netcdf(grid(1)%b,vname='b',netcdf_file_name='check.nc',rank=myrank,iter=iter)

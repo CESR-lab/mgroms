@@ -28,6 +28,7 @@ program mg_testseamount
   integer(kind=ip) :: it, nit
 
   real(kind=rp), dimension(:,:), pointer :: dx, dy, zeta, h
+  real(kind=rp), dimension(:,:), pointer :: rmask
   real(kind=rp) :: hc, theta_b, theta_s
 
   integer(kind=ip) :: pi, pj
@@ -86,14 +87,24 @@ program mg_testseamount
      write(*,*)'hc, theta_b, theta_s:',hc, theta_b, theta_s
   endif
 
-  allocate(  dx(0:ny+1,0:nx+1))
-  allocate(  dy(0:ny+1,0:nx+1))
-  allocate(zeta(0:ny+1,0:nx+1))
-  allocate(   h(0:ny+1,0:nx+1))
+  allocate(   dx(0:ny+1,0:nx+1))
+  allocate(   dy(0:ny+1,0:nx+1))
+  allocate( zeta(0:ny+1,0:nx+1))
+  allocate(    h(0:ny+1,0:nx+1))
 
   call setup_seamount(nx,ny,nz,npxg,npyg,Lx,Ly,Htot,dx,dy,zeta,h)
 
-  call nhydro_matrices(dx,dy,zeta,h,hc,theta_b,theta_s)
+  allocate(rmask(0:ny+1,0:nx+1))
+  rmask(:,:) = 1._rp
+
+  if (bmask) then
+     rmask(:,0)    = 0._rp
+     rmask(0,:)    = 0._rp
+     rmask(:,nx+1) = 0._rp
+     rmask(ny+1,:) = 0._rp
+  endif
+
+  call nhydro_matrices(dx,dy,zeta,h,rmask,hc,theta_b,theta_s)
 
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
@@ -171,7 +182,7 @@ program mg_testseamount
      !----------------------!
      if (rank == 0) write(*,*)'Call nhydro solver'
 
-     call nhydro_solve(nx,ny,nz,u,v,w)
+     call nhydro_solve(nx,ny,nz,rmask,u,v,w)
 
      if (netcdf_output) then
         call write_netcdf(u,vname='uc',netcdf_file_name='uc.nc',rank=myrank,iter=it)
@@ -184,7 +195,7 @@ program mg_testseamount
      !------------------------------------------------------------!
      if (rank == 0) write(*,*)'Check nondivergence'
 
-     call nhydro_check_nondivergence(nx,ny,nz,u,v,w)
+     call nhydro_check_nondivergence(nx,ny,nz,rmask,u,v,w)
 
      if (netcdf_output) then
         call write_netcdf(grid(1)%b,vname='bc',netcdf_file_name='bc.nc',rank=myrank,iter=it)

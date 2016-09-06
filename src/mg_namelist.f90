@@ -32,6 +32,8 @@ module mg_namelist
 
   logical           :: netcdf_output = .false. !- .false. or .true.
 
+  logical           :: bmask         = .false. !- Boundary mask is applied changing matirx coef to
+
   namelist/nhparam/    &
        solver_prec   , &
        solver_maxiter, &
@@ -44,7 +46,8 @@ module mg_namelist
        interp_type   , &
        restrict_type , &
        netcdf_output , &
-       aggressive   
+       aggressive    , &
+       bmask
 
 contains
 
@@ -116,6 +119,7 @@ contains
           write(*,*)'  - restrict_type : ', trim(restrict_type)
           write(*,*)'  - aggressive    : ', aggressive
           write(*,*)'  - netcdf_output : ', netcdf_output
+          write(*,*)'  - bmask         : ', bmask
           write(*,*)'  '
        endif
     endif

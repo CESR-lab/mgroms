@@ -12,19 +12,20 @@ module mg_correct_uvw
 
 contains
   !-------------------------------------------------------------------------     
-  subroutine correct_uvw(u,v,w)
+  subroutine correct_uvw(rmask,u,v,w)
 
+    real(kind=rp), dimension(:,:)  , pointer, intent(inout) :: rmask
     real(kind=rp), dimension(:,:,:), pointer, intent(inout) :: u,v,w
 
     integer(kind=ip):: k, j, i
     integer(kind=ip):: nx, ny, nz
 
+    real(kind=rp), dimension(:,:)  , pointer :: umask,vmask
     real(kind=rp), dimension(:,:)  , pointer :: dx,dy
     real(kind=rp), dimension(:,:,:), pointer :: zr,zw
     real(kind=rp), dimension(:,:,:), pointer :: p
     real(kind=rp) :: dxu,dyv
     real(kind=rp) :: dzw
-
 
     !NG comment: constants in a mg_cst.f90 file ?
     real(kind=rp), parameter :: two  = 2._rp
@@ -44,6 +45,28 @@ contains
 
     if (myrank==0) write(*,*)'- correct u,v,w:'
 
+    !! umask and vmask
+    allocate(umask(0:ny+1,0:nx+1))
+    allocate(vmask(0:ny+1,0:nx+1))
+    if (bmask) then
+!!$    be care
+       umask(:,:)=0._8
+       vmask(:,:)=0._8
+       do i = 1,nx+1
+          do j = 0,ny+1
+             umask(j,i) = rmask(j,i-1)*rmask(j,i)
+          enddo
+       enddo
+       do i = 0,nx+1
+          do j = 1,ny+1
+             vmask(j,i) = rmask(j-1,i)*rmask(j,i)
+          enddo
+       enddo
+    else
+       umask(:,:)=1._8
+       vmask(:,:)=1._8
+    endif
+
     !! Correct
     p => grid(1)%p
 
@@ -53,19 +76,19 @@ contains
 
              dxu = hlf * (dx(j,i)+dx(j,i-1))
 
-             u(i,j,k) = u(i,j,k) - one / dxu * (p(k,j,i)-p(k,j,i-1))
+             u(i,j,k) = u(i,j,k) - one / dxu * (p(k,j,i)-p(k,j,i-1)) * umask(j,i)
 
           enddo
        enddo
     enddo
 
-   do i = 0,nx+1
+    do i = 0,nx+1
        do j = 1,ny+1 
           do k = 1,nz
 
              dyv = hlf * (dy(j,i)+dy(j-1,i))
 
-             v(i,j,k) = v(i,j,k) - one / dyv * (p(k,j,i)-p(k,j-1,i  ))
+             v(i,j,k) = v(i,j,k) - one / dyv * (p(k,j,i)-p(k,j-1,i  )) * vmask(j,i)
 
           enddo
        enddo
@@ -85,6 +108,9 @@ contains
 
        enddo
     enddo
+
+    deallocate(umask)
+    deallocate(vmask)
 
   end subroutine correct_uvw
 

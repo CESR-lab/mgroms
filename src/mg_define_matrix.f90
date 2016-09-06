@@ -25,12 +25,13 @@ module mg_define_matrix
 contains
 
   !-------------------------------------------------------------------------  
-  subroutine define_matrices_topo(dx, dy, zeta, h)
+  subroutine define_matrices_topo(dx, dy, zeta, h, rmask)
 
     real(kind=rp), dimension(:,:), intent(in) :: dx
     real(kind=rp), dimension(:,:), intent(in) :: dy
     real(kind=rp), dimension(:,:), intent(in) :: zeta
     real(kind=rp), dimension(:,:), intent(in) :: h
+    real(kind=rp), dimension(:,:), pointer, intent(in) :: rmask
 
     integer(kind=ip)::  lev
 
@@ -71,7 +72,6 @@ contains
           grid(lev)%dy(0:ny+1,0:nx+1) = dy
           grid(lev)%zeta(0:ny+1,0:nx+1) = zeta
           grid(lev)%h (0:ny+1,0:nx+1) =  h
-
 
        else
           nxf =grid(lev-1)%nx
@@ -174,18 +174,19 @@ contains
        endif
 
        ! Define matrix coefficients from dx, dy, zr and zw coarsened
-       call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw)
+       call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw, rmask)
 
     enddo ! lev
 
   end subroutine define_matrices_topo
 
   !-----------------------------------------------------------------------------------
-  subroutine define_matrix(lev, dx, dy, zr, zw)
+  subroutine define_matrix(lev, dx, dy, zr, zw, rmask)
 
     integer(kind=ip),intent(in):: lev
-    real(kind=rp), dimension(:,:),   pointer, intent(in) :: dx, dy
+    real(kind=rp), dimension(:,:)  , pointer, intent(in) :: dx, dy
     real(kind=rp), dimension(:,:,:), pointer, intent(in) :: zr, zw
+    real(kind=rp), dimension(:,:)  , pointer, intent(in) :: rmask
 
     ! Define matrix coefficients cA
     ! Coefficients are stored in order of diagonals
@@ -201,6 +202,8 @@ contains
     integer(kind=ip):: k, j, i
     integer(kind=ip):: nx, ny, nz
 
+    real(kind=rp), dimension(:,:)  ,   pointer :: umask, vmask
+
     real(kind=rp) :: Arz
     real(kind=rp), dimension(:,:,:),   pointer :: dzw
     real(kind=rp), dimension(:,:,:),   pointer :: zydx,zxdy
@@ -212,6 +215,28 @@ contains
     nz = grid(lev)%nz
 
     cA => grid(lev)%cA 
+
+    ! Umask and Vmask from rmask
+    allocate(umask(0:ny+1,0:nx+1))
+    allocate(vmask(0:ny+1,0:nx+1))
+
+    if (bmask) then
+       umask(:,:)=0._rp
+       vmask(:,:)=0._rp
+       do i = 1,nx+1
+          do j = 0,ny+1
+             umask(j,i) = rmask(j,i-1) * rmask(j,i)
+          enddo
+       enddo
+       do i = 0,nx+1
+          do j = 1,ny+1
+             vmask(j,i) = rmask(j-1,i) * rmask(j,i)
+          enddo
+       enddo
+    else
+       umask(:,:)=1._rp
+       vmask(:,:)=1._rp
+    endif
 
     !- Used in compute_rhs -!
     if (lev == 1) then
@@ -269,169 +294,251 @@ contains
        enddo
     enddo
 
-!! interaction coeff with neighbours
-!XX
-          !---------!
-          !- K = 1 -! lower level
-          !---------!
-          k = 1
+    !! interaction coeff with neighbours
+    !XX
+    !---------!
+    !- K = 1 -! lower level
+    !---------!
+    k = 1
 
     do i = 1,nx
        do j = 1,ny+1
-          cA(3,k,j,i) = qrt * ( &
-               ( hlf * (zr(k+1,j+1,i  )-zr(k+1,j-1,i  )) / dy(j,i) ) * dx(j,i) + &
-               ( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i) )
-          !! zydx(k+1,j,i) + &
-          !! zydx(k,j-1,i) ) ! couples with k+1 j-1
-          cA(4,k,j,i) =                                                                &
+
+          cA(3,k,j,i) = qrt * ( &          ! couples with k+1 j-1    
+               ( hlf * (zr(k+1,j+1,i)-zr(k+1,j-1,i)) / dy(j  ,i) ) * dx(j  ,i) + &
+               ( hlf * (zr(k  ,j  ,i)-zr(k  ,j-2,i)) / dy(j-1,i) ) * dx(j-1,i) ) * vmask(j,i)
+
+          cA(4,k,j,i) =                                                                     &
                                 ! couples with j-1
-               ( qrt                                                                 * &
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) )             * &
-               (dx(j,i)+dx(j-1,i)) )/ (hlf * (dy(j,i)+dy(j-1,i)))                      & 
+               ( qrt                                                                      * &  ! 0.25 *
+               ( zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j-1,i)-zw(k,j-1,i)) * (dx(j,i)+dx(j-1,i)) ) / &  ! Ary(k,j,i) /
+               ( hlf * (dy(j,i)+dy(j-1,i)))                                                 &  ! dyv(j,i)
                                 ! topo terms 
-               - ( (( hlf * (zr(k,j+1,i)-zr(k,j-1,i)) / dy(j,i) ) * dx(j,i))**2 / &
-               ( cw(k,j  ,i) + cw(k+1,j  ,i) )     &
-               +   (( hlf * (zr(k,j,i)-zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i))**2 / &
-               ( cw(k,j-1,i) + cw(k+1,j-1,i) )   ) &
+               - ( (( hlf * (zr(k,j+1,i)-zr(k,j-1,i)) / dy(j,i) ) * dx(j,i))**2 /           & ! zydx(k,j,i)*zydx(k,j,i) /
+               ( cw(k,j,i) + cw(k+1,j,i) )                                                  & ! (cw(k,j,i)+cw(k+1,j,i)
+               +   (( hlf * (zr(k,j,i)-zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i))**2 /         & ! zydx(k,j-1,i)*zydx(k,j-1,i)/
+               ( cw(k,j-1,i) + cw(k+1,j-1,i) ) )                                            & ! (cw(k,j-1,i)+cw(k+1,j-1,i)
                                 ! from j,k cross terms
-               - qrt * ( &
-               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) -  &
-               ( hlf * (zr(k,j+1,i  )-zr(k,j-1,i  )) / dy(j,i) ) * dx(j,i))  
-      enddo
+               - qrt *  ( &
+               ( hlf * (zr(k,j  ,i) - zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i)              - & ! zydx(k,j-1,i)
+               ( hlf * (zr(k,j+1,i) - zr(k,j-1,i)) / dy(j  ,i) ) * dx(j  ,i) )                ! zydx(k,j,i)
+
+          if (bmask) then
+             cA(4,k,j,i) = ( cA(4,k,j,i)  &
+                                ! from i,j cross terms if lbc                                         
+                  -(hlf * (( hlf * (zr(k,j,i)-zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i))**2  / & ! 0.5*zxdy(k,j-1,i)*zydx(k,j-1,i)
+                  (cw(k,j-1,i)+cw(k+1,j-1,i))                                             * & ! cw(k,j-1,i)+cw(k+1,j-1,i)
+                  (umask(j-1,i+1) - umask(j-1,i))                                           & ! umask
+                  - hlf * (( hlf * (zr(k,j+1,i)-zr(k,j-1,i)) / dy(j,i) ) * dx(j,i))**2    / & ! 0.5*zxdy(k,j,i)*zydx(k,j,i)
+                  (cw(k,j,i)+cw(k+1,j,i))                                                 * & ! cw(k,j,i)+cw(k+1,j,i)
+                  (umask(j,i+1) - umask(j,i))) )                                          * & ! umask
+                  vmask(j,i)                                                                  ! vmask all Ca4
+          endif
+
+       enddo
     enddo
+
     do i = 1,nx+1
        do j = 1,ny
+
           cA(6,k,j,i) = qrt * ( &
-               ( hlf * (zr(k+1,j  ,i+1)-zr(k+1,j  ,i-1)) / dx(j,i) ) * dy(j,i) + &
-               ( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1) )  ! couples with k+1 i-1
-          cA(7,k,j,i) =                                                                &
+               ( hlf * (zr(k+1,j,i+1)-zr(k+1,j,i-1)) / dx(j,i  ) ) * dy(j,i  )   + &
+               ( hlf * (zr(k  ,j,i  )-zr(k  ,j,i-2)) / dx(j,i-1) ) * dy(j,i-1) ) * & ! couples with k+1 i-1
+               umask(j,i)
+
+          cA(7,k,j,i) =                                                                    &
                                 ! couples with i-1
-               ( qrt                                                                 * &
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) )             * &
-               (dy(j,i)+dy(j,i-1)) )                                                 / &
-               ( hlf * (dx(j,i)+dx(j,i-1)) )                                           &  
+               ( qrt                                                                     * & ! 0.25
+               (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j,i-1)-zw(k,j,i-1)) * (dy(j,i)+dy(j,i-1)) ) / & ! Arx(k,j,i)
+               ( hlf * (dx(j,i)+dx(j,i-1)) )                                               & ! dxu(j,i)
                                 ! topo terms
-               - ( (( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i) ) * dy(j,i))**2 / &
-               ( cw(k,j,i  ) + cw(k+1,j,i  ) )     &
-               +   (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1))**2 / &
-               ( cw(k,j,i-1) + cw(k+1,j,i-1) )   ) &
+               - ( (( hlf * (zr(k,j,i+1)-zr(k,j,i-1)) / dx(j,i) ) * dy(j,i))**2          / & ! zxdy(k,j,i)*zxdy(k,j,i)
+               ( cw(k,j,i) + cw(k+1,j,i) )                                                 & ! cw(k,j,i-1)+cw(k+1,j,i-1)
+               +   (( hlf * (zr(k,j,i)-zr(k,j,i-2)) / dx(j,i-1) ) * dy(j,i-1))**2        / & ! zxdy(k,j,i-1)*zxdy(k,j,i-1)
+               ( cw(k,j,i-1) + cw(k+1,j,i-1) ) )                                           & ! cw(k,j,i-1)+cw(k+1,j,i-1)
                                 ! from i,k cross terms
-               - qrt * ( &
-               ( hlf * (zr(k,j  ,i  )-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1) - &
-               ( hlf * (zr(k,j  ,i+1)-zr(k,j  ,i-1)) / dx(j,i  ) ) * dy(j,i) )
-      enddo
+               - qrt                                                                   * ( & ! 0.25
+               ( hlf * (zr(k,j,i  )-zr(k,j,i-2)) / dx(j,i-1) ) * dy(j,i-1)               - & ! zxdy(k,j,i-1)
+               ( hlf * (zr(k,j,i+1)-zr(k,j,i-1)) / dx(j,i  ) ) * dy(j,i)                 )   ! zxdy(k,j,i)
+
+          if (bmask) then
+
+             cA(7,k,j,i) = ( cA(7,k,j,i) &
+                                ! from i,j cross terms if lbc                                         
+                  -(hlf * (( hlf * (zr(k,j,i)-zr(k,j,i-2)) / dx(j,i-1) ) * dy(j,i-1))**2 / & ! 0.5*zxdy(k,j,i-1)*zydx(k,j,i-1)
+                  (cw(k,j,i-1)+cw(k+1,j,i-1) )                                             & ! cw(k,j,i-1)+cw(k+1,j,i-1)
+                  * (vmask(j+1,i-1) - vmask(j,i-1))                                        & ! vmask
+                  - hlf * (( hlf * (zr(k,j,i+1)-zr(k,j,i-1)) / dx(j,i) ) * dy(j,i))**2   / & ! 0.5*zxdy(k,j,i)*zydx(k,j,i)
+                  (cw(k,j,i)+cw(k+1,j,i))                                                  & ! cw(k,j,i)+cw(k+1,j,i)
+                  * (vmask(j+1,i) - vmask(j,i))) )                                       * & ! vmask
+                  umask(j,i)                                                                 ! umask
+
+          endif
+
+       enddo
     enddo
+
     do i = 1,nx+1
        do j = 0,ny
           ! only for k==1, couples with j+1,i-1
           cA(5,k,j,i) = &
-               + hlf * &
+               + hlf                                                             * &
                (( hlf * (zr(k,j+1,i+1)-zr(k,j+1,i-1)) / dx(j+1,i) ) * dy(j+1,i)) * &
                (( hlf * (zr(k,j+2,i  )-zr(k,j  ,i  )) / dy(j+1,i) ) * dx(j+1,i)) / &
-               ( cw(k,j+1,i  ) + cw(k+1,j+1,i  ))  &
-               + hlf * &
-               (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) * &
+               ( cw(k,j+1,i  ) + cw(k+1,j+1,i  ))                                * &
+               umask(j+1,i) * vmask(j+1,i)                                         & ! mask
+               + hlf                                                             * &
+               (( hlf * (zr(k,j  ,i  )-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) * &
                (( hlf * (zr(k,j+1,i-1)-zr(k,j-1,i-1)) / dy(j,i-1) ) * dx(j,i-1)) / &
-               ( cw(k,j  ,i-1) + cw(k+1,j  ,i-1))
-         enddo
+               ( cw(k,j  ,i-1) + cw(k+1,j  ,i-1))                                * &
+               umask(j,i) * vmask(j+1,i-1)                                           ! mask
+       enddo
     enddo
+
     do i = 1,nx+1
        do j = 1,ny+1
           ! only for k==1, couples with j-1,i-1
           cA(8,k,j,i) = &
-               - hlf * &
+               - hlf                                                             * &
                (( hlf * (zr(k,j-1,i+1)-zr(k,j-1,i-1)) / dx(j-1,i) ) * dy(j-1,i)) * &
-               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) / &
-               (cw(k,j-1,i  ) + cw(k+1,j-1,i  )) & 
-               - hlf * &
-               (( hlf * (zr(k,j,i)-zr(k,j,i-2)) / dx(j,i-1) ) * dy(j,i-1)) * &
+               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i))   / &
+               (cw(k,j-1,i  ) + cw(k+1,j-1,i  ))                                 * & 
+               umask(j-1,i) * vmask(j,i)                                           & ! mask
+               - hlf                                                             * &
+               (( hlf * (zr(k,j,i)-zr(k,j,i-2)) / dx(j,i-1) ) * dy(j,i-1))       * &
                (( hlf * (zr(k,j+1,i-1)-zr(k,j-1,i-1)) / dy(j,i-1) ) * dx(j,i-1)) / &
-               (cw(k,j  ,i-1) + cw(k+1,j  ,i-1)) 
+               (cw(k,j  ,i-1) + cw(k+1,j  ,i-1))                                 * &
+               umask(j,i) * vmask(j,i-1)                                             ! mask
        enddo
     enddo
 
-!XX
-          !---------------!
-          !- K = 2, nz-1 -! interior levels
-          !---------------!
+    !XX
+    !---------------!
+    !- K = 2, nz-1 -! interior levels
+    !---------------!
 
     do i = 1,nx
        do j = 1,ny
           do k = 2,nz-1 
              cA(2,k,j,i) =  cw(k,j,i)                                  ! couples with k-1
-          enddo
-       enddo
-    enddo
-    do i = 1,nx
-       do j = 1,ny+1
-          do k = 2,nz-1 
-             cA(3,k,j,i) =  qrt * ( &
-                  ( hlf * (zr(k+1,j+1,i  )-zr(k+1,j-1,i  )) / dy(j,i) ) * dx(j,i) + &
-                  ( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i) )     ! couples with k+1 j-1
-             cA(4,k,j,i) =  ( qrt * &
-                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-                  (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) ) ! couples with j-1
-             cA(5,k,j,i) =- qrt * ( &
-                  (( hlf * (zr(k-1,j+1,i  )-zr(k-1,j-1,i  )) / dy(j,i) ) * dx(j,i)) + &
-                  (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) )     ! couples with k-1 j-1
-          enddo
-      enddo
-    enddo
-    do i = 1,nx+1
-       do j = 1,ny 
-          do k = 2,nz-1 
-             cA(6,k,j,i) =  qrt * ( &
-                  (( hlf * (zr(k+1,j  ,i+1)-zr(k+1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
-                  (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) )     ! Couples with k+1 i-1
-             cA(7,k,j,i) =   (qrt * &
-                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
-                  (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) ) ! Couples with i-1
-             cA(8,k,j,i) =- qrt * ( &
-                  (( hlf * (zr(k-1,j  ,i+1)-zr(k-1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
-                  (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1))  )     ! Couples with k-1 i-1
+
+             if (bmask) then
+                cA(2,k,j,i) = cA(2,k,j,i)                    &
+                                ! from i,k  cross terms if lbc
+                     - qrt * ( &
+                     ( hlf * (zr(k-1,j,i+1)-zr(k-1,j,i-1)) / dx(j,i) ) * dy(j,i)   - & ! zxdy(k-1,j,i)
+                     ( hlf * (zr(k  ,j,i+1)-zr(k  ,j,i-1)) / dx(j,i) ) * dy(j,i) ) * & ! zxdy(k,j,i)
+                     (umask(j,i+1) - umask(j,i))             &
+                                ! from j,k  cross terms if lbc
+                     - qrt * ( &
+                     ( hlf * (zr(k-1,j+1,i) - zr(k-1,j-1,i)) / dy(j,i) ) * dx(j,i)     - & ! zydx(k-1,j,i)
+                     ( hlf * (zr(k  ,j+1,i) - zr(k  ,j-1,i)) / dy(j,i) ) * dx(j,i)   ) * & ! zydx(k,j,i)
+                     (vmask(j+1,i) - vmask(j,i))
+             endif
+
           enddo
        enddo
     enddo
 
-!XX
-          !----------!
-          !- K = nz -! upper level
-          !----------!
-          k = nz
+    do i = 1,nx
+       do j = 1,ny+1
+          do k = 2,nz-1 
+
+             cA(3,k,j,i) =  qrt * ( &
+                  ( hlf * (zr(k+1,j+1,i  )-zr(k+1,j-1,i  )) / dy(j,i) ) * dx(j,i) + &
+                  ( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i) ) * & ! couples with k+1 j-1
+                  vmask(j,i)
+
+             cA(4,k,j,i) =  ( qrt * &
+                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
+                  (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) )     * & ! couples with j-1
+                  vmask(j,i)
+
+             cA(5,k,j,i) =- qrt * ( &
+                  (( hlf * (zr(k-1,j+1,i  )-zr(k-1,j-1,i  )) / dy(j,i) ) * dx(j,i)) + &
+                  (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) ) * & ! couples with k-1 j-1
+                  vmask(j,i)
+
+          enddo
+       enddo
+    enddo
+
+    do i = 1,nx+1
+       do j = 1,ny 
+          do k = 2,nz-1 
+
+             cA(6,k,j,i) =  qrt * ( &
+                  (( hlf * (zr(k+1,j  ,i+1)-zr(k+1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
+                  (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) ) * &    ! Couples with k+1 i-1
+                  umask(j,i)
+
+             cA(7,k,j,i) =   (qrt * &
+                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
+                  (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) )     * & ! Couples with i-1
+                  umask(j,i)
+
+             cA(8,k,j,i) =- qrt * ( &
+                  (( hlf * (zr(k-1,j  ,i+1)-zr(k-1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
+                  (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) ) * & ! Couples with k-1 i-1
+                  umask(j,i)
+
+          enddo
+       enddo
+    enddo
+
+    !XX
+    !----------!
+    !- K = nz -! upper level
+    !----------!
+    k = nz
 
     do i = 1,nx    
        do j = 1,ny 
           cA(2,k,j,i) = cw(k,j,i)                                    ! couples with k-1
-       enddo 
-    enddo 
+       enddo
+    enddo
+
     do i = 1,nx
        do j = 1,ny+1
+
           cA(4,k,j,i) = ( qrt * &
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-               (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) ) & ! couples with j-1
-               + qrt * ( &
-               - (( hlf * (zr(k,j  ,i)-zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i)) &
-               + (( hlf * (zr(k,j+1,i)-zr(k,j-1,i)) / dy(j  ,i) ) * dx(j  ,i)) )
+               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) )         * &
+               (dx(j,i)+dx(j-1,i)) ) / ( hlf * (dy(j,i)+dy(j-1,i)) )               & ! couples with j-1
+               + qrt * (                                                           &
+               - (( hlf * (zr(k,j  ,i)-zr(k,j-2,i)) / dy(j-1,i) ) * dx(j-1,i))     &
+               + (( hlf * (zr(k,j+1,i)-zr(k,j-1,i)) / dy(j  ,i) ) * dx(j  ,i)) ) * &
+               vmask(j,i)
+
           cA(5,k,j,i) =- qrt * ( &
                (( hlf * (zr(k-1,j+1,i  )-zr(k-1,j-1,i  )) / dy(j,i) ) * dx(j,i)) + &
-               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) )     ! couples with k-1 j-1
-      enddo 
-    enddo 
+               (( hlf * (zr(k,j,i  )-zr(k,j-2,i  )) / dy(j-1,i) ) * dx(j-1,i)) ) * & ! couples with k-1 j-1
+               vmask(j,i)
+
+       enddo
+    enddo
+
     do i = 1,nx+1
        do j = 1,ny 
+
           cA(7,k,j,i) = (qrt * &
                ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
                (dy(j,i)+dy(j,i-1)) ) / ( hlf * (dx(j,i)+dx(j,i-1)) ) & ! Couples with i-1
                + qrt * ( &
                - (( hlf * (zr(k,j,i  )-zr(k,j,i-2)) / dx(j,i-1)) * dy(j,i-1)) &
-               + (( hlf * (zr(k,j,i+1)-zr(k,j,i-1)) / dx(j,i  )) * dy(j,i  )) )
+               + (( hlf * (zr(k,j,i+1)-zr(k,j,i-1)) / dx(j,i  )) * dy(j,i  )) ) * &
+               umask(j,i)
+
           cA(8,k,j,i) =- qrt * ( &
                (( hlf * (zr(k-1,j  ,i+1)-zr(k-1,j  ,i-1)) / dx(j,i) ) * dy(j,i)) + &
-               (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) )     ! Couples with k-1 i-1
+               (( hlf * (zr(k,j  ,i)-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) ) * & ! Couples with k-1 i-1
+               umask(j,i)
+
        enddo
     enddo
 
-!    call fill_halo(lev,cA)
+    if (bmask) then
+       call fill_halo(lev,cA)
+    endif
 
     !! interaction coeff with itself
     do i = 1,nx
@@ -480,6 +587,9 @@ contains
        if (myrank==0) write(*,*)'       write cA in a netcdf file'
        call write_netcdf(grid(lev)%cA,vname='ca',netcdf_file_name='cA.nc',rank=myrank,iter=lev)
     endif
+
+    deallocate(umask)
+    deallocate(vmask)
 
   end subroutine define_matrix
 
