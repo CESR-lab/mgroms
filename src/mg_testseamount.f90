@@ -97,11 +97,9 @@ program mg_testseamount
   allocate(rmask(0:ny+1,0:nx+1))
   rmask(:,:) = 1._rp
 
+  !- Not generic - Only for 1 proc
   if (bmask) then
-     rmask(:,0)    = 0._rp
-     rmask(0,:)    = 0._rp
-     rmask(:,nx+1) = 0._rp
-     rmask(ny+1,:) = 0._rp
+     call fill_halo_2D_bmask(rmask)
   endif
 
   call nhydro_matrices(dx,dy,zeta,h,rmask,hc,theta_b,theta_s)

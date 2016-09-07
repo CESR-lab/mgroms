@@ -451,6 +451,44 @@ contains
   !----------------------------------------------------------------------------
   !- Nonblocking MPI exchanges -!
   !-----------------------------!
+  subroutine fill_halo_2D_bmask(a2D)
+
+    real(kind=rp), dimension(:,:), pointer, intent(inout)::a2D
+
+    integer(kind=ip) :: nx, ny
+    integer(kind=ip) :: nh
+    integer(kind=ip) :: south, east, north, west
+
+    nx = grid(1)%nx
+    ny = grid(1)%ny
+    nh = 1
+
+    south     = grid(1)%neighb(1)
+    east      = grid(1)%neighb(2)
+    north     = grid(1)%neighb(3)
+    west      = grid(1)%neighb(4)
+
+    if (south == MPI_PROC_NULL) then
+       a2D(0,:) = 0._rp
+    endif
+
+    if (east == MPI_PROC_NULL) then
+       a2D(:,nx+1) = 0._rp
+    endif
+
+    if (north == MPI_PROC_NULL) then
+       a2D(ny+1,:) = 0._rp
+    endif
+
+    if (west == MPI_PROC_NULL) then
+       a2D(:,0) = 0._rp
+    endif
+
+  end subroutine fill_halo_2D_bmask
+
+  !----------------------------------------------------------------------------
+  !- Nonblocking MPI exchanges -!
+  !-----------------------------!
   subroutine fill_halo_3D_new(lev,p,nx,ny,nz,lbc_null)
 
     integer(kind=ip), intent(in):: lev
