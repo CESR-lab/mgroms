@@ -37,8 +37,8 @@ contains
     real(kind=rp), parameter :: qrt  = 0.25_rp
     real(kind=rp), parameter :: zero = 0._rp
 
-    !    integer(kind=ip), save :: iter=0
-    !    iter = iter + 1
+    integer(kind=ip), save :: iter=0
+    iter = iter + 1
 
     nx = grid(1)%nx
     ny = grid(1)%ny
@@ -103,29 +103,29 @@ contains
     do i = 1,nx+1  ! West  to East
        do j = 1,ny ! South to North
 
-          uf(k,j,i) =  &
-               ( qrt                                                    * & 
-               ( zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j,i-1)-zw(k,j,i-1) ) * ( dy(j,i) + dy(j,i-1) ) & 
-               * u(i,j,k) &
+          uf(k,j,i) =                                                                            &
+               ( qrt * (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j,i-1)-zw(k,j,i-1)) * (dy(j,i) + dy(j,i-1)) & ! Arx(k,j,i)
+               * u(i,j,k)                                                                        & ! * u(i,j,k)
                
-               - qrt * ( &
-               + zxdy(k,j,i  )*dzw(k+1,j,i  )*w(i  ,j,k+1-1) * rmask(j,i  )   &
-               + zxdy(k,j,i-1)*dzw(k+1,j,i-1)*w(i-1,j,k+1-1) * rmask(j,i-1) ) &
+               - qrt * (                                                          &
+               + zxdy(k,j,i  ) * dzw(k+1,j,i  ) * w(i  ,j,k+1-1) * rmask(j,i  )   &
+               + zxdy(k,j,i-1) * dzw(k+1,j,i-1) * w(i-1,j,k+1-1) * rmask(j,i-1) ) &
                
-               -( &
-               + zxdy(k,j,i  )*zxdy(k,j,i  )/(cw(k,j,i  )+cw(k+1,j,i  )) &
-               + zxdy(k,j,i-1)*zxdy(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) ) * &
-               (hlf * ( dx(j,i) + dx(j,i-1) )) * u(i,j,k) &
+               -(                                                              &
+               + zxdy(k,j,i  ) * zxdy(k,j,i  ) / (cw(k,j,i  )+cw(k+1,j,i  ))   &
+               + zxdy(k,j,i-1) * zxdy(k,j,i-1) / (cw(k,j,i-1)+cw(k+1,j,i-1)) ) &
+               * (hlf * ( dx(j,i) + dx(j,i-1) ))                               & ! * dxu(j,i)
+               * u(i,j,k)                                                      & ! * u(i,j,k)
                
                -( & 
-               + zxdy(k,j,i) * zydx(k,j,i)/(cw(k,j,i  )+cw(k+1,j,i  ))   &
+               + zxdy(k,j,i) * zydx(k,j,i) / (cw(k,j,i)+cw(k+1,j,i))       &
+               * hlf * (                                                   & ! 0.5 *
+               hlf * (dy(j  ,i) + dy(j-1,i)) * v(i,j  ,k) * vmask(j  ,i) + & ! dyv(j  ,i)*v(k,j  ,i)*vmask(j  ,i)
+               hlf * (dy(j+1,i) + dy(j  ,i)) * v(i,j+1,k) * vmask(j+1,i))  & ! dyv(j+1,i)*v(k,j+1,i)*vmask(j+1,i)
+               + zxdy(k,j,i-1) * zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1)) &
                * hlf * ( &
-               hlf * ( dy(j  ,i) + dy(j-1,i) )*v(i,j  ,k) * vmask(j  ,i) + &
-               hlf * ( dy(j+1,i) + dy(j  ,i) )*v(i,j+1,k) * vmask(j+1,i))   & 
-               + zxdy(k,j,i-1) * zydx(k,j,i-1)/(cw(k,j,i-1)+cw(k+1,j,i-1))   &
-               * hlf * ( &
-               hlf * ( dy(j  ,i-1) + dy(j-1,i-1) )*v(i-1,j  ,k) * vmask(j  ,i-1) + &
-               hlf * ( dy(j+1,i-1) + dy(j  ,i-1) )*v(i-1,j+1,k) * vmask(j+1,i-1)) ) ) * &
+               hlf * (dy(j  ,i-1) + dy(j-1,i-1)) * v(i-1,j  ,k) * vmask(j  ,i-1)     + & ! dyv(j  ,i-1)*v(k,j  ,i-1)*vmask(j  ,i-1)
+               hlf * (dy(j+1,i-1) + dy(j  ,i-1)) * v(i-1,j+1,k) * vmask(j+1,i-1)) )) * & ! dyv(j+1,i-1)*v(k,j+1,i-1)*vmask(j+1,i-1)
                umask(j,i)
 
        enddo
@@ -136,14 +136,14 @@ contains
 
           do k = 2,nz-1 !interior levels
 
-             uf(k,j,i) =  (qrt                                               * & 
-                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
-                  ( dy(j,i) + dy(j,i-1) ) * u(i,j,k)                          &
+             uf(k,j,i) =  (                                                                     & 
+                  qrt * (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j,i-1)-zw(k,j,i-1)) * (dy(j,i)+dy(j,i-1)) & ! Arx(k,j,i)
+                  * u(i,j,k)                                                                    & ! * u(i,j,k)
                   - qrt * ( &
-                  + zxdy(k,j,i  ) * dzw(k  ,j,i  ) * w(i  ,j,k  -1) *rmask(j,i  )&
-                  + zxdy(k,j,i  ) * dzw(k+1,j,i  ) * w(i  ,j,k+1-1) *rmask(j,i  )&
-                  + zxdy(k,j,i-1) * dzw(k  ,j,i-1) * w(i-1,j,k  -1) *rmask(j,i-1)&
-                  + zxdy(k,j,i-1) * dzw(k+1,j,i-1) * w(i-1,j,k+1-1) *rmask(j,i-1)&
+                  + zxdy(k,j,i  ) * dzw(k  ,j,i  ) * w(i  ,j,k  -1) * rmask(j,i  ) &
+                  + zxdy(k,j,i  ) * dzw(k+1,j,i  ) * w(i  ,j,k+1-1) * rmask(j,i  ) &
+                  + zxdy(k,j,i-1) * dzw(k  ,j,i-1) * w(i-1,j,k  -1) * rmask(j,i-1) &
+                  + zxdy(k,j,i-1) * dzw(k+1,j,i-1) * w(i-1,j,k+1-1) * rmask(j,i-1) &
                   )  ) * umask(j,i)
           enddo
 
@@ -155,16 +155,14 @@ contains
     do i = 1,nx+1  ! West  to East
        do j = 1,ny ! South to North
 
-          uf(k,j,i) = &
-               ( qrt                                                       * & 
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j,i-1) - zw(k,j,i-1) ) * &
-               ( dy(j,i) + dy(j,i-1) ) &
-               * u(i,j,k) &
+          uf(k,j,i) = (                                                                        &
+               qrt * (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j,i-1)-zw(k,j,i-1)) * (dy(j,i) + dy(j,i-1)) & ! Arx(k,j,i)
+               * u(i,j,k)                                                                      & ! * u(i,j,k)
                - qrt * ( &
-               + zxdy(k,j,i  )*       dzw(k  ,j,i  )*w(i  ,j,k  -1) &
-               + zxdy(k,j,i  )* two * dzw(k+1,j,i  )*w(i  ,j,k+1-1) &
-               + zxdy(k,j,i-1)*       dzw(k  ,j,i-1)*w(i-1,j,k  -1) &
-               + zxdy(k,j,i-1)* two * dzw(k+1,j,i-1)*w(i-1,j,k+1-1) &
+               + zxdy(k,j,i  )*       dzw(k  ,j,i  )*w(i  ,j,k  -1) * rmask(j,i  ) &
+               + zxdy(k,j,i  )* two * dzw(k+1,j,i  )*w(i  ,j,k+1-1) * rmask(j,i  ) &
+               + zxdy(k,j,i-1)*       dzw(k  ,j,i-1)*w(i-1,j,k  -1) * rmask(j,i-1) &
+               + zxdy(k,j,i-1)* two * dzw(k+1,j,i-1)*w(i-1,j,k+1-1) * rmask(j,i-1) &
                )  ) * umask(j,i)
 
        enddo
@@ -174,15 +172,15 @@ contains
        call fill_halo(1,uf,lbc_null='u')
     endif
 
-!!$    if (netcdf_output) then
-!!$       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
-!!$    endif
+    if (netcdf_output) then
+       call write_netcdf(uf,vname='uf',netcdf_file_name='uf.nc',rank=myrank,iter=iter)
+    endif
 
     do i = 1,nx
        do j = 1,ny 
           do k = 1,nz
 
-             rhs(k,j,i) = uf(k  ,j  ,i+1) - uf(k,j,i) 
+             rhs(k,j,i) = uf(k,j,i+1) - uf(k,j,i) 
 
           enddo
        enddo
@@ -202,30 +200,30 @@ contains
     do i = 1,nx
        do j = 1,ny+1
 
-          vf(k,j,i) = &
-               ( qrt                                                       * &
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-               ( dx(j,i) + dx(j-1,i) ) &
-               * v(i,j,k) &
-               - qrt * ( &
+          vf(k,j,i) = ( &
+               qrt * (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j-1,i)-zw(k,j-1,i) ) * (dx(j,i)+dx(j-1,i) ) & ! Ary(k,j,i)
+               * v(i,j,k)                                                                      & ! * v(i,j,k)
+               
+               - qrt * (                                                      &
                + zydx(k,j  ,i) * dzw(k+1,j  ,i)*w(i,j  ,k+1-1) * rmask(j  ,i) &
                + zydx(k,j-1,i) * dzw(k+1,j-1,i)*w(i,j-1,k+1-1) * rmask(j-1,i) &
-               ) &
+               )                                                              &
                
-               -( &
+               -(                                                          &
                + zydx(k,j  ,i) * zydx(k,j  ,i)/(cw(k,j  ,i)+cw(k+1,j  ,i)) &
-               + zydx(k,j-1,i) * zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) ) * &
-               hlf * ( dy(j,i) + dy(j-1,i) ) * v(i,j,k) &
+               + zydx(k,j-1,i) * zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i)) &
+               ) * hlf * (dy(j,i) + dy(j-1,i))                             & ! * dyv(j,i)
+               * v(i,j,k)                                                  &
                
                - ( &
                + zxdy(k,j  ,i) * zydx(k,j  ,i)/(cw(k,j  ,i)+cw(k+1,j  ,i))  &
                * hlf * ( &
-               hlf * ( dx(j,i  ) + dx(j,i-1) ) * u(i  ,j,k) * umask(j,i  )+ &
-               hlf * ( dx(j,i+1) + dx(j,i  ) ) * u(i+1,j,k) * umask(j,i+1)) &
+               hlf * (dx(j,i  ) + dx(j,i-1)) * u(i  ,j,k) * umask(j,i  ) + &
+               hlf * (dx(j,i+1) + dx(j,i  )) * u(i+1,j,k) * umask(j,i+1) ) &
                + zxdy(k,j-1,i) * zydx(k,j-1,i)/(cw(k,j-1,i)+cw(k+1,j-1,i))   &
                * hlf * ( &
-               hlf * ( dx(j-1,i  ) + dx(j-1,i-1) ) * u(i  ,j-1,k) * umask(j-1,i  ) + &
-               hlf * ( dx(j-1,i+1) + dx(j-1,i  ) ) * u(i+1,j-1,k) * umask(j-1,i+1)) &
+               hlf * (dx(j-1,i  ) + dx(j-1,i-1)) * u(i  ,j-1,k) * umask(j-1,i  ) + &
+               hlf * (dx(j-1,i+1) + dx(j-1,i  )) * u(i+1,j-1,k) * umask(j-1,i+1)) &
                ) ) * vmask(j,i)
 
        enddo
@@ -236,14 +234,15 @@ contains
 
           do k = 2,nz-1 !interior levels
 
-             vf(k,j,i) = ( qrt * &
-                  ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-                  ( dx(j,i) + dx(j-1,i) ) * v(i,j,k) &
+             vf(k,j,i) = ( &
+                  qrt * (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j-1,i)-zw(k,j-1,i) ) * (dx(j,i)+dx(j-1,i) ) & ! Ary(k,j,i)
+                  * v(i,j,k)                                                                      &
+
                   - qrt * ( &
-                  + zydx(k,j  ,i) * dzw(k  ,j  ,i) * w(i,j  ,k  -1) &
-                  + zydx(k,j  ,i) * dzw(k+1,j  ,i) * w(i,j  ,k+1-1) &
-                  + zydx(k,j-1,i) * dzw(k  ,j-1,i) * w(i,j-1,k  -1) &
-                  + zydx(k,j-1,i) * dzw(k+1,j-1,i) * w(i,j-1,k+1-1) &
+                  + zydx(k,j  ,i) * dzw(k  ,j  ,i) * w(i,j  ,k  -1) * rmask(j  ,i) &
+                  + zydx(k,j  ,i) * dzw(k+1,j  ,i) * w(i,j  ,k+1-1) * rmask(j  ,i) &
+                  + zydx(k,j-1,i) * dzw(k  ,j-1,i) * w(i,j-1,k  -1) * rmask(j-1,i) &
+                  + zydx(k,j-1,i) * dzw(k+1,j-1,i) * w(i,j-1,k+1-1) * rmask(j-1,i) &
                   )  ) * vmask(j,i)
 
           enddo
@@ -256,16 +255,15 @@ contains
     do i = 1,nx
        do j = 1,ny+1
 
-          vf(k,j,i) =  &
-               ( qrt                                                       * &
-               ( zw(k+1,j,i) - zw(k,j,i) + zw(k+1,j-1,i) - zw(k,j-1,i) ) * &
-               ( dx(j,i) + dx(j-1,i) ) &
-               * v(i,j,k) &
+          vf(k,j,i) = (  &
+               qrt * (zw(k+1,j,i)-zw(k,j,i)+zw(k+1,j-1,i)-zw(k,j-1,i)) * (dx(j,i)+dx(j-1,i)) & ! Ary(k,j,i)
+               * v(i,j,k)                                                                    &
+
                - qrt * ( &
-               + zydx(k,j  ,i)*       dzw(k  ,j  ,i) * w(i,j  ,k  -1) &
-               + zydx(k,j  ,i)* two * dzw(k+1,j  ,i) * w(i,j  ,k+1-1) &
-               + zydx(k,j-1,i)*       dzw(k  ,j-1,i) * w(i,j-1,k  -1) &
-               + zydx(k,j-1,i)* two * dzw(k+1,j-1,i) * w(i,j-1,k+1-1) &
+               + zydx(k,j  ,i)*       dzw(k  ,j  ,i) * w(i,j  ,k  -1) * rmask(j  ,i) &
+               + zydx(k,j  ,i)* two * dzw(k+1,j  ,i) * w(i,j  ,k+1-1) * rmask(j  ,i) &
+               + zydx(k,j-1,i)*       dzw(k  ,j-1,i) * w(i,j-1,k  -1) * rmask(j-1,i) &
+               + zydx(k,j-1,i)* two * dzw(k+1,j-1,i) * w(i,j-1,k+1-1) * rmask(j-1,i) &
                ) ) * vmask(j,i)
 
        enddo
@@ -275,15 +273,15 @@ contains
        call fill_halo(1,vf,lbc_null='v')
     endif
 
-!!$    if (netcdf_output) then
-!!$       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
-!!$    endif
+    if (netcdf_output) then
+       call write_netcdf(vf,vname='vf',netcdf_file_name='vf.nc',rank=myrank,iter=iter)
+    endif
 
     do i = 1,nx
        do j = 1,ny 
           do k = 1,nz
 
-             rhs(k,j,i) =  rhs(k,j,i) + vf(k  ,j+1,i  ) - vf(k,j,i)
+             rhs(k,j,i) =  rhs(k,j,i) + vf(k,j+1,i) - vf(k,j,i)
 
           enddo
        enddo
@@ -315,10 +313,10 @@ contains
 
              wf(k,j,i) = cw(k,j,i) * dzw(k,j,i)* w(i,j,k-1) &
                   - qrt * hlf * ( &
-                  + zxdy(k  ,j,i) * ( dx(j,i  ) + dx(j,i-1) ) * u(i  ,j,k  ) * umask(j,i  ) &
-                  + zxdy(k  ,j,i) * ( dx(j,i+1) + dx(j,i  ) ) * u(i+1,j,k  ) * umask(j,i+1) &
-                  + zxdy(k-1,j,i) * ( dx(j,i  ) + dx(j,i-1) ) * u(i  ,j,k-1) * umask(j,i  ) &
-                  + zxdy(k-1,j,i) * ( dx(j,i+1) + dx(j,i  ) ) * u(i+1,j,k-1) * umask(j,i+1) )
+                  + zxdy(k  ,j,i) * (dx(j,i  ) + dx(j,i-1)) * u(i  ,j,k  ) * umask(j,i  ) &
+                  + zxdy(k  ,j,i) * (dx(j,i+1) + dx(j,i  )) * u(i+1,j,k  ) * umask(j,i+1) &
+                  + zxdy(k-1,j,i) * (dx(j,i  ) + dx(j,i-1)) * u(i  ,j,k-1) * umask(j,i  ) &
+                  + zxdy(k-1,j,i) * (dx(j,i+1) + dx(j,i  )) * u(i+1,j,k-1) * umask(j,i+1) )
           enddo
 
        enddo
@@ -331,10 +329,10 @@ contains
 
              wf(k,j,i) = wf(k,j,i) &
                   - qrt * hlf * ( &
-                  + zydx(k  ,j,i) * ( dy(j  ,i) + dy(j-1,i) ) * v(i,j  ,k  ) * vmask(j  ,i) &
-                  + zydx(k  ,j,i) * ( dy(j+1,i) + dy(j  ,i) ) * v(i,j+1,k  ) * vmask(j+1,i) &
-                  + zydx(k-1,j,i) * ( dy(j  ,i) + dy(j-1,i) ) * v(i,j  ,k-1) * vmask(j  ,i) &
-                  + zydx(k-1,j,i) * ( dy(j+1,i) + dy(j  ,i) ) * v(i,j+1,k-1) * vmask(j+1,i) )
+                  + zydx(k  ,j,i) * (dy(j  ,i) + dy(j-1,i)) * v(i,j  ,k  ) * vmask(j  ,i) &
+                  + zydx(k  ,j,i) * (dy(j+1,i) + dy(j  ,i)) * v(i,j+1,k  ) * vmask(j+1,i) &
+                  + zydx(k-1,j,i) * (dy(j  ,i) + dy(j-1,i)) * v(i,j  ,k-1) * vmask(j  ,i) &
+                  + zydx(k-1,j,i) * (dy(j+1,i) + dy(j  ,i)) * v(i,j+1,k-1) * vmask(j+1,i) )
           enddo
 
        enddo
@@ -348,25 +346,25 @@ contains
           wf(k,j,i) = cw(k,j,i) * dzw(k,j,i) * w(i,j,k-1)&
                
                - hlf * hlf *( &
-               + zxdy(k-1,j,i) * ( dx(j,i) + dx(j,i-1) ) * u(i  ,j,k-1) * umask(j,i  )   &
-               + zxdy(k-1,j,i) * ( dx(j,i+1) + dx(j,i) ) * u(i+1,j,k-1) * umask(j,i+1) ) &
+               + zxdy(k-1,j,i) * (dx(j,i) + dx(j,i-1)) * u(i  ,j,k-1) * umask(j,i  )   &
+               + zxdy(k-1,j,i) * (dx(j,i+1) + dx(j,i)) * u(i+1,j,k-1) * umask(j,i+1) ) &
                
                - hlf * hlf * ( &
-               + zydx(k-1,j,i) * ( dy(j,i) + dy(j-1,i) ) * v(i,j  ,k-1) * vmask(j  ,i) &
-               + zydx(k-1,j,i) * ( dy(j+1,i) + dy(j,i) ) * v(i,j+1,k-1) * vmask(j+1,i) )
+               + zydx(k-1,j,i) * (dy(j,i) + dy(j-1,i)) * v(i,j  ,k-1) * vmask(j  ,i) &
+               + zydx(k-1,j,i) * (dy(j+1,i) + dy(j,i)) * v(i,j+1,k-1) * vmask(j+1,i) )
 
        enddo
     enddo
 
-!!$    if (netcdf_output) then
-!!$       call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank,iter=iter)
-!!$    endif
+    if (netcdf_output) then
+       call write_netcdf(wf,vname='wf',netcdf_file_name='wf.nc',rank=myrank,iter=iter)
+    endif
 
     do i = 1,nx
        do j = 1,ny 
           do k = 1,nz
 
-             rhs(k,j,i) = rhs(k,j,i) + wf(k+1,j  ,i  ) - wf(k,j,i)
+             rhs(k,j,i) = rhs(k,j,i) + wf(k+1,j,i) - wf(k,j,i)
 
           enddo
        enddo
