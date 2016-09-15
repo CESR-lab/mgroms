@@ -40,8 +40,8 @@ module mg_grids
 
      real(kind=rp),dimension(:,:)  ,pointer :: dx => null()   ! Mesh in x  (1 halo point)
      real(kind=rp),dimension(:,:)  ,pointer :: dy => null()   ! Mesh in y  (1 halo point)
-     real(kind=rp),dimension(:,:)  ,pointer :: zeta  => null()   ! Free-surface anomaly (2 halo points)
-     real(kind=rp),dimension(:,:)  ,pointer :: h  => null()   ! Topography (2 halo points)
+     real(kind=rp),dimension(:,:)  ,pointer :: zeta  => null()! Free-surface anomaly (1 halo point)
+     real(kind=rp),dimension(:,:)  ,pointer :: h  => null()   ! Topography (1 halo point)
      real(kind=rp),dimension(:,:,:),pointer :: zr => null()   ! Mesh in z at rho point (nz  , 2 halo points)
      real(kind=rp),dimension(:,:,:),pointer :: zw => null()   ! Mesh in z at w point   (nz+1, 2 halo points)
 
@@ -72,20 +72,28 @@ module mg_grids
      ! MPI: 2D array buffers (halo=1 and halo=2 => h, zr, zw)
      real(kind=rp),dimension(:,:),pointer :: sendN2D1,recvN2D1,sendS2D1,recvS2D1
      real(kind=rp),dimension(:,:),pointer :: sendE2D1,recvE2D1,sendW2D1,recvW2D1
-     real(kind=rp),dimension(:,:),pointer :: sendN2D2,recvN2D2,sendS2D2,recvS2D2
-     real(kind=rp),dimension(:,:),pointer :: sendE2D2,recvE2D2,sendW2D2,recvW2D2
-     real(kind=rp),dimension(:,:),pointer :: sendSW2D2,recvSW2D2,sendSE2D2,recvSE2D2
-     real(kind=rp),dimension(:,:),pointer :: sendNW2D2,recvNW2D2,sendNE2D2,recvNE2D2
+     real(kind=rp),dimension(:,:),pointer :: sendSW2D1,recvSW2D1,sendSE2D1,recvSE2D1
+     real(kind=rp),dimension(:,:),pointer :: sendNW2D1,recvNW2D1,sendNE2D1,recvNE2D1
 
      ! MPI: 3D array buffers (nz and nz+1) (halo=1)
-     real(kind=rp),dimension(:,:),pointer :: sendN,recvN,sendS,recvS
-     real(kind=rp),dimension(:,:),pointer :: sendE,recvE,sendW,recvW
-     real(kind=rp),dimension(:)  ,pointer :: sendSW,recvSW,sendSE,recvSE
-     real(kind=rp),dimension(:)  ,pointer :: sendNW,recvNW,sendNE,recvNE
-     real(kind=rp),dimension(:,:),pointer :: sendNp,recvNp,sendSp,recvSp
-     real(kind=rp),dimension(:,:),pointer :: sendEp,recvEp,sendWp,recvWp
-     real(kind=rp),dimension(:)  ,pointer :: sendSWp,recvSWp,sendSEp,recvSEp
-     real(kind=rp),dimension(:)  ,pointer :: sendNWp,recvNWp,sendNEp,recvNEp
+     real(kind=rp),dimension(:,:,:),pointer :: sendN,recvN,sendS,recvS
+     real(kind=rp),dimension(:,:,:),pointer :: sendE,recvE,sendW,recvW
+     real(kind=rp),dimension(:,:,:),pointer :: sendSW,recvSW,sendSE,recvSE
+     real(kind=rp),dimension(:,:,:),pointer :: sendNW,recvNW,sendNE,recvNE
+     real(kind=rp),dimension(:,:,:),pointer :: sendNp,recvNp,sendSp,recvSp
+     real(kind=rp),dimension(:,:,:),pointer :: sendEp,recvEp,sendWp,recvWp
+     real(kind=rp),dimension(:,:,:),pointer :: sendSWp,recvSWp,sendSEp,recvSEp
+     real(kind=rp),dimension(:,:,:),pointer :: sendNWp,recvNWp,sendNEp,recvNEp
+
+     ! MPI: 3D array buffers (nz and nz+1) (halo=2)
+     real(kind=rp),dimension(:,:,:),pointer :: sendN3D2,recvN3D2,sendS3D2,recvS3D2
+     real(kind=rp),dimension(:,:,:),pointer :: sendE3D2,recvE3D2,sendW3D2,recvW3D2
+     real(kind=rp),dimension(:,:,:),pointer :: sendSW3D2,recvSW3D2,sendSE3D2,recvSE3D2
+     real(kind=rp),dimension(:,:,:),pointer :: sendNW3D2,recvNW3D2,sendNE3D2,recvNE3D2
+     real(kind=rp),dimension(:,:,:),pointer :: sendN3D2p,recvN3D2p,sendS3D2p,recvS3D2p
+     real(kind=rp),dimension(:,:,:),pointer :: sendE3D2p,recvE3D2p,sendW3D2p,recvW3D2p
+     real(kind=rp),dimension(:,:,:),pointer :: sendSW3D2p,recvSW3D2p,sendSE3D2p,recvSE3D2p
+     real(kind=rp),dimension(:,:,:),pointer :: sendNW3D2p,recvNW3D2p,sendNE3D2p,recvNE3D2p
 
      ! MPI: 4D matrix coefficient buffers (halo=1)
      real(kind=rp),dimension(:,:,:),pointer :: sendN4D,recvN4D,sendS4D,recvS4D
@@ -173,8 +181,8 @@ contains
        ny = grid(lev)%ny
        nz = grid(lev)%nz
        ! Halo point is two for topography and vertical mesh !
-       allocate(grid(lev)%zeta(   -1:ny+2,-1:nx+2))
-       allocate(grid(lev)%h(      -1:ny+2,-1:nx+2))
+       allocate(grid(lev)%zeta(    0:ny+1, 0:nx+1))
+       allocate(grid(lev)%h(       0:ny+1, 0:nx+1))
        allocate(grid(lev)%zr(  nz,-1:ny+2,-1:nx+2))
        allocate(grid(lev)%zw(nz+1,-1:ny+2,-1:nx+2))
        allocate(grid(lev)%cw(  nz+1,0:ny+1,0:nx+1))
@@ -191,7 +199,7 @@ contains
 
     allocate(grid(lev)%dummy3Dnz( nz  ,0:ny+1,0:nx+1))
     allocate(grid(lev)%dummy3Dnzp(nz+1,0:ny+1,0:nx+1))
- 
+
     do lev=1,nlevs
        nx = grid(lev)%nx
        ny = grid(lev)%ny
@@ -221,6 +229,7 @@ contains
     enddo
 
     ! MPI exhanges for 2D arrays
+    !-Halo 1-!
     do lev=1,nlevs
        nx = grid(lev)%nx
        allocate(gbuffers(lev)%sendS2D1(1,nx))
@@ -238,102 +247,155 @@ contains
     enddo
 
     do lev=1,nlevs
-       nx = grid(lev)%nx
-       allocate(gbuffers(lev)%sendS2D2(2,nx))
-       allocate(gbuffers(lev)%recvS2D2(2,nx))
-       allocate(gbuffers(lev)%sendN2D2(2,nx))
-       allocate(gbuffers(lev)%recvN2D2(2,nx))
+       allocate(gbuffers(lev)%sendSW2D1(1,1))
+       allocate(gbuffers(lev)%sendSE2D1(1,1))
+       allocate(gbuffers(lev)%sendNW2D1(1,1))
+       allocate(gbuffers(lev)%sendNE2D1(1,1))
     enddo
 
     do lev=1,nlevs
-       ny = grid(lev)%ny
-       allocate(gbuffers(lev)%sendE2D2(ny,2))
-       allocate(gbuffers(lev)%recvE2D2(ny,2))
-       allocate(gbuffers(lev)%sendW2D2(ny,2))
-       allocate(gbuffers(lev)%recvW2D2(ny,2))
+       allocate(gbuffers(lev)%recvSW2D1(1,1))
+       allocate(gbuffers(lev)%recvSE2D1(1,1))
+       allocate(gbuffers(lev)%recvNW2D1(1,1))
+       allocate(gbuffers(lev)%recvNE2D1(1,1))
     enddo
 
-    do lev=1,nlevs
-       allocate(gbuffers(lev)%sendSW2D2(2,2))
-       allocate(gbuffers(lev)%sendSE2D2(2,2))
-       allocate(gbuffers(lev)%sendNW2D2(2,2))
-       allocate(gbuffers(lev)%sendNE2D2(2,2))
-    enddo
-
-    do lev=1,nlevs
-       allocate(gbuffers(lev)%recvSW2D2(2,2))
-       allocate(gbuffers(lev)%recvSE2D2(2,2))
-       allocate(gbuffers(lev)%recvNW2D2(2,2))
-       allocate(gbuffers(lev)%recvNE2D2(2,2))
-    enddo
-
-    ! MPI exhanges for 3D arrays
+    ! MPI exhanges for 3D arrays (halo=1)
     do lev=1,nlevs
        nx = grid(lev)%nx
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%sendS(nz,nx))
-       allocate(gbuffers(lev)%recvS(nz,nx))
-       allocate(gbuffers(lev)%sendN(nz,nx))
-       allocate(gbuffers(lev)%recvN(nz,nx))
+       allocate(gbuffers(lev)%sendS(nz,1,nx))
+       allocate(gbuffers(lev)%recvS(nz,1,nx))
+       allocate(gbuffers(lev)%sendN(nz,1,nx))
+       allocate(gbuffers(lev)%recvN(nz,1,nx))
     enddo
 
     do lev=1,nlevs
        ny = grid(lev)%ny
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%sendE(nz,ny))
-       allocate(gbuffers(lev)%recvE(nz,ny))
-       allocate(gbuffers(lev)%sendW(nz,ny))
-       allocate(gbuffers(lev)%recvW(nz,ny))
+       allocate(gbuffers(lev)%sendE(nz,ny,1))
+       allocate(gbuffers(lev)%recvE(nz,ny,1))
+       allocate(gbuffers(lev)%sendW(nz,ny,1))
+       allocate(gbuffers(lev)%recvW(nz,ny,1))
     enddo
 
     do lev=1,nlevs
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%sendSW(nz))
-       allocate(gbuffers(lev)%sendSE(nz))
-       allocate(gbuffers(lev)%sendNW(nz))
-       allocate(gbuffers(lev)%sendNE(nz))
+       allocate(gbuffers(lev)%sendSW(nz,1,1))
+       allocate(gbuffers(lev)%sendSE(nz,1,1))
+       allocate(gbuffers(lev)%sendNW(nz,1,1))
+       allocate(gbuffers(lev)%sendNE(nz,1,1))
     enddo
 
     do lev=1,nlevs
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%recvSW(nz))
-       allocate(gbuffers(lev)%recvSE(nz))
-       allocate(gbuffers(lev)%recvNW(nz))
-       allocate(gbuffers(lev)%recvNE(nz))
+       allocate(gbuffers(lev)%recvSW(nz,1,1))
+       allocate(gbuffers(lev)%recvSE(nz,1,1))
+       allocate(gbuffers(lev)%recvNW(nz,1,1))
+       allocate(gbuffers(lev)%recvNE(nz,1,1))
     enddo
 
     do lev=1,nlevs
        nx = grid(lev)%nx
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%sendSp(nz+1,nx))
-       allocate(gbuffers(lev)%recvSp(nz+1,nx))
-       allocate(gbuffers(lev)%sendNp(nz+1,nx))
-       allocate(gbuffers(lev)%recvNp(nz+1,nx))
+       allocate(gbuffers(lev)%sendSp(nz+1,1,nx))
+       allocate(gbuffers(lev)%recvSp(nz+1,1,nx))
+       allocate(gbuffers(lev)%sendNp(nz+1,1,nx))
+       allocate(gbuffers(lev)%recvNp(nz+1,1,nx))
     enddo
 
     do lev=1,nlevs
        ny = grid(lev)%ny
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%sendEp(nz+1,ny))
-       allocate(gbuffers(lev)%recvEp(nz+1,ny))
-       allocate(gbuffers(lev)%sendWp(nz+1,ny))
-       allocate(gbuffers(lev)%recvWp(nz+1,ny))
+       allocate(gbuffers(lev)%sendEp(nz+1,ny,1))
+       allocate(gbuffers(lev)%recvEp(nz+1,ny,1))
+       allocate(gbuffers(lev)%sendWp(nz+1,ny,1))
+       allocate(gbuffers(lev)%recvWp(nz+1,ny,1))
     enddo
 
     do lev=1,nlevs
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%sendSWp(nz+1))
-       allocate(gbuffers(lev)%sendSEp(nz+1))
-       allocate(gbuffers(lev)%sendNWp(nz+1))
-       allocate(gbuffers(lev)%sendNEp(nz+1))
+       allocate(gbuffers(lev)%sendSWp(nz+1,1,1))
+       allocate(gbuffers(lev)%sendSEp(nz+1,1,1))
+       allocate(gbuffers(lev)%sendNWp(nz+1,1,1))
+       allocate(gbuffers(lev)%sendNEp(nz+1,1,1))
     enddo
 
     do lev=1,nlevs
        nz = grid(lev)%nz
-       allocate(gbuffers(lev)%recvSWp(nz+1))
-       allocate(gbuffers(lev)%recvSEp(nz+1))
-       allocate(gbuffers(lev)%recvNWp(nz+1))
-       allocate(gbuffers(lev)%recvNEp(nz+1))
+       allocate(gbuffers(lev)%recvSWp(nz+1,1,1))
+       allocate(gbuffers(lev)%recvSEp(nz+1,1,1))
+       allocate(gbuffers(lev)%recvNWp(nz+1,1,1))
+       allocate(gbuffers(lev)%recvNEp(nz+1,1,1))
+    enddo
+
+    ! MPI exhanges for 3D arrays (halo=2 ) ZR and ZW
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%sendS3D2(nz,2,nx))
+       allocate(gbuffers(lev)%recvS3D2(nz,2,nx))
+       allocate(gbuffers(lev)%sendN3D2(nz,2,nx))
+       allocate(gbuffers(lev)%recvN3D2(nz,2,nx))
+    enddo
+
+    do lev=1,nlevs
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%sendE3D2(nz,ny,2))
+       allocate(gbuffers(lev)%recvE3D2(nz,ny,2))
+       allocate(gbuffers(lev)%sendW3D2(nz,ny,2))
+       allocate(gbuffers(lev)%recvW3D2(nz,ny,2))
+    enddo
+
+    do lev=1,nlevs
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%sendSW3D2(nz,2,2))
+       allocate(gbuffers(lev)%sendSE3D2(nz,2,2))
+       allocate(gbuffers(lev)%sendNW3D2(nz,2,2))
+       allocate(gbuffers(lev)%sendNE3D2(nz,2,2))
+    enddo
+
+    do lev=1,nlevs
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%recvSW3D2(nz,2,2))
+       allocate(gbuffers(lev)%recvSE3D2(nz,2,2))
+       allocate(gbuffers(lev)%recvNW3D2(nz,2,2))
+       allocate(gbuffers(lev)%recvNE3D2(nz,2,2))
+    enddo
+
+    do lev=1,nlevs
+       nx = grid(lev)%nx
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%sendS3D2p(nz+1,2,nx))
+       allocate(gbuffers(lev)%recvS3D2p(nz+1,2,nx))
+       allocate(gbuffers(lev)%sendN3D2p(nz+1,2,nx))
+       allocate(gbuffers(lev)%recvN3D2p(nz+1,2,nx))
+    enddo
+
+    do lev=1,nlevs
+       ny = grid(lev)%ny
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%sendE3D2p(nz+1,ny,2))
+       allocate(gbuffers(lev)%recvE3D2p(nz+1,ny,2))
+       allocate(gbuffers(lev)%sendW3D2p(nz+1,ny,2))
+       allocate(gbuffers(lev)%recvW3D2p(nz+1,ny,2))
+    enddo
+
+    do lev=1,nlevs
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%sendSW3D2p(nz+1,2,2))
+       allocate(gbuffers(lev)%sendSE3D2p(nz+1,2,2))
+       allocate(gbuffers(lev)%sendNW3D2p(nz+1,2,2))
+       allocate(gbuffers(lev)%sendNE3D2p(nz+1,2,2))
+    enddo
+
+    do lev=1,nlevs
+       nz = grid(lev)%nz
+       allocate(gbuffers(lev)%recvSW3D2p(nz+1,2,2))
+       allocate(gbuffers(lev)%recvSE3D2p(nz+1,2,2))
+       allocate(gbuffers(lev)%recvNW3D2p(nz+1,2,2))
+       allocate(gbuffers(lev)%recvNE3D2p(nz+1,2,2))
     enddo
 
     ! MPI exhanges for 4D CA array
@@ -746,22 +808,6 @@ contains
           if (associated(gbuffers(lev)%recvE2D1)) deallocate(gbuffers(lev)%recvE2D1)
           if (associated(gbuffers(lev)%sendW2D1)) deallocate(gbuffers(lev)%sendW2D1)
           if (associated(gbuffers(lev)%recvW2D1)) deallocate(gbuffers(lev)%recvW2D1)
-          if (associated(gbuffers(lev)%sendN2D2)) deallocate(gbuffers(lev)%sendN2D2)
-          if (associated(gbuffers(lev)%recvN2D2)) deallocate(gbuffers(lev)%recvN2D2)
-          if (associated(gbuffers(lev)%sendS2D2)) deallocate(gbuffers(lev)%sendS2D2)
-          if (associated(gbuffers(lev)%recvS2D2)) deallocate(gbuffers(lev)%recvS2D2)
-          if (associated(gbuffers(lev)%sendE2D2)) deallocate(gbuffers(lev)%sendE2D2)
-          if (associated(gbuffers(lev)%recvE2D2)) deallocate(gbuffers(lev)%recvE2D2)
-          if (associated(gbuffers(lev)%sendW2D2)) deallocate(gbuffers(lev)%sendW2D2)
-          if (associated(gbuffers(lev)%recvW2D2)) deallocate(gbuffers(lev)%recvW2D2)
-          if (associated(gbuffers(lev)%sendSW2D2)) deallocate(gbuffers(lev)%sendSW2D2)
-          if (associated(gbuffers(lev)%recvSW2D2)) deallocate(gbuffers(lev)%recvSW2D2)
-          if (associated(gbuffers(lev)%sendSE2D2)) deallocate(gbuffers(lev)%sendSE2D2)
-          if (associated(gbuffers(lev)%recvSE2D2)) deallocate(gbuffers(lev)%recvSE2D2)
-          if (associated(gbuffers(lev)%sendNW2D2)) deallocate(gbuffers(lev)%sendNW2D2)
-          if (associated(gbuffers(lev)%recvNW2D2)) deallocate(gbuffers(lev)%recvNW2D2)
-          if (associated(gbuffers(lev)%sendNE2D2)) deallocate(gbuffers(lev)%sendNE2D2)
-          if (associated(gbuffers(lev)%recvNE2D2)) deallocate(gbuffers(lev)%recvNE2D2)
 
           if (associated(gbuffers(lev)%sendN)) deallocate(gbuffers(lev)%sendN)
           if (associated(gbuffers(lev)%recvN)) deallocate(gbuffers(lev)%recvN)
@@ -795,6 +841,39 @@ contains
           if (associated(gbuffers(lev)%recvNWp)) deallocate(gbuffers(lev)%recvNWp)
           if (associated(gbuffers(lev)%sendNEp)) deallocate(gbuffers(lev)%sendNEp)
           if (associated(gbuffers(lev)%recvNEp)) deallocate(gbuffers(lev)%recvNEp)
+
+          if (associated(gbuffers(lev)%sendN3D2)) deallocate(gbuffers(lev)%sendN3D2)
+          if (associated(gbuffers(lev)%recvN3D2)) deallocate(gbuffers(lev)%recvN3D2)
+          if (associated(gbuffers(lev)%sendS3D2)) deallocate(gbuffers(lev)%sendS3D2)
+          if (associated(gbuffers(lev)%recvS3D2)) deallocate(gbuffers(lev)%recvS3D2)
+          if (associated(gbuffers(lev)%sendE3D2)) deallocate(gbuffers(lev)%sendE3D2)
+          if (associated(gbuffers(lev)%recvE3D2)) deallocate(gbuffers(lev)%recvE3D2)
+          if (associated(gbuffers(lev)%sendW3D2)) deallocate(gbuffers(lev)%sendW3D2)
+          if (associated(gbuffers(lev)%recvW3D2)) deallocate(gbuffers(lev)%recvW3D2)
+          if (associated(gbuffers(lev)%sendSW3D2)) deallocate(gbuffers(lev)%sendSW3D2)
+          if (associated(gbuffers(lev)%recvSW3D2)) deallocate(gbuffers(lev)%recvSW3D2)
+          if (associated(gbuffers(lev)%sendSE3D2)) deallocate(gbuffers(lev)%sendSE3D2)
+          if (associated(gbuffers(lev)%recvSE3D2)) deallocate(gbuffers(lev)%recvSE3D2)
+          if (associated(gbuffers(lev)%sendNW3D2)) deallocate(gbuffers(lev)%sendNW3D2)
+          if (associated(gbuffers(lev)%recvNW3D2)) deallocate(gbuffers(lev)%recvNW3D2)
+          if (associated(gbuffers(lev)%sendNE3D2)) deallocate(gbuffers(lev)%sendNE3D2)
+          if (associated(gbuffers(lev)%recvNE3D2)) deallocate(gbuffers(lev)%recvNE3D2)
+          if (associated(gbuffers(lev)%sendN3D2p)) deallocate(gbuffers(lev)%sendN3D2p)
+          if (associated(gbuffers(lev)%recvN3D2p)) deallocate(gbuffers(lev)%recvN3D2p)
+          if (associated(gbuffers(lev)%sendS3D2p)) deallocate(gbuffers(lev)%sendS3D2p)
+          if (associated(gbuffers(lev)%recvS3D2p)) deallocate(gbuffers(lev)%recvS3D2p)
+          if (associated(gbuffers(lev)%sendE3D2p)) deallocate(gbuffers(lev)%sendE3D2p)
+          if (associated(gbuffers(lev)%recvE3D2p)) deallocate(gbuffers(lev)%recvE3D2p)
+          if (associated(gbuffers(lev)%sendW3D2p)) deallocate(gbuffers(lev)%sendW3D2p)
+          if (associated(gbuffers(lev)%recvW3D2p)) deallocate(gbuffers(lev)%recvW3D2p)
+          if (associated(gbuffers(lev)%sendSW3D2p)) deallocate(gbuffers(lev)%sendSW3D2p)
+          if (associated(gbuffers(lev)%recvSW3D2p)) deallocate(gbuffers(lev)%recvSW3D2p)
+          if (associated(gbuffers(lev)%sendSE3D2p)) deallocate(gbuffers(lev)%sendSE3D2p)
+          if (associated(gbuffers(lev)%recvSE3D2p)) deallocate(gbuffers(lev)%recvSE3D2p)
+          if (associated(gbuffers(lev)%sendNW3D2p)) deallocate(gbuffers(lev)%sendNW3D2p)
+          if (associated(gbuffers(lev)%recvNW3D2p)) deallocate(gbuffers(lev)%recvNW3D2p)
+          if (associated(gbuffers(lev)%sendNE3D2p)) deallocate(gbuffers(lev)%sendNE3D2p)
+          if (associated(gbuffers(lev)%recvNE3D2p)) deallocate(gbuffers(lev)%recvNE3D2p)
 
           if (associated(gbuffers(lev)%sendN4D)) deallocate(gbuffers(lev)%sendN4D)
           if (associated(gbuffers(lev)%recvN4D)) deallocate(gbuffers(lev)%recvN4D)

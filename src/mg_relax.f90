@@ -115,6 +115,7 @@ contains
        enddo
 
        call fill_halo(lev,p,nx,ny,1)
+!!$       call fill_halo(lev,p)
 
     enddo
 
@@ -147,6 +148,7 @@ contains
        enddo    ! i
 
        call fill_halo(lev,p,nx,ny,nz)
+!!$       call fill_halo(lev,p)
 
     enddo  !it
 
@@ -164,9 +166,9 @@ contains
     real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
     real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
     real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
-!    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-!    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-!    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
+    !    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
+    !    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
+    !    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
 
     integer(kind=ip) :: i,j,it
     integer(kind=ip) :: rb
@@ -186,6 +188,7 @@ contains
           enddo    ! i
 
           call fill_halo(lev,p,nx,ny,nz)
+!!$          call fill_halo(lev,p)
 
        enddo       ! red-black
 
@@ -228,6 +231,7 @@ contains
              enddo    ! i
 
              call fill_halo(lev,p,nx,ny,nz)
+!!$             call fill_halo(lev,p)
 
           enddo  ! fc2
        enddo  ! fc1

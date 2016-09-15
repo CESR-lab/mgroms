@@ -70,13 +70,12 @@ contains
 
           !NG: WARNING dx, dy and h model have to be defined 
           !NG: on (ny,nx) and not on (nx,ny) !!
-          grid(lev)%dx(0:ny+1,0:nx+1) = dx
-          grid(lev)%dy(0:ny+1,0:nx+1) = dy
+          grid(lev)%dx(0:ny+1,0:nx+1)   = dx
+          grid(lev)%dy(0:ny+1,0:nx+1)   = dy
           grid(lev)%zeta(0:ny+1,0:nx+1) = zeta
-          grid(lev)%h (0:ny+1,0:nx+1) =  h
+          grid(lev)%h (0:ny+1,0:nx+1)   = h
 
           allocate(rmaski(0:ny+1,0:nx+1))
-
           rmaski = rmask
 
        else
@@ -155,7 +154,7 @@ contains
 
           !- boundary mask (gather not tested!)
           if (associated(rmaski)) deallocate(rmaski)
-          allocate(rmaski(0:nyc+1,0:nxc+1))
+          allocate(rmaski(0:ny+1,0:nx+1))
           rmaski(:,:) = 1._rp
           if (bmask) then
              call fill_halo_2D_bmask(lev,rmaski)
@@ -163,20 +162,23 @@ contains
 
        endif ! lev == 1
 
-       call fill_halo(lev, grid(lev)%dx,nhalo=1)
-       call fill_halo(lev, grid(lev)%dy,nhalo=1)
-       call fill_halo(lev, grid(lev)%zeta,nhalo=2)
-       call fill_halo(lev, grid(lev)%h ,nhalo=2)
+       call fill_halo(lev, grid(lev)%dx)
+       call fill_halo(lev, grid(lev)%dy)
+       call fill_halo(lev, grid(lev)%zeta)
+       call fill_halo(lev, grid(lev)%h)
 
        zrc => grid(lev)%zr
        zwc => grid(lev)%zw
 
        ! Compute zr and zw
-       call setup_zr_zw                    (  & 
+       call setup_zr_zw                (  & 
             hlim,nhtheta_b,nhtheta_s,     &
             grid(lev)%zeta,grid(lev)%h,   &  ! input args
             grid(lev)%zr, grid(lev)%zw,   &  ! output args
-            coord_type='new_s_coord'      )    ! optional
+            coord_type='new_s_coord'      )  ! optional
+
+       call fill_halo(lev,grid(lev)%zr) ! Special fill_halo nh = 2
+       call fill_halo(lev,grid(lev)%zw) ! Special fill_halo nh = 2
 
        if (netcdf_output) then
           call write_netcdf(grid(lev)%dx,vname='dx',netcdf_file_name='dx.nc',rank=myrank,iter=lev)
@@ -186,6 +188,11 @@ contains
           call write_netcdf(grid(lev)%zr,vname='zr',netcdf_file_name='zr.nc',rank=myrank,iter=lev)
           call write_netcdf(grid(lev)%zw,vname='zw',netcdf_file_name='zw.nc',rank=myrank,iter=lev)
        endif
+
+!!$       if (myrank==0) then
+!!$          write(*,*)'2 Min, max dx:', lev, minval(grid(lev)%dx),maxval(grid(lev)%dx)
+!!$          write(*,*)'2 Min, max dy:', lev, minval(grid(lev)%dy),maxval(grid(lev)%dy)
+!!$       endif
 
        ! Define matrix coefficients from dx, dy, zr and zw coarsened
        call define_matrix(lev, grid(lev)%dx, grid(lev)%dy, grid(lev)%zr, grid(lev)%zw, rmaski)
@@ -226,11 +233,20 @@ contains
     real(kind=rp), dimension(:,:,:),   pointer :: cw
     real(kind=rp), dimension(:,:,:,:), pointer :: cA
 
+    real(kind=rp), dimension(:,:),   pointer :: zx ! dbg: to remove !!!
+
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
 
+!!$    if (myrank==0) then
+!!$       write(*,*)'3 Min, max dx:', lev, minval(dx),maxval(dx)
+!!$       write(*,*)'3 Min, max dy:', lev, minval(dy),maxval(dy)
+!!$    endif
+
     cA => grid(lev)%cA 
+
+    allocate(zx(0:ny+1,0:nx+1))
 
     ! Umask and Vmask from rmask
     allocate(umask(0:ny+1,0:nx+1))
@@ -253,6 +269,11 @@ contains
        umask(:,:)=1._rp
        vmask(:,:)=1._rp
     endif
+
+!!$    if (myrank==0) then
+!!$       write(*,*)' Min max umask:', minval(umask), maxval(umask)
+!!$       write(*,*)' Min max vmask:', minval(vmask), maxval(vmask)
+!!$    endif
 
     !- Used in compute_rhs -!
     if (lev == 1) then
@@ -309,6 +330,15 @@ contains
 
        enddo
     enddo
+
+!!$    if (myrank==0) then
+!!$       if (lev==4) then
+!!$          write(*,*)'---> CW lev=4 test vals <----'
+!!$          write(*,*) cw(1,0,0)
+!!$          write(*,*) dx(0,0), dy(0,0)
+!!$          write(*,*)'---> --------------- <----'
+!!$       end if
+!!$    endif
 
     !! interaction coeff with neighbours
     !XX
@@ -408,15 +438,30 @@ contains
                + hlf                                                             * &
                (( hlf * (zr(k,j+1,i+1)-zr(k,j+1,i-1)) / dx(j+1,i) ) * dy(j+1,i)) * &
                (( hlf * (zr(k,j+2,i  )-zr(k,j  ,i  )) / dy(j+1,i) ) * dx(j+1,i)) / &
-               ( cw(k,j+1,i  ) + cw(k+1,j+1,i  ))                                * &
+               ( cw(k,j+1,i ) + cw(k+1,j+1,i))                                * &
                umask(j+1,i) * vmask(j+1,i)                                         & ! mask
                + hlf                                                             * &
                (( hlf * (zr(k,j  ,i  )-zr(k,j  ,i-2)) / dx(j,i-1) ) * dy(j,i-1)) * &
                (( hlf * (zr(k,j+1,i-1)-zr(k,j-1,i-1)) / dy(j,i-1) ) * dx(j,i-1)) / &
-               ( cw(k,j  ,i-1) + cw(k+1,j  ,i-1))                                * &
+               ( cw(k,j,i-1) + cw(k+1,j,i-1))                                    * &
                umask(j,i) * vmask(j+1,i-1)                                           ! mask
        enddo
     enddo
+
+!!$    if (myrank==0) then
+!!$       if (lev==4) then
+!!$          !!write(*,*) cA(5,k,:,:)
+!!$          write(*,*)'---> lev=4 test vals <----'
+!!$          write(*,*) cw(k,1,1)
+!!$          write(*,*) cw(k+1,1,1)
+!!$          write(*,*) umask(1,1), vmask(1,1)
+!!$          write(*,*) cw(k,0,0)
+!!$          write(*,*) cw(k+1,0,0)
+!!$          write(*,*) umask(0,1), vmask(1,0)
+!!$          write(*,*) cA(5,k,0,1)
+!!$          write(*,*)'---> --------------- <----'
+!!$       end if
+!!$    endif
 
     do i = 1,nx+1
        do j = 1,ny+1
@@ -597,19 +642,33 @@ contains
                - hlf * (hlf * (zr(k,j  ,i  ) - zr(k,j  ,i-2)) / dx(j  ,i-1)) * dy(j  ,i-1) & ! - 2 * 0.25 * zxdy(nz,j,i-1)
                + hlf * (hlf * (zr(k,j+2,i  ) - zr(k,j  ,i  )) / dy(j+1,i  )) * dx(j+1,i  ) & ! + 2 * 0.25 * zydx(nz,j+1,i)
                - hlf * (hlf * (zr(k,j  ,i  ) - zr(k,j-2,i  )) / dy(j-1,i  )) * dx(j-1,i  ) & ! - 2 * 0.25 * zydx(nz,j-1,i)
-               - cA(4,k,j,i)-cA(4,k,j+1,i) &
-               - cA(7,k,j,i)-cA(7,k,j,i+1) &
-               - cA(6,k-1,j,i+1)           &
-               - cA(8,k,j,i)               &
-               - cA(3,k-1,j+1,i)           &
-               - cA(5,k,j,i)
+               - cA(4,k  ,j,i  ) - cA(4,k,j+1,i  ) &
+               - cA(7,k  ,j,i  ) - cA(7,k,j  ,i+1) &
+               - cA(6,k-1,j,i+1)                   &
+               - cA(8,k  ,j,i  )                   &
+               - cA(3,k-1,j+1,i)                   &
+               - cA(5,k  ,j,i  )
+
        enddo ! j
     enddo ! i
+
+    k = nz
+    do i = 0,nx+1
+       do j = 0, ny+1
+          zx(j,i) = hlf * (zr(k,j,i+1) - zr(k,j,i-1)) / dx(j ,i)
+      enddo ! j
+    enddo ! i
+
+    
 
     if (netcdf_output) then
        if (myrank==0) write(*,*)'       write cA in a netcdf file'
        call write_netcdf(grid(lev)%cA,vname='ca',netcdf_file_name='cA.nc',rank=myrank,iter=lev)
+       call write_netcdf(zx,vname='zx',netcdf_file_name='zx.nc',rank=myrank,iter=lev)
+       call write_netcdf(zr(nz,0:ny+1,0:nx+1),vname='zr2',netcdf_file_name='zr2.nc',rank=myrank,iter=lev)
     endif
+
+    deallocate(zx)
 
     deallocate(umask)
     deallocate(vmask)

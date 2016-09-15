@@ -88,6 +88,8 @@ contains
     ny = size(zr,dim=2) - 2*nh
     nx = size(zr,dim=3) - 2*nh
 
+    nh = 1
+
     ! vertical coordinate
 
     !---------------------!
