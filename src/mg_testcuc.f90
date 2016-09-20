@@ -22,10 +22,11 @@ program mg_testcuc
   real(kind=8) :: Lx, Ly, Htot
   real(kind=8) :: hc, theta_b, theta_s
   real(kind=8), dimension(:,:), pointer :: dx, dy, zeta, h
+  real(kind=8), dimension(:,:), pointer :: rmask
 
   call tic(1,'mg_testcuc')
 
-  nit = 10
+  nit = 1
 
   !---------------!
   !- Ocean model -!
@@ -86,7 +87,14 @@ program mg_testcuc
 
   call setup_cuc(nx,ny,nz,npxg,npyg,Lx,Ly,Htot,dx,dy,zeta,h)
 
-  call nhydro_matrices(dx,dy,zeta,h,hc,theta_b,theta_s)
+  allocate(rmask(0:ny+1,0:nx+1))
+  rmask(:,:) = 1._rp
+  if (bmask) then
+     !- Mask the boundaries
+     call fill_halo_2D_bmask(1,rmask)   !- Generic n procs
+  endif
+
+  call nhydro_matrices(dx,dy,zeta,h,rmask,hc,theta_b,theta_s)
 
   !-------------------------------------!
   !- U,V,W initialisation (model vars) -!
@@ -114,7 +122,7 @@ program mg_testcuc
      !- Call nhydro solver -!
      !----------------------!
      if (rank == 0) write(*,*)'Call nhydro solver'
-     call  nhydro_solve(nx,ny,nz,u,v,w)
+     call  nhydro_solve(nx,ny,nz,rmask,u,v,w)
 
      if (netcdf_output) then
         call write_netcdf(u,vname='uc',netcdf_file_name='uc.nc',rank=myrank,iter=it)
@@ -126,7 +134,7 @@ program mg_testcuc
      !- Call nhydro correct to check if nh correction is correct -!
      !------------------------------------------------------------!
      if (rank == 0) write(*,*)'Check nondivergence'
-     call nhydro_check_nondivergence(nx,ny,nz,u,v,w)
+     call nhydro_check_nondivergence(nx,ny,nz,rmask,u,v,w)
 
      if (netcdf_output) then
         call write_netcdf(grid(1)%b,vname='bc',netcdf_file_name='bc.nc',rank=myrank,iter=it)
