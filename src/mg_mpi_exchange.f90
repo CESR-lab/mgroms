@@ -1149,7 +1149,7 @@ contains
     if (northeast.ne.MPI_PROC_NULL) then
        sendNE = p(:,ny-nh+1:ny,nx-nh+1:nx) 
        call MPI_ISend(                                &
-            sendNE,nz,MPI_DOUBLE_PRECISION,northeast, &
+            sendNE,nz*nh*nh,MPI_DOUBLE_PRECISION,northeast, &
             neswtag,MPI_COMM_WORLD,req(15),ierr)
        comm(15)=15
     endif
@@ -1362,7 +1362,9 @@ contains
             ewtag,MPI_COMM_WORLD,req(4),ierr)
        comm(4)=4
     else !!Homogenous Neumann
-       cA(:,:,1:ny,0) = 0._rp
+       if (.not.bmask) then
+          cA(:,:,1:ny,0) = 0._rp
+       endif
     endif
 
     if (southwest.ne.MPI_PROC_NULL) then
