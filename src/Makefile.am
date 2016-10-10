@@ -23,6 +23,10 @@ cleanf:
 
 ##
 SUBDIRS	       = .
+examplesdir    = $(prefix)
+examples_DATA  = nh_namelist
+EXTRA_DIST     = $(examples_DATA)
+
 bin_PROGRAMS   = \
 	testcuc      \
     testseamount

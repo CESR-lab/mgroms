@@ -751,6 +751,7 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  examples/Makefile
                  examples/curie/Makefile
+                 examples/idris_ada/Makefile
                  examples/namelist/Makefile
                  examples/perf_caparmor/Makefile ])
 
