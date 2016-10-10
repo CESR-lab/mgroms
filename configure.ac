@@ -39,7 +39,7 @@ AC_PREREQ([2.59])
 #
 ## Initialize autoconf with name of project, version, bug report 
 ## and support email address.
-AC_INIT([mgroms],[0.3.8],[nmolem@atmos.ucla.edu, Guillaume.Roullet@univ-brest.fr, Nicolas.Ducousso@univ-brest.fr, Nicolas.Grima@univ-brest.fr ],[mgroms],[https://github.com/nmolem/mgroms])
+AC_INIT([mgroms],[0.3.9],[nmolem@atmos.ucla.edu, Guillaume.Roullet@univ-brest.fr, Nicolas.Ducousso@univ-brest.fr, Nicolas.Grima@univ-brest.fr ],[mgroms],[https://github.com/nmolem/mgroms])
 #
 ## Set the directory that contains support scripts such as install-sh
 ## and config.guess
@@ -345,7 +345,8 @@ if test -n "$FC" ; then
 	    if test "$enable_prof" = "yes" ; then
           AC_MSG_NOTICE([      -> PROFILING is SELECTED (gprof and intel report)])
 	      CFLAGS="-pg $CFLAGS"
-          FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all -profile-functions -profile-loops=all -profile-loops-report=2 $FCFLAGS"
+##          FCFLAGS="-pg -opt-report 3 -opt-report-file=$<.log -opt-report-phase=all -profile-functions -profile-loops=all -profile-loops-report=2 $FCFLAGS"
+            FCFLAGS="-pg -qopt-report=5 -qopt-report-phase=all -qopt-report-file=$<.log $FCFLAGS"
           LDFLAGS="-pg $LDFLAGS"
         fi
      	if test "$enable_openmp" = "yes" ; then
