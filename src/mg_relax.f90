@@ -17,20 +17,11 @@ contains
     integer(kind=ip), intent(in):: lev
     integer(kind=ip), intent(in):: nsweeps
 
-!    real(kind=rp),dimension(:,:,:), pointer:: p
-!    real(kind=rp),dimension(:,:,:), pointer:: b
-!    real(kind=rp),dimension(:,:,:,:), pointer:: cA
-
-    integer(kind=ip) :: nx, ny, nz, nd
-
-!    p  => grid(lev)%p
-!    b  => grid(lev)%b
-!    cA => grid(lev)%cA
+    integer(kind=ip) :: nx, ny, nz
 
     nx = grid(lev)%nx
     ny = grid(lev)%ny
     nz = grid(lev)%nz
-!    nd = size(cA(:,:,:,:),dim=1)
 
     if (grid(lev)%nz == 1) then
 
@@ -248,20 +239,15 @@ contains
     real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(inout):: p
     real(kind=rp),dimension(nz,0:ny+1,0:nx+1)  , intent(in)   :: b
     real(kind=rp),dimension(8,nz,0:ny+1,0:nx+1), intent(in)   :: cA
-    !    real(kind=rp),dimension(:,:,:)  , pointer, intent(inout):: p
-    !    real(kind=rp),dimension(:,:,:)  , pointer, intent(in)   :: b
-    !    real(kind=rp),dimension(:,:,:,:), pointer, intent(in)   :: cA
-
-    integer(kind=ip)                          , intent(in)  :: i
-    integer(kind=ip)                          , intent(in)  :: j
-    integer(kind=ip)                          , intent(in)  :: nx,ny,nz
+    integer(kind=ip)                           , intent(in)  :: i
+    integer(kind=ip)                           , intent(in)  :: j
+    integer(kind=ip)                           , intent(in)  :: nx
+    integer(kind=ip)                           , intent(in)  :: ny
+    integer(kind=ip)                           , intent(in)  :: nz
 
     !- Local -!
     integer(kind=ip) :: k
-    real(kind=rp),dimension(nz):: xc,gam
-    real(kind=rp):: d,dd,bb,bet,z
-
-    !    real(kind=rp), dimension(nz) :: zrhs, zd, zud, zgam
+    real(kind=rp), dimension(nz) :: rhs, d, ud
 
     ! Coefficients are stored in order of diagonals
     ! cA(1,:,:,:)      -> p(k,j,i)
@@ -274,7 +260,7 @@ contains
     ! cA(8,:,:,:)      -> p(k-1,j,i-1)
 
     k=1 !lower level
-    z = b(k,j,i)                                              &
+    rhs(k) = b(k,j,i)                                              &
          - cA(3,k,j,i)*p(k+1,j-1,i)                                &
          - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
          - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
@@ -284,85 +270,68 @@ contains
 
     if (cmatrix == 'real') then
        !- Exception for the redefinition of the coef for the bottom level
-       z = z &
+       rhs(k) = rhs(k) &
             - cA(5,k,j,i)*p(k,j+1,i-1) - cA(5,k,j-1,i+1)*p(k,j-1,i+1) &
             - cA(8,k,j,i)*p(k,j-1,i-1) - cA(8,k,j+1,i+1)*p(k,j+1,i+1)
     endif
 
-!!$    zd(k)   = cA(1,k,j,i)
-!!$    zud(k)  = cA(2,k+1,j,i)
-
-    dd    = cA(2,k+1,j,i)
-    bet   = 1._rp/cA(1,k,j,i)
-    xc(1) = z*bet
+    d(k)   = cA(1,k,j,i)
+    ud(k)  = cA(2,k+1,j,i)
 
     do k = 2,nz-1 !interior levels
-       z = b(k,j,i) &
+       rhs(k) = b(k,j,i) &
             - cA(3,k,j,i)*p(k+1,j-1,i) - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
             - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
             - cA(5,k,j,i)*p(k-1,j-1,i) - cA(5,k+1,j+1,i)*p(k+1,j+1,i) &
             - cA(6,k,j,i)*p(k+1,j,i-1) - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
             - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
             - cA(8,k,j,i)*p(k-1,j,i-1) - cA(8,k+1,j,i+1)*p(k+1,j,i+1) 
-!!$       zd(k)   = cA(1,k,j,i)
-!!$       zud(k)  = cA(2,k+1,j,i)
-       gam(k)= dd*bet
-       bet     = 1._rp/(cA(1,k,j,i)-dd*gam(k))
-       xc(k) = (z-dd*xc(k-1))*bet
-       dd  = cA(2,k+1,j,i)
+       d(k)   = cA(1,k,j,i)
+       ud(k)  = cA(2,k+1,j,i)
     enddo
 
     k=nz !upper level
-    z = b(k,j,i)                                              &
+    rhs(k) = b(k,j,i)                                              &
          - cA(3,k-1,j+1,i)*p(k-1,j+1,i) &
          - cA(4,k,j,i)*p(k  ,j-1,i) - cA(4,k  ,j+1,i)*p(k  ,j+1,i) &
          - cA(5,k,j,i)*p(k-1,j-1,i)                                &
          - cA(6,k-1,j,i+1)*p(k-1,j,i+1) &
          - cA(7,k,j,i)*p(k  ,j,i-1) - cA(7,k  ,j,i+1)*p(k  ,j,i+1) &
          - cA(8,k,j,i)*p(k-1,j,i-1) 
+    d(k)   = cA(1,k,j,i)
 
-!!$    zd(k)   = cA(1,k,j,i)
-
-    gam(k)= dd*bet
-    bet     = 1._rp/(cA(1,k,j,i)-dd*gam(k))
-    xc(k) = (z-dd*xc(k-1))*bet
-
-    p(nz,j,i)=xc(nz)
-    do k=nz-1,1,-1
-       p(k,j,i) = xc(k)-gam(k+1)*p(k+1,j,i)
-    enddo
-
-!!$    call tridiag(nz,zd,zud,zrhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs    
+    call tridiag(nz,d,ud,rhs,p(:,j,i)) !solve for vertical_coeff_matrix.p1d=rhs
 
   end subroutine relax_3D_8_heart
 
-!!$  !----------------------------------------
-!!$  subroutine tridiag(l,d,dd,b,xc)
-!!$    !     Axc = b
-!!$    !     Solve tridiagonal system
-!!$    implicit none
-!!$    !     IMPORT/EXPORT
-!!$    integer                   ,intent(in)  :: l
-!!$    real(kind=rp),dimension(l),intent(in)  :: d,b
-!!$    real(kind=rp),dimension(l),intent(in)  :: dd
-!!$    real(kind=rp),dimension(l),intent(out) :: xc
-!!$    !     LOCAL
-!!$    integer                  :: k
-!!$    real(kind=rp),dimension(l):: gam
-!!$    real(kind=rp)             :: bet
-!!$
-!!$    bet   = 1._rp/d(1)
-!!$    xc(1) = b(1)*bet
-!!$    do k=2,l
-!!$       gam(k)= dd(k-1)*bet
-!!$       bet     = 1._rp/(d(k)-dd(k-1)*gam(k))
-!!$       xc(k) = (b(k)-dd(k-1)*xc(k-1))*bet
-!!$    enddo
-!!$    do k=l-1,1,-1
-!!$       xc(k) = xc(k)-gam(k+1)*xc(k+1)
-!!$    enddo
-!!$    !    endif
-!!$  end subroutine tridiag
+  !----------------------------------------
+  subroutine tridiag(l,d,dd,b,xc)
+    !     Axc = b
+    !     Solve tridiagonal system
+    implicit none
+    !     IMPORT/EXPORT
+    integer                   ,intent(in)  :: l
+    real(kind=rp),dimension(l),intent(in)  :: d,b
+    real(kind=rp),dimension(l),intent(in)  :: dd
+    real(kind=rp),dimension(l),intent(out) :: xc
+    !     LOCAL
+    integer                  :: k
+    real(kind=rp),dimension(l):: gam
+    real(kind=rp)             :: bet
+
+    bet   = 1._8/d(1)
+    xc(1) = b(1)*bet
+    do k=2,l
+       gam(k)= dd(k-1)*bet
+       bet     = 1._8/(d(k)-dd(k-1)*gam(k))
+       xc(k) = (b(k)-dd(k-1)*xc(k-1))*bet
+    enddo
+
+    do k=l-1,1,-1
+       xc(k) = xc(k)-gam(k+1)*xc(k+1)
+    enddo
+    !    endif
+  end subroutine tridiag
 
   !----------------------------------------
   subroutine compute_residual(lev,res)
@@ -375,7 +344,7 @@ contains
 !    real(kind=rp),dimension(:,:,:)  , pointer:: r
 !    real(kind=rp),dimension(:,:,:,:), pointer:: cA
 
-    integer(kind=ip) :: nx, ny, nz, nd
+    integer(kind=ip) :: nx, ny, nz
     real(kind=rp) ::resloc
 
 !    p  => grid(lev)%p

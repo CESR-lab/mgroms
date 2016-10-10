@@ -24,7 +24,6 @@ contains
     real(kind=rp), dimension(:,:)  , pointer :: dx,dy
     real(kind=rp), dimension(:,:,:), pointer :: zr,zw
 
-    real(kind=rp) :: Arx, Ary
     real(kind=rp), dimension(:,:,:), pointer :: dzw
     real(kind=rp), dimension(:,:,:), pointer :: zydx,zxdy
     real(kind=rp), dimension(:,:,:), pointer :: cw
