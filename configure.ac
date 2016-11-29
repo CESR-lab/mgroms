@@ -320,7 +320,7 @@ if test -n "$FC" ; then
 	      debug)
             AC_MSG_NOTICE([ifort -> DEBUGGING OPTIONS are SELECTED])
 	        CFLAGS="-g -O0"
-            FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
+            FCFLAGS="-g -O0 -check all -traceback -warn all -warn unused -debug variable_locations"
 	        LDFLAGS="-g -O0 -check all -traceback -auto"
           ;;
           aggressive)

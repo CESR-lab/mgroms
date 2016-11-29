@@ -176,6 +176,10 @@ contains
             grid(lev)%zeta,grid(lev)%h,   &  ! input args
             grid(lev)%zr, grid(lev)%zw,   &  ! output args
             coord_type='new_s_coord'      )  ! optional
+!!$
+!!$       call setup_zr_zw               (  & 
+!!$            grid(lev)%h,                 &  ! input args
+!!$            grid(lev)%zr, grid(lev)%zw)
 
        call fill_halo(lev,grid(lev)%zr) ! Special fill_halo nh = 2
        call fill_halo(lev,grid(lev)%zw) ! Special fill_halo nh = 2

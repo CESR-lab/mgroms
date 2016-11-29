@@ -3259,7 +3259,7 @@ $as_echo "$as_me: WARNING: mgroms MSG: !!! HOST and/or SYSTEM is UNKNOWN : $host
             { $as_echo "$as_me:${as_lineno-$LINENO}: ifort -> DEBUGGING OPTIONS are SELECTED" >&5
 $as_echo "$as_me: ifort -> DEBUGGING OPTIONS are SELECTED" >&6;}
 	        CFLAGS="-g -O0"
-            FCFLAGS="-g -O0 -check all -traceback -auto -warn all -warn unused -debug variable_locations"
+            FCFLAGS="-g -O0 -check all -traceback -warn all -warn unused -debug variable_locations"
 	        LDFLAGS="-g -O0 -check all -traceback -auto"
           ;;
           aggressive)

@@ -4,7 +4,8 @@ http://www.idris.fr/ada/
 
 Git:
 ---
-module load git/2.8.2
+module load git/2.8.2  
+git is available on ADA but internet connexion not, it is not possible to clone a repository from github 
 
 Environment:
 -----------

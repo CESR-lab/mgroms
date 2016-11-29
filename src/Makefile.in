@@ -79,7 +79,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = testcuc$(EXEEXT) testseamount$(EXEEXT)
+bin_PROGRAMS = testcuc$(EXEEXT) testseamount$(EXEEXT) \
+	testrndtopo$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -102,6 +103,17 @@ am_testcuc_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_testcuc.$(OBJEXT)
 testcuc_OBJECTS = $(am_testcuc_OBJECTS)
 testcuc_LDADD = $(LDADD)
+am_testrndtopo_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
+	mg_zr_zw.$(OBJEXT) mg_namelist.$(OBJEXT) \
+	mg_netcdf_out.$(OBJEXT) mg_grids.$(OBJEXT) \
+	mg_mpi_exchange.$(OBJEXT) mg_mpi_exchange_ijk.$(OBJEXT) \
+	mg_gather.$(OBJEXT) mg_compute_rhs.$(OBJEXT) \
+	mg_correct_uvw.$(OBJEXT) mg_define_matrix.$(OBJEXT) \
+	mg_setup_tests.$(OBJEXT) mg_relax.$(OBJEXT) \
+	mg_intergrids.$(OBJEXT) mg_solvers.$(OBJEXT) nhydro.$(OBJEXT) \
+	mg_testrndtopo.$(OBJEXT)
+testrndtopo_OBJECTS = $(am_testrndtopo_OBJECTS)
+testrndtopo_LDADD = $(LDADD)
 am_testseamount_OBJECTS = mg_mpi.$(OBJEXT) mg_tictoc.$(OBJEXT) \
 	mg_zr_zw.$(OBJEXT) mg_namelist.$(OBJEXT) \
 	mg_netcdf_out.$(OBJEXT) mg_grids.$(OBJEXT) \
@@ -138,8 +150,10 @@ AM_V_FCLD = $(am__v_FCLD_@AM_V@)
 am__v_FCLD_ = $(am__v_FCLD_@AM_DEFAULT_V@)
 am__v_FCLD_0 = @echo "  FCLD    " $@;
 am__v_FCLD_1 = 
-SOURCES = $(testcuc_SOURCES) $(testseamount_SOURCES)
-DIST_SOURCES = $(testcuc_SOURCES) $(testseamount_SOURCES)
+SOURCES = $(testcuc_SOURCES) $(testrndtopo_SOURCES) \
+	$(testseamount_SOURCES)
+DIST_SOURCES = $(testcuc_SOURCES) $(testrndtopo_SOURCES) \
+	$(testseamount_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -381,6 +395,26 @@ testseamount_SOURCES = \
 	nhydro.f90           \
 	mg_testseamount.f90
 
+testrndtopo_SOURCES = \
+	mg_mpi.f90           \
+	mg_tictoc.f90        \
+	mg_zr_zw.f90         \
+	mg_namelist.f90      \
+	mg_netcdf_out.f90    \
+	mg_grids.f90         \
+	mg_mpi_exchange.f90  \
+	mg_mpi_exchange_ijk.f90 \
+	mg_gather.f90        \
+	mg_compute_rhs.f90   \
+    mg_correct_uvw.f90   \
+	mg_define_matrix.f90 \
+	mg_setup_tests.f90   \
+	mg_relax.f90         \
+	mg_intergrids.f90    \
+	mg_solvers.f90       \
+	nhydro.f90           \
+	mg_testrndtopo.f90
+
 all: all-recursive
 
 .SUFFIXES:
@@ -461,6 +495,10 @@ clean-binPROGRAMS:
 testcuc$(EXEEXT): $(testcuc_OBJECTS) $(testcuc_DEPENDENCIES) $(EXTRA_testcuc_DEPENDENCIES) 
 	@rm -f testcuc$(EXEEXT)
 	$(AM_V_FCLD)$(FCLINK) $(testcuc_OBJECTS) $(testcuc_LDADD) $(LIBS)
+
+testrndtopo$(EXEEXT): $(testrndtopo_OBJECTS) $(testrndtopo_DEPENDENCIES) $(EXTRA_testrndtopo_DEPENDENCIES) 
+	@rm -f testrndtopo$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(testrndtopo_OBJECTS) $(testrndtopo_LDADD) $(LIBS)
 
 testseamount$(EXEEXT): $(testseamount_OBJECTS) $(testseamount_DEPENDENCIES) $(EXTRA_testseamount_DEPENDENCIES) 
 	@rm -f testseamount$(EXEEXT)
@@ -787,6 +825,7 @@ clean-local:
 
 cleanf:
 	-rm -f *.nc fort.* *.dump *.xml gmon.out *.log *__genmod*
+
 #
 #mainmodel_SOURCES=       \
 #	mg_mpi.f90           \

@@ -1,4 +1,4 @@
-program mg_testseamount
+program mg_testrndtopo
 
   use mg_mpi
   use mg_tictoc
@@ -34,7 +34,7 @@ program mg_testseamount
   integer(kind=ip) :: pi, pj
   integer(kind=ip) :: ib, ie, jb, je, kb, ke
 
-  call tic(1,'mg_bench_seamount')
+  call tic(1,'mg_bench_rndtopo')
 
   nit = 1
 
@@ -69,9 +69,9 @@ program mg_testseamount
   call nhydro_init(nx,ny,nz,npxg,npyg)
 
   !---------------------!
-  !- Setup seamount    -!
+  !- Setup rndtopo    -!
   !---------------------!
-  if (rank == 0) write(*,*)'Initialise seamount bench'
+  if (rank == 0) write(*,*)'Initialise rndtopo bench'
 
   Lx   =  1.e4_rp
   Ly   =  1.e4_rp
@@ -92,7 +92,7 @@ program mg_testseamount
   allocate( zeta(0:ny+1,0:nx+1))
   allocate(    h(0:ny+1,0:nx+1))
 
-  call setup_seamount(nx,ny,nz,npxg,npyg,Lx,Ly,Htot,dx,dy,zeta,h)
+  call setup_rndtopo(nx,ny,nz,npxg,npyg,Lx,Ly,Htot,dx,dy,zeta,h)
 
   allocate(rmask(0:ny+1,0:nx+1))
   rmask(:,:) = 1._rp
@@ -213,12 +213,12 @@ program mg_testseamount
   call nhydro_clean()
 
   !----------------------!
-  !- End Bench-seamount -!
+  !- End Bench-rndtopo -!
   !----------------------!
   call mpi_finalize(ierr)
 
-  call toc(1,'mg_bench_seamount')
+  call toc(1,'mg_bench_rndtopo')
   if(myrank == 0) call print_tictoc(myrank)
 
-end program mg_testseamount
+end program mg_testrndtopo
 
